@@ -69,7 +69,7 @@ func main() {
 
 	// Initialisation des handlers
 	authHandler := handlers.NewAuthHandler(authService, cfg)
-	healthHandler := handlers.NewHealthHandler(db)
+	healthHandler := handlers.NewHealthHandler(cfg, db)
 
 	// Configuration du mode Gin
 	if cfg.Server.Environment == "production" {
