@@ -1,0 +1,724 @@
+package service
+
+import (
+	"fmt"
+	"math"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+
+	"combat/internal/config"
+	"combat/internal/models"
+	"combat/internal/repository"
+)
+
+// AntiCheatServiceInterface définit les méthodes du service anti-cheat
+type AntiCheatServiceInterface interface {
+	// Validation des actions
+	ValidateAction(actor *models.CombatParticipant, req *models.ActionRequest) *models.ValidationResponse
+	CheckActionFrequency(actorID uuid.UUID, timeWindow time.Duration) (bool, int, error)
+	ValidateTimestamp(clientTime, serverTime time.Time) (bool, string)
+	
+	// Détection de patterns suspects
+	DetectSuspiciousPatterns(actorID uuid.UUID) (*models.AntiCheatResult, error)
+	CheckDamageIntegrity(action *models.CombatAction, actor, target *models.CombatParticipant) (bool, string)
+	ValidateMovement(oldPos, newPos *models.Position, timeElapsed time.Duration) (bool, string)
+	
+	// Système de scoring
+	CalculateSuspicionScore(actorID uuid.UUID) (float64, []string, error)
+	RecordSuspiciousActivity(actorID uuid.UUID, activityType string, details map[string]interface{})
+	
+	// Actions correctives
+	ApplyAntiCheatMeasures(actorID uuid.UUID, score float64, flags []string) string
+	TemporaryBan(actorID uuid.UUID, duration time.Duration, reason string) error
+}
+
+// AntiCheatService implémente l'interface AntiCheatServiceInterface
+type AntiCheatService struct {
+	actionRepo     repository.ActionRepositoryInterface
+	config         *config.Config
+	suspiciousLogs map[uuid.UUID][]SuspiciousActivity
+	playerStats    map[uuid.UUID]*PlayerStats
+}
+
+// SuspiciousActivity représente une activité suspecte
+type SuspiciousActivity struct {
+	Type        string                 `json:"type"`
+	Timestamp   time.Time              `json:"timestamp"`
+	Severity    int                    `json:"severity"`
+	Details     map[string]interface{} `json:"details"`
+	ActionID    *uuid.UUID             `json:"action_id,omitempty"`
+}
+
+// PlayerStats représente les statistiques d'un joueur pour l'anti-cheat
+type PlayerStats struct {
+	ActorID               uuid.UUID     `json:"actor_id"`
+	LastActionTime        time.Time     `json:"last_action_time"`
+	ActionsInLastMinute   []time.Time   `json:"actions_in_last_minute"`
+	AverageDamage         float64       `json:"average_damage"`
+	MaxDamageRecorded     int           `json:"max_damage_recorded"`
+	SuspicionScore        float64       `json:"suspicion_score"`
+	LastPositionUpdate    time.Time     `json:"last_position_update"`
+	ConsistentHighDamage  int           `json:"consistent_high_damage"`
+	ImpossibleActions     int           `json:"impossible_actions"`
+}
+
+// NewAntiCheatService crée un nouveau service anti-cheat
+func NewAntiCheatService(
+	actionRepo repository.ActionRepositoryInterface,
+	config *config.Config,
+) AntiCheatServiceInterface {
+	return &AntiCheatService{
+		actionRepo:     actionRepo,
+		config:         config,
+		suspiciousLogs: make(map[uuid.UUID][]SuspiciousActivity),
+		playerStats:    make(map[uuid.UUID]*PlayerStats),
+	}
+}
+
+// ValidateAction valide une action avec l'anti-cheat
+func (s *AntiCheatService) ValidateAction(actor *models.CombatParticipant, req *models.ActionRequest) *models.ValidationResponse {
+	response := &models.ValidationResponse{
+		Valid:    true,
+		Errors:   []string{},
+		Warnings: []string{},
+		AntiCheat: &models.AntiCheatResult{
+			Suspicious: false,
+			Score:      0,
+			Flags:      []string{},
+			Action:     "allow",
+		},
+	}
+
+	// Vérifier la fréquence d'actions
+	if suspicious, count, err := s.CheckActionFrequency(actor.CharacterID, 1*time.Minute); err == nil && suspicious {
+		response.AntiCheat.Suspicious = true
+		response.AntiCheat.Score += 25
+		response.AntiCheat.Flags = append(response.AntiCheat.Flags, "high_action_frequency")
+		response.Warnings = append(response.Warnings, fmt.Sprintf("High action frequency: %d actions/minute", count))
+		
+		s.RecordSuspiciousActivity(actor.CharacterID, "high_frequency", map[string]interface{}{
+			"actions_per_minute": count,
+			"threshold":          s.config.AntiCheat.MaxActionsPerSecond * 60,
+		})
+	}
+
+	// Valider le timestamp
+	if !req.ClientTimestamp.IsZero() {
+		if valid, reason := s.ValidateTimestamp(req.ClientTimestamp, time.Now()); !valid {
+			response.AntiCheat.Score += 15
+			response.AntiCheat.Flags = append(response.AntiCheat.Flags, "timestamp_anomaly")
+			response.Warnings = append(response.Warnings, reason)
+			
+			s.RecordSuspiciousActivity(actor.CharacterID, "timestamp_anomaly", map[string]interface{}{
+				"client_timestamp": req.ClientTimestamp,
+				"server_timestamp": time.Now(),
+				"reason":          reason,
+			})
+		}
+	}
+
+	// Vérifier les patterns de comportement
+	if patterns, err := s.DetectSuspiciousPatterns(actor.CharacterID); err == nil {
+		if patterns.Suspicious {
+			response.AntiCheat.Score += patterns.Score
+			response.AntiCheat.Flags = append(response.AntiCheat.Flags, patterns.Flags...)
+		}
+	}
+
+	// Calculer le score de suspicion final
+	finalScore, flags, _ := s.CalculateSuspicionScore(actor.CharacterID)
+	response.AntiCheat.Score = math.Max(response.AntiCheat.Score, finalScore)
+	response.AntiCheat.Flags = append(response.AntiCheat.Flags, flags...)
+
+	// Déterminer l'action à prendre
+	response.AntiCheat.Action = s.ApplyAntiCheatMeasures(actor.CharacterID, response.AntiCheat.Score, response.AntiCheat.Flags)
+
+	// Si le score est trop élevé, bloquer l'action
+	if response.AntiCheat.Score > 80 {
+		response.Valid = false
+		response.Errors = append(response.Errors, "Action blocked by anti-cheat system")
+		response.AntiCheat.Suspicious = true
+	} else if response.AntiCheat.Score > 50 {
+		response.AntiCheat.Suspicious = true
+	}
+
+	return response
+}
+
+// CheckActionFrequency vérifie la fréquence d'actions d'un joueur
+func (s *AntiCheatService) CheckActionFrequency(actorID uuid.UUID, timeWindow time.Duration) (bool, int, error) {
+	actions, err := s.actionRepo.GetRecentActionsByActor(actorID, timeWindow)
+	if err != nil {
+		return false, 0, err
+	}
+
+	actionCount := len(actions)
+	maxAllowed := int(timeWindow.Seconds()) * s.config.AntiCheat.MaxActionsPerSecond
+
+	return actionCount > maxAllowed, actionCount, nil
+}
+
+// ValidateTimestamp valide un timestamp client
+func (s *AntiCheatService) ValidateTimestamp(clientTime, serverTime time.Time) (bool, string) {
+	diff := serverTime.Sub(clientTime).Abs()
+
+	// Tolérance de 5 secondes
+	if diff > 5*time.Second {
+		return false, fmt.Sprintf("Timestamp too far from server time: %v difference", diff)
+	}
+
+	// Vérifier si le timestamp est dans le futur
+	if clientTime.After(serverTime.Add(1 * time.Second)) {
+		return false, "Timestamp is in the future"
+	}
+
+	// Vérifier si le timestamp est trop ancien
+	if clientTime.Before(serverTime.Add(-30 * time.Second)) {
+		return false, "Timestamp is too old"
+	}
+
+	return true, ""
+}
+
+// DetectSuspiciousPatterns détecte des patterns suspects dans le comportement
+func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.AntiCheatResult, error) {
+	result := &models.AntiCheatResult{
+		Suspicious: false,
+		Score:      0,
+		Flags:      []string{},
+		Action:     "allow",
+	}
+
+	// Récupérer les statistiques du joueur
+	stats := s.getOrCreatePlayerStats(actorID)
+
+	// Pattern 1: Actions trop régulières (bot-like behavior)
+	actions, err := s.actionRepo.GetRecentActionsByActor(actorID, 5*time.Minute)
+	if err != nil {
+		return result, err
+	}
+
+	if len(actions) > 10 {
+		intervals := s.calculateActionIntervals(actions)
+		if s.isPatternTooRegular(intervals) {
+			result.Score += 20
+			result.Flags = append(result.Flags, "regular_pattern")
+			
+			s.RecordSuspiciousActivity(actorID, "regular_pattern", map[string]interface{}{
+				"action_count": len(actions),
+				"intervals":    intervals,
+			})
+		}
+	}
+
+	// Pattern 2: Dégâts inconsistants avec les stats
+	highDamageActions := 0
+	for _, action := range actions {
+		if action.DamageDealt > 0 {
+			// Si les dégâts sont beaucoup plus élevés que prévu
+			expectedMaxDamage := stats.MaxDamageRecorded
+			if expectedMaxDamage == 0 {
+				expectedMaxDamage = 100 // Valeur par défaut
+			}
+
+			if float64(action.DamageDealt) > float64(expectedMaxDamage)*s.config.AntiCheat.MaxDamageMultiplier {
+				highDamageActions++
+				result.Score += 10
+			}
+		}
+	}
+
+	if highDamageActions > 3 {
+		result.Flags = append(result.Flags, "excessive_damage")
+		s.RecordSuspiciousActivity(actorID, "excessive_damage", map[string]interface{}{
+			"high_damage_actions": highDamageActions,
+			"max_damage_threshold": float64(stats.MaxDamageRecorded) * s.config.AntiCheat.MaxDamageMultiplier,
+		})
+	}
+
+	// Pattern 3: Critique rate anormalement élevé
+	criticalActions := 0
+	totalDamageActions := 0
+	for _, action := range actions {
+		if action.DamageDealt > 0 {
+			totalDamageActions++
+			if action.IsCritical {
+				criticalActions++
+			}
+		}
+	}
+
+	if totalDamageActions > 5 {
+		critRate := float64(criticalActions) / float64(totalDamageActions)
+		if critRate > 0.5 { // Plus de 50% de critiques est suspect
+			result.Score += 15
+			result.Flags = append(result.Flags, "high_critical_rate")
+			
+			s.RecordSuspiciousActivity(actorID, "high_critical_rate", map[string]interface{}{
+				"critical_rate":       critRate,
+				"critical_actions":    criticalActions,
+				"total_damage_actions": totalDamageActions,
+			})
+		}
+	}
+
+	// Déterminer si c'est suspect
+	if result.Score > 30 {
+		result.Suspicious = true
+	}
+
+	return result, nil
+}
+
+// CheckDamageIntegrity vérifie l'intégrité des calculs de dégâts
+func (s *AntiCheatService) CheckDamageIntegrity(action *models.CombatAction, actor, target *models.CombatParticipant) (bool, string) {
+	if action.DamageDealt <= 0 {
+		return true, "" // Pas de dégâts à vérifier
+	}
+
+	// Calculer les dégâts attendus
+	expectedDamage := action.CalculateDamage(actor, target, nil)
+	
+	// Tolérance de ±20% pour la variance
+	tolerance := 0.20
+	minExpected := float64(expectedDamage) * (1 - tolerance)
+	maxExpected := float64(expectedDamage) * (1 + tolerance)
+
+	actualDamage := float64(action.DamageDealt)
+
+	if actualDamage < minExpected || actualDamage > maxExpected {
+		return false, fmt.Sprintf("Damage integrity check failed: expected %d (±20%%), got %d", expectedDamage, action.DamageDealt)
+	}
+
+	return true, ""
+}
+
+// ValidateMovement valide un mouvement de joueur
+func (s *AntiCheatService) ValidateMovement(oldPos, newPos *models.Position, timeElapsed time.Duration) (bool, string) {
+	if oldPos == nil || newPos == nil {
+		return true, "" // Pas de mouvement à valider
+	}
+
+	// Calculer la distance
+	dx := newPos.X - oldPos.X
+	dy := newPos.Y - oldPos.Y
+	dz := newPos.Z - oldPos.Z
+	distance := math.Sqrt(dx*dx + dy*dy + dz*dz)
+
+	// Calculer la vitesse (unités par seconde)
+	speed := distance / timeElapsed.Seconds()
+
+	// Vitesse maximale autorisée (configurable)
+	maxSpeed := 20.0 // unités par seconde
+
+	if speed > maxSpeed {
+		return false, fmt.Sprintf("Movement too fast: %.2f units/s (max: %.2f)", speed, maxSpeed)
+	}
+
+	// Vérifier les téléportations impossibles
+	if distance > 100 && timeElapsed < 1*time.Second {
+		return false, fmt.Sprintf("Impossible teleportation: %.2f units in %.2f seconds", distance, timeElapsed.Seconds())
+	}
+
+	return true, ""
+}
+
+// CalculateSuspicionScore calcule le score de suspicion global d'un joueur
+func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (float64, []string, error) {
+	stats := s.getOrCreatePlayerStats(actorID)
+	var flags []string
+	score := 0.0
+
+	// Facteur 1: Activités suspectes récentes
+	suspiciousActivities := s.suspiciousLogs[actorID]
+	recentActivities := 0
+	for _, activity := range suspiciousActivities {
+		if time.Since(activity.Timestamp) < 10*time.Minute {
+			recentActivities++
+			score += float64(activity.Severity)
+		}
+	}
+
+	if recentActivities > 3 {
+		flags = append(flags, "multiple_recent_infractions")
+		score += 15
+	}
+
+	// Facteur 2: Consistance des performances
+	if stats.ConsistentHighDamage > 5 {
+		flags = append(flags, "consistent_high_performance")
+		score += 10
+	}
+
+	// Facteur 3: Actions impossibles
+	if stats.ImpossibleActions > 2 {
+		flags = append(flags, "impossible_actions")
+		score += 20
+	}
+
+	// Facteur 4: Timing patterns
+	actions, err := s.actionRepo.GetRecentActionsByActor(actorID, 5*time.Minute)
+	if err == nil && len(actions) > 0 {
+		avgProcessingTime := s.calculateAverageProcessingTime(actions)
+		if avgProcessingTime < 50 { // Moins de 50ms est suspect pour un humain
+			flags = append(flags, "superhuman_reflexes")
+			score += 15
+		}
+	}
+
+	// Limiter le score entre 0 et 100
+	if score > 100 {
+		score = 100
+	}
+
+	stats.SuspicionScore = score
+	return score, flags, nil
+}
+
+// RecordSuspiciousActivity enregistre une activité suspecte
+func (s *AntiCheatService) RecordSuspiciousActivity(actorID uuid.UUID, activityType string, details map[string]interface{}) {
+	activity := SuspiciousActivity{
+		Type:      activityType,
+		Timestamp: time.Now(),
+		Severity:  s.getSeverityForActivity(activityType),
+		Details:   details,
+	}
+
+	if s.suspiciousLogs[actorID] == nil {
+		s.suspiciousLogs[actorID] = []SuspiciousActivity{}
+	}
+
+	s.suspiciousLogs[actorID] = append(s.suspiciousLogs[actorID], activity)
+
+	// Garder seulement les 50 dernières activités
+	if len(s.suspiciousLogs[actorID]) > 50 {
+		s.suspiciousLogs[actorID] = s.suspiciousLogs[actorID][1:]
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"actor_id":      actorID,
+		"activity_type": activityType,
+		"severity":      activity.Severity,
+		"details":       details,
+	}).Warn("Suspicious activity recorded")
+}
+
+// ApplyAntiCheatMeasures applique des mesures correctives
+func (s *AntiCheatService) ApplyAntiCheatMeasures(actorID uuid.UUID, score float64, flags []string) string {
+	if score < 30 {
+		return "allow"
+	}
+
+	if score < 50 {
+		// Avertissement léger
+		s.RecordSuspiciousActivity(actorID, "warning_issued", map[string]interface{}{
+			"score": score,
+			"flags": flags,
+		})
+		return "warn"
+	}
+
+	if score < 80 {
+		// Surveillance renforcée
+		s.RecordSuspiciousActivity(actorID, "enhanced_monitoring", map[string]interface{}{
+			"score": score,
+			"flags": flags,
+		})
+		return "monitor"
+	}
+
+	// Score élevé - action drastique
+	s.RecordSuspiciousActivity(actorID, "high_suspicion_score", map[string]interface{}{
+		"score": score,
+		"flags": flags,
+	})
+
+	// Appliquer un ban temporaire selon la gravité
+	duration := s.calculateBanDuration(score, flags)
+	s.TemporaryBan(actorID, duration, "High suspicion score detected")
+
+	return "block"
+}
+
+// TemporaryBan applique un ban temporaire
+func (s *AntiCheatService) TemporaryBan(actorID uuid.UUID, duration time.Duration, reason string) error {
+	// TODO: Implémenter le système de ban
+	// Pour l'instant, juste enregistrer l'action
+	s.RecordSuspiciousActivity(actorID, "temporary_ban", map[string]interface{}{
+		"duration": duration.String(),
+		"reason":   reason,
+	})
+
+	logrus.WithFields(logrus.Fields{
+		"actor_id": actorID,
+		"duration": duration,
+		"reason":   reason,
+	}).Warn("Temporary ban applied")
+
+	return nil
+}
+
+// Helper methods
+
+func (s *AntiCheatService) getOrCreatePlayerStats(actorID uuid.UUID) *PlayerStats {
+	if stats, exists := s.playerStats[actorID]; exists {
+		return stats
+	}
+
+	stats := &PlayerStats{
+		ActorID:             actorID,
+		ActionsInLastMinute: []time.Time{},
+		SuspicionScore:      0,
+	}
+
+	s.playerStats[actorID] = stats
+	return stats
+}
+
+func (s *AntiCheatService) calculateActionIntervals(actions []*models.CombatAction) []float64 {
+	if len(actions) < 2 {
+		return []float64{}
+	}
+
+	intervals := make([]float64, len(actions)-1)
+	for i := 1; i < len(actions); i++ {
+		interval := actions[i].ServerTimestamp.Sub(actions[i-1].ServerTimestamp).Seconds()
+		intervals[i-1] = interval
+	}
+
+	return intervals
+}
+
+func (s *AntiCheatService) isPatternTooRegular(intervals []float64) bool {
+	if len(intervals) < 5 {
+		return false
+	}
+
+	// Calculer l'écart-type des intervalles
+	mean := 0.0
+	for _, interval := range intervals {
+		mean += interval
+	}
+	mean /= float64(len(intervals))
+
+	variance := 0.0
+	for _, interval := range intervals {
+		variance += math.Pow(interval-mean, 2)
+	}
+	variance /= float64(len(intervals))
+	stdDev := math.Sqrt(variance)
+
+	// Si l'écart-type est très faible, le pattern est trop régulier
+	return stdDev < 0.1 && mean > 0.5 && mean < 2.0
+}
+
+func (s *AntiCheatService) calculateAverageProcessingTime(actions []*models.CombatAction) float64 {
+	if len(actions) == 0 {
+		return 0
+	}
+
+	total := 0.0
+	count := 0
+
+	for _, action := range actions {
+		if action.ProcessingTimeMs != nil && *action.ProcessingTimeMs > 0 {
+			total += float64(*action.ProcessingTimeMs)
+			count++
+		}
+	}
+
+	if count == 0 {
+		return 0
+	}
+
+	return total / float64(count)
+}
+
+func (s *AntiCheatService) getSeverityForActivity(activityType string) int {
+	severityMap := map[string]int{
+		"high_frequency":      5,
+		"timestamp_anomaly":   3,
+		"regular_pattern":     7,
+		"excessive_damage":    8,
+		"high_critical_rate":  6,
+		"impossible_movement": 9,
+		"damage_integrity":    8,
+		"superhuman_reflexes": 7,
+		"multiple_infractions": 10,
+	}
+
+	if severity, exists := severityMap[activityType]; exists {
+		return severity
+	}
+
+	return 5 // Sévérité par défaut
+}
+
+func (s *AntiCheatService) calculateBanDuration(score float64, flags []string) time.Duration {
+	baseDuration := 5 * time.Minute
+
+	// Augmenter selon le score
+	multiplier := score / 20.0
+	duration := time.Duration(float64(baseDuration) * multiplier)
+
+	// Augmenter selon les flags critiques
+	criticalFlags := []string{"impossible_actions", "excessive_damage", "superhuman_reflexes"}
+	for _, flag := range flags {
+		for _, critical := range criticalFlags {
+			if flag == critical {
+				duration *= 2
+				break
+			}
+		}
+	}
+
+	// Limiter la durée maximale
+	maxDuration := 30 * time.Minute
+	if duration > maxDuration {
+		duration = maxDuration
+	}
+
+	return duration
+}
+
+// UpdatePlayerStats met à jour les statistiques d'un joueur après une action
+func (s *AntiCheatService) UpdatePlayerStats(actorID uuid.UUID, action *models.CombatAction) {
+	stats := s.getOrCreatePlayerStats(actorID)
+
+	// Mettre à jour le temps de dernière action
+	stats.LastActionTime = action.ServerTimestamp
+
+	// Ajouter l'action à la liste des actions récentes
+	now := time.Now()
+	stats.ActionsInLastMinute = append(stats.ActionsInLastMinute, now)
+
+	// Nettoyer les actions trop anciennes
+	cutoff := now.Add(-1 * time.Minute)
+	newActions := []time.Time{}
+	for _, actionTime := range stats.ActionsInLastMinute {
+		if actionTime.After(cutoff) {
+			newActions = append(newActions, actionTime)
+		}
+	}
+	stats.ActionsInLastMinute = newActions
+
+	// Mettre à jour les statistiques de dégâts
+	if action.DamageDealt > 0 {
+		if action.DamageDealt > stats.MaxDamageRecorded {
+			stats.MaxDamageRecorded = action.DamageDealt
+		}
+
+		// Calculer la moyenne mobile des dégâts
+		if stats.AverageDamage == 0 {
+			stats.AverageDamage = float64(action.DamageDealt)
+		} else {
+			stats.AverageDamage = (stats.AverageDamage*0.9) + (float64(action.DamageDealt)*0.1)
+		}
+
+		// Vérifier si les dégâts sont anormalement élevés
+		if float64(action.DamageDealt) > stats.AverageDamage*2.0 {
+			stats.ConsistentHighDamage++
+		} else {
+			stats.ConsistentHighDamage = 0 // Reset si les dégâts redeviennent normaux
+		}
+	}
+}
+
+// GetPlayerSuspicionReport génère un rapport de suspicion pour un joueur
+func (s *AntiCheatService) GetPlayerSuspicionReport(actorID uuid.UUID) *SuspicionReport {
+	stats := s.getOrCreatePlayerStats(actorID)
+	activities := s.suspiciousLogs[actorID]
+
+	report := &SuspicionReport{
+		ActorID:        actorID,
+		SuspicionScore: stats.SuspicionScore,
+		LastActivity:   stats.LastActionTime,
+		RecentFlags:    []string{},
+		Summary:        "",
+	}
+
+	// Analyser les activités récentes
+	recentActivities := 0
+	flagCounts := make(map[string]int)
+
+	for _, activity := range activities {
+		if time.Since(activity.Timestamp) < 24*time.Hour {
+			recentActivities++
+			flagCounts[activity.Type]++
+		}
+	}
+
+	// Générer les flags récents
+	for flag, count := range flagCounts {
+		if count > 1 {
+			report.RecentFlags = append(report.RecentFlags, fmt.Sprintf("%s (x%d)", flag, count))
+		} else {
+			report.RecentFlags = append(report.RecentFlags, flag)
+		}
+	}
+
+	// Générer le résumé
+	if stats.SuspicionScore < 20 {
+		report.Summary = "Player behavior appears normal"
+	} else if stats.SuspicionScore < 50 {
+		report.Summary = "Some suspicious patterns detected, monitoring recommended"
+	} else if stats.SuspicionScore < 80 {
+		report.Summary = "Multiple suspicious activities, enhanced monitoring active"
+	} else {
+		report.Summary = "High suspicion score, immediate review recommended"
+	}
+
+	return report
+}
+
+// SuspicionReport représente un rapport de suspicion
+type SuspicionReport struct {
+	ActorID        uuid.UUID `json:"actor_id"`
+	SuspicionScore float64   `json:"suspicion_score"`
+	LastActivity   time.Time `json:"last_activity"`
+	RecentFlags    []string  `json:"recent_flags"`
+	Summary        string    `json:"summary"`
+}
+
+// CleanupOldData nettoie les anciennes données d'anti-cheat
+func (s *AntiCheatService) CleanupOldData() {
+	cutoff := time.Now().Add(-24 * time.Hour)
+
+	// Nettoyer les logs suspects anciens
+	for actorID, activities := range s.suspiciousLogs {
+		newActivities := []SuspiciousActivity{}
+		for _, activity := range activities {
+			if activity.Timestamp.After(cutoff) {
+				newActivities = append(newActivities, activity)
+			}
+		}
+		
+		if len(newActivities) == 0 {
+			delete(s.suspiciousLogs, actorID)
+		} else {
+			s.suspiciousLogs[actorID] = newActivities
+		}
+	}
+
+	// Nettoyer les stats des joueurs inactifs
+	inactiveCutoff := time.Now().Add(-7 * 24 * time.Hour)
+	for actorID, stats := range s.playerStats {
+		if stats.LastActionTime.Before(inactiveCutoff) {
+			delete(s.playerStats, actorID)
+		}
+	}
+
+	logrus.Debug("Anti-cheat data cleanup completed")
+}
+
+// StartCleanupRoutine démarre la routine de nettoyage
+func (s *AntiCheatService) StartCleanupRoutine() {
+	ticker := time.NewTicker(1 * time.Hour)
+	go func() {
+		for range ticker.C {
+			s.CleanupOldData()
+		}
+	}()
+}

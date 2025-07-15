@@ -1,0 +1,421 @@
+package models
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// ChallengeType définit les types de défis PvP
+type ChallengeType string
+
+const (
+	ChallengeTypeDuel       ChallengeType = "duel"
+	ChallengeTypeArena      ChallengeType = "arena"
+	ChallengeTypeTournament ChallengeType = "tournament"
+)
+
+// ChallengeStatus définit les statuts d'un défi
+type ChallengeStatus string
+
+const (
+	ChallengeStatusPending   ChallengeStatus = "pending"
+	ChallengeStatusAccepted  ChallengeStatus = "accepted"
+	ChallengeStatusDeclined  ChallengeStatus = "declined"
+	ChallengeStatusCancelled ChallengeStatus = "cancelled"
+	ChallengeStatusExpired   ChallengeStatus = "expired"
+	ChallengeStatusCompleted ChallengeStatus = "completed"
+)
+
+// ResultType définit les types de résultats
+type ResultType string
+
+const (
+	ResultTypeVictory ResultType = "victory"
+	ResultTypeDefeat  ResultType = "defeat"
+	ResultTypeDraw    ResultType = "draw"
+	ResultTypeForfeit ResultType = "forfeit"
+	ResultTypeTimeout ResultType = "timeout"
+)
+
+// PvPChallenge représente un défi PvP
+type PvPChallenge struct {
+	ID            uuid.UUID       `json:"id" db:"id"`
+	ChallengerID  uuid.UUID       `json:"challenger_id" db:"challenger_id"`
+	ChallengedID  uuid.UUID       `json:"challenged_id" db:"challenged_id"`
+	CombatID      *uuid.UUID      `json:"combat_id" db:"combat_id"`
+	
+	// Détails du défi
+	ChallengeType ChallengeType   `json:"challenge_type" db:"challenge_type"`
+	Message       *string         `json:"message" db:"message"`
+	Stakes        PvPStakes       `json:"stakes" db:"stakes"`
+	
+	// État du défi
+	Status        ChallengeStatus `json:"status" db:"status"`
+	
+	// Résultat
+	WinnerID      *uuid.UUID      `json:"winner_id" db:"winner_id"`
+	LoserID       *uuid.UUID      `json:"loser_id" db:"loser_id"`
+	ResultType    *ResultType     `json:"result_type" db:"result_type"`
+	
+	// Timestamps
+	CreatedAt     time.Time       `json:"created_at" db:"created_at"`
+	RespondedAt   *time.Time      `json:"responded_at" db:"responded_at"`
+	ExpiresAt     time.Time       `json:"expires_at" db:"expires_at"`
+	CompletedAt   *time.Time      `json:"completed_at" db:"completed_at"`
+	
+	// Relations (chargées séparément)
+	Challenger    *PlayerSummary  `json:"challenger,omitempty" db:"-"`
+	Challenged    *PlayerSummary  `json:"challenged,omitempty" db:"-"`
+	Combat        *CombatInstance `json:"combat,omitempty" db:"-"`
+}
+
+// PvPStakes représente les enjeux d'un défi PvP
+type PvPStakes struct {
+	Gold           int                    `json:"gold,omitempty"`
+	Items          []StakeItem            `json:"items,omitempty"`
+	Experience     int                    `json:"experience,omitempty"`
+	Reputation     int                    `json:"reputation,omitempty"`
+	Title          string                 `json:"title,omitempty"`
+	CustomRewards  map[string]interface{} `json:"custom_rewards,omitempty"`
+}
+
+// StakeItem représente un objet mis en jeu
+type StakeItem struct {
+	ItemID   string `json:"item_id"`
+	Quantity int    `json:"quantity"`
+	Quality  string `json:"quality,omitempty"`
+}
+
+// PlayerSummary représente un résumé d'informations joueur
+type PlayerSummary struct {
+	ID          uuid.UUID `json:"id"`
+	UserID      uuid.UUID `json:"user_id"`
+	Name        string    `json:"name"`
+	Level       int       `json:"level"`
+	Class       string    `json:"class"`
+	PvPRating   int       `json:"pvp_rating"`
+	Avatar      string    `json:"avatar,omitempty"`
+	Status      string    `json:"status,omitempty"`
+}
+
+// PvPMatch représente un match PvP
+type PvPMatch struct {
+	ID           uuid.UUID       `json:"id"`
+	ChallengeID  uuid.UUID       `json:"challenge_id"`
+	CombatID     uuid.UUID       `json:"combat_id"`
+	MatchType    ChallengeType   `json:"match_type"`
+	Players      []*PlayerSummary `json:"players"`
+	WinnerID     *uuid.UUID      `json:"winner_id,omitempty"`
+	Duration     time.Duration   `json:"duration"`
+	RatingChanges map[uuid.UUID]int `json:"rating_changes,omitempty"`
+	Rewards      map[uuid.UUID]*PvPReward `json:"rewards,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
+	CompletedAt  *time.Time      `json:"completed_at,omitempty"`
+}
+
+// PvPReward représente les récompenses PvP
+type PvPReward struct {
+	RatingChange int                    `json:"rating_change"`
+	Gold         int                    `json:"gold"`
+	Experience   int                    `json:"experience"`
+	Items        []RewardItem           `json:"items,omitempty"`
+	Titles       []string               `json:"titles,omitempty"`
+	Achievements []string               `json:"achievements,omitempty"`
+	Custom       map[string]interface{} `json:"custom,omitempty"`
+}
+
+// PvPRanking représente le classement PvP
+type PvPRanking struct {
+	Rank        int           `json:"rank"`
+	PlayerID    uuid.UUID     `json:"player_id"`
+	PlayerName  string        `json:"player_name"`
+	Rating      int           `json:"rating"`
+	Wins        int           `json:"wins"`
+	Losses      int           `json:"losses"`
+	Draws       int           `json:"draws"`
+	WinRate     float64       `json:"win_rate"`
+	Streak      int           `json:"streak"`
+	LastMatch   *time.Time    `json:"last_match,omitempty"`
+}
+
+// CreateChallengeRequest représente une demande de création de défi
+type CreateChallengeRequest struct {
+	ChallengedID  uuid.UUID     `json:"challenged_id" binding:"required"`
+	ChallengeType ChallengeType `json:"challenge_type" binding:"required"`
+	Message       string        `json:"message,omitempty"`
+	Stakes        *PvPStakes    `json:"stakes,omitempty"`
+	ExpiresIn     *int          `json:"expires_in,omitempty"` // en minutes
+}
+
+// RespondChallengeRequest représente une réponse à un défi
+type RespondChallengeRequest struct {
+	Accept  bool   `json:"accept" binding:"required"`
+	Message string `json:"message,omitempty"`
+}
+
+// PvPQueueEntry représente une entrée dans la file d'attente PvP
+type PvPQueueEntry struct {
+	ID           uuid.UUID     `json:"id"`
+	PlayerID     uuid.UUID     `json:"player_id"`
+	QueueType    ChallengeType `json:"queue_type"`
+	Rating       int           `json:"rating"`
+	QueuedAt     time.Time     `json:"queued_at"`
+	EstimatedWait time.Duration `json:"estimated_wait"`
+	Preferences  *QueuePreferences `json:"preferences,omitempty"`
+}
+
+// QueuePreferences représente les préférences de file d'attente
+type QueuePreferences struct {
+	RatingRange    *RatingRange `json:"rating_range,omitempty"`
+	MaxWaitTime    *int         `json:"max_wait_time,omitempty"` // en minutes
+	AllowBots      bool         `json:"allow_bots"`
+	PreferredMaps  []string     `json:"preferred_maps,omitempty"`
+}
+
+// RatingRange représente une plage de classement
+type RatingRange struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
+}
+
+// PvPStatistics représente les statistiques PvP d'un joueur
+type PvPStatistics struct {
+	PlayerID           uuid.UUID `json:"player_id"`
+	CurrentRating      int       `json:"current_rating"`
+	HighestRating      int       `json:"highest_rating"`
+	TotalMatches       int       `json:"total_matches"`
+	Wins               int       `json:"wins"`
+	Losses             int       `json:"losses"`
+	Draws              int       `json:"draws"`
+	WinRate            float64   `json:"win_rate"`
+	CurrentStreak      int       `json:"current_streak"`
+	BestStreak         int       `json:"best_streak"`
+	AverageDamage      float64   `json:"average_damage"`
+	AverageMatchDuration time.Duration `json:"average_match_duration"`
+	FavoriteOpponent   *uuid.UUID    `json:"favorite_opponent,omitempty"`
+	LastMatchAt        *time.Time    `json:"last_match_at,omitempty"`
+	UpdatedAt          time.Time     `json:"updated_at"`
+}
+
+// IsExpired vérifie si le défi a expiré
+func (c *PvPChallenge) IsExpired() bool {
+	return time.Now().After(c.ExpiresAt) && c.Status == ChallengeStatusPending
+}
+
+// CanAccept vérifie si le défi peut être accepté
+func (c *PvPChallenge) CanAccept(playerID uuid.UUID) bool {
+	return c.Status == ChallengeStatusPending && 
+		   c.ChallengedID == playerID && 
+		   !c.IsExpired()
+}
+
+// CanCancel vérifie si le défi peut être annulé
+func (c *PvPChallenge) CanCancel(playerID uuid.UUID) bool {
+	return c.Status == ChallengeStatusPending && 
+		   c.ChallengerID == playerID
+}
+
+// GetDuration retourne la durée du défi depuis sa création
+func (c *PvPChallenge) GetDuration() time.Duration {
+	if c.CompletedAt != nil {
+		return c.CompletedAt.Sub(c.CreatedAt)
+	}
+	return time.Since(c.CreatedAt)
+}
+
+// CalculateRatingChange calcule le changement de classement après un match
+func CalculateRatingChange(winnerRating, loserRating int, isWinner bool) int {
+	// Constante K pour l'algorithme Elo
+	k := 32.0
+	
+	// Calcul de la probabilité de victoire attendue
+	expectedScore := 1.0 / (1.0 + math.Pow(10, float64(loserRating-winnerRating)/400.0))
+	
+	if !isWinner {
+		expectedScore = 1.0 - expectedScore
+	}
+	
+	// Score réel (1 pour victoire, 0 pour défaite)
+	actualScore := 0.0
+	if isWinner {
+		actualScore = 1.0
+	}
+	
+	// Calcul du changement de classement
+	change := k * (actualScore - expectedScore)
+	
+	return int(math.Round(change))
+}
+
+// GetRankFromRating retourne le rang basé sur le classement
+func GetRankFromRating(rating int) string {
+	switch {
+	case rating >= 2400:
+		return "Grandmaster"
+	case rating >= 2200:
+		return "Master"
+	case rating >= 2000:
+		return "Diamond"
+	case rating >= 1800:
+		return "Platinum"
+	case rating >= 1600:
+		return "Gold"
+	case rating >= 1400:
+		return "Silver"
+	case rating >= 1200:
+		return "Bronze"
+	default:
+		return "Novice"
+	}
+}
+
+// ValidateStakes valide les enjeux d'un défi
+func (s *PvPStakes) Validate() error {
+	// Vérification des limites
+	if s.Gold < 0 {
+		return fmt.Errorf("l'or misé ne peut pas être négatif")
+	}
+	
+	if s.Gold > 10000 {
+		return fmt.Errorf("l'or misé ne peut pas dépasser 10000")
+	}
+	
+	if s.Experience < 0 {
+		return fmt.Errorf("l'expérience misée ne peut pas être négative")
+	}
+	
+	if len(s.Items) > 10 {
+		return fmt.Errorf("impossible de miser plus de 10 objets")
+	}
+	
+	// Validation des objets
+	for _, item := range s.Items {
+		if item.ItemID == "" {
+			return fmt.Errorf("ID d'objet invalide")
+		}
+		if item.Quantity <= 0 {
+			return fmt.Errorf("la quantité d'objet doit être positive")
+		}
+	}
+	
+	return nil
+}
+
+// GetTotalValue calcule la valeur totale des enjeux
+func (s *PvPStakes) GetTotalValue() int {
+	total := s.Gold + s.Experience + s.Reputation
+	
+	// Estimation de la valeur des objets (à implémenter selon le système d'objets)
+	for _, item := range s.Items {
+		// Valeur estimée basée sur la rareté
+		itemValue := 100 // Valeur par défaut
+		switch item.Quality {
+		case "common":
+			itemValue = 50
+		case "uncommon":
+			itemValue = 100
+		case "rare":
+			itemValue = 250
+		case "epic":
+			itemValue = 500
+		case "legendary":
+			itemValue = 1000
+		}
+		total += itemValue * item.Quantity
+	}
+	
+	return total
+}
+
+// CreateDefaultStakes crée des enjeux par défaut basés sur le niveau des joueurs
+func CreateDefaultStakes(challengerLevel, challengedLevel int) *PvPStakes {
+	avgLevel := (challengerLevel + challengedLevel) / 2
+	
+	return &PvPStakes{
+		Gold:       avgLevel * 10,
+		Experience: avgLevel * 5,
+		Reputation: 1,
+	}
+}
+
+// GetMatchmakingRange retourne la plage de classement pour le matchmaking
+func GetMatchmakingRange(rating int, waitTime time.Duration) *RatingRange {
+	// Base range de ±100 points
+	baseRange := 100
+	
+	// Élargir la plage en fonction du temps d'attente
+	waitMinutes := int(waitTime.Minutes())
+	expandedRange := baseRange + (waitMinutes * 10)
+	
+	// Limiter l'expansion maximale
+	if expandedRange > 500 {
+		expandedRange = 500
+	}
+	
+	return &RatingRange{
+		Min: rating - expandedRange,
+		Max: rating + expandedRange,
+	}
+}
+
+// IsInRange vérifie si un classement est dans la plage
+func (r *RatingRange) IsInRange(rating int) bool {
+	return rating >= r.Min && rating <= r.Max
+}
+
+// GetSeasonInfo retourne les informations de la saison PvP actuelle
+func GetSeasonInfo() *PvPSeasonInfo {
+	return &PvPSeasonInfo{
+		ID:          1,
+		Name:        "Saison 1 - Les Premiers Combats",
+		StartDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:     time.Date(2024, 3, 31, 23, 59, 59, 0, time.UTC),
+		IsActive:    true,
+		Rewards:     GetSeasonRewards(),
+		Leaderboard: true,
+	}
+}
+
+// PvPSeasonInfo représente les informations d'une saison PvP
+type PvPSeasonInfo struct {
+	ID          int                    `json:"id"`
+	Name        string                 `json:"name"`
+	StartDate   time.Time              `json:"start_date"`
+	EndDate     time.Time              `json:"end_date"`
+	IsActive    bool                   `json:"is_active"`
+	Rewards     map[string]*PvPReward  `json:"rewards"`
+	Leaderboard bool                   `json:"leaderboard"`
+}
+
+// GetSeasonRewards retourne les récompenses de fin de saison
+func GetSeasonRewards() map[string]*PvPReward {
+	return map[string]*PvPReward{
+		"Grandmaster": {
+			Gold:       10000,
+			Experience: 5000,
+			Items: []RewardItem{
+				{ItemID: "legendary_pvp_mount", Quantity: 1, Quality: "legendary"},
+				{ItemID: "grandmaster_title", Quantity: 1, Quality: "epic"},
+			},
+			Titles: []string{"Grandmaster"},
+		},
+		"Master": {
+			Gold:       7500,
+			Experience: 3500,
+			Items: []RewardItem{
+				{ItemID: "epic_pvp_weapon", Quantity: 1, Quality: "epic"},
+				{ItemID: "master_title", Quantity: 1, Quality: "rare"},
+			},
+			Titles: []string{"Master"},
+		},
+		"Diamond": {
+			Gold:       5000,
+			Experience: 2500,
+			Items: []RewardItem{
+				{ItemID: "rare_pvp_armor", Quantity: 1, Quality: "rare"},
+			},
+			Titles: []string{"Diamond Fighter"},
+		},
+	}
+}
