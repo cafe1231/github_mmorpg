@@ -1,13 +1,8 @@
 package service
 
 import (
-	"fmt"
-	"math"
 	"math/rand"
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 
 	"combat/internal/models"
 )
