@@ -1,3 +1,4 @@
+// internal/repository/anticheat.go
 package repository
 
 import (
@@ -87,9 +88,11 @@ func (r *AntiCheatRepository) UpdateBan(ban *models.AntiCheatBan) error {
 func (r *AntiCheatRepository) GetViolationStats() (*models.AntiCheatStats, error) {
 	// TODO: Implémenter avec votre DB
 	stats := &models.AntiCheatStats{
-		TotalViolations: 0,
-		ViolationsByType: make(map[string]int),
+		TotalViolations:      0,
+		ViolationsByType:     make(map[string]int),
 		ViolationsBySeverity: make(map[string]int),
+		ActiveBans:           0,
+		TotalBans:            0,
 	}
 	return stats, nil
 }

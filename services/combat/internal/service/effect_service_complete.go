@@ -303,24 +303,22 @@ func (s *EffectService) CleanupExpiredEffects() error {
 	return nil
 }
 
-// CleanupSessionEffects nettoie tous les effets d'une session de combat
+// CleanupSessionEffects nettoie les effets d'une session
 func (s *EffectService) CleanupSessionEffects(sessionID uuid.UUID) error {
-	count, err := s.effectRepo.CleanupSessionEffects(sessionID)
+	count, err := s.effectRepo.RemoveSessionEffects(sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup session effects: %w", err)
 	}
 	
-	if count > 0 {
-		logrus.WithFields(logrus.Fields{
-			"session_id": sessionID,
-			"count":      count,
-		}).Info("Cleaned up session effects")
-	}
+	logrus.WithFields(logrus.Fields{
+		"session_id": sessionID,
+		"count":      count,
+	}).Info("Cleaned up session effects")
 	
 	return nil
 }
 
-// CalculateEffectiveStats calcule les stats effectives avec tous les effets
+// CalculateEffectiveStats calcule les stats effectives avec les effets appliqués
 func (s *EffectService) CalculateEffectiveStats(characterID uuid.UUID, baseStats map[string]interface{}) (map[string]interface{}, error) {
 	effects, err := s.GetActiveEffects(characterID)
 	if err != nil {
@@ -329,8 +327,8 @@ func (s *EffectService) CalculateEffectiveStats(characterID uuid.UUID, baseStats
 	
 	// Copier les stats de base
 	effectiveStats := make(map[string]interface{})
-	for k, v := range baseStats {
-		effectiveStats[k] = v
+	for key, value := range baseStats {
+		effectiveStats[key] = value
 	}
 	
 	// Appliquer les modificateurs de chaque effet
@@ -343,32 +341,32 @@ func (s *EffectService) CalculateEffectiveStats(characterID uuid.UUID, baseStats
 	return effectiveStats, nil
 }
 
-// ProcessPeriodicEffects traite les effets périodiques (DoT, HoT)
+// ProcessPeriodicEffects traite les effets périodiques pour un personnage
 func (s *EffectService) ProcessPeriodicEffects(characterID uuid.UUID) error {
 	effects, err := s.GetActiveEffects(characterID)
 	if err != nil {
-		return fmt.Errorf("failed to get effects for periodic processing: %w", err)
+		return fmt.Errorf("failed to get active effects: %w", err)
 	}
 	
 	now := time.Now()
 	
 	for _, effect := range effects {
-		// Vérifier si c'est un effet périodique
-		if !s.isPeriodicEffect(effect) {
-			continue
-		}
-		
-		// Vérifier si c'est le moment de déclencher l'effet
-		if effect.LastTick == nil || now.Sub(*effect.LastTick) >= s.getTickInterval(effect) {
-			if err := s.processPeriodicTick(effect); err != nil {
-				logrus.WithError(err).WithField("effect_id", effect.ID).Error("Failed to process periodic tick")
-				continue
-			}
+		if s.isPeriodicEffect(effect) {
+			// Vérifier si le tick doit être traité
+			tickInterval := s.getTickInterval(effect)
 			
-			// Mettre à jour le timestamp du dernier tick
-			effect.LastTick = &now
-			if err := s.effectRepo.Update(effect); err != nil {
-				logrus.WithError(err).Error("Failed to update effect last tick")
+			// Si pas de dernier tick ou si assez de temps s'est écoulé
+			if effect.LastTick == nil || now.Sub(*effect.LastTick) >= tickInterval {
+				if err := s.processPeriodicTick(effect); err != nil {
+					logrus.WithError(err).WithField("effect_id", effect.ID).Error("Failed to process periodic tick")
+					continue
+				}
+				
+				// Mettre à jour le timestamp du dernier tick
+				effect.LastTick = &now
+				if err := s.effectRepo.Update(effect); err != nil {
+					logrus.WithError(err).Error("Failed to update effect last tick")
+				}
 			}
 		}
 	}
@@ -443,6 +441,10 @@ func (s *EffectService) calculateStackedModifiers(baseModifiers map[string]inter
 
 // canDispel vérifie si un effet peut être dissipé
 func (s *EffectService) canDispel(effect *models.StatusEffect, dispelType string) bool {
+	if !effect.IsDispellable {
+		return false
+	}
+	
 	switch dispelType {
 	case "magic":
 		return effect.Type == "buff" || effect.Type == "debuff"
@@ -468,7 +470,7 @@ func (s *EffectService) applyStatModifiers(stats map[string]interface{}, modifie
 			s.addToStat(stats, key, modifier)
 		case "damage_multiplier", "healing_multiplier", "speed_multiplier":
 			// Multiplicateurs
-			s.multiplyStatt(stats, key, modifier)
+			s.multiplyStat(stats, key, modifier)
 		default:
 			// Autres modificateurs
 			s.addToStat(stats, key, modifier)
@@ -491,8 +493,8 @@ func (s *EffectService) addToStat(stats map[string]interface{}, key string, valu
 	stats[baseKey] = currentValue + bonusValue
 }
 
-// multiplyStatt multiplie une stat
-func (s *EffectService) multiplyStatt(stats map[string]interface{}, key string, value interface{}) {
+// multiplyStat multiplie une stat
+func (s *EffectService) multiplyStat(stats map[string]interface{}, key string, value interface{}) {
 	baseKey := key
 	if key == "damage_multiplier" {
 		baseKey = "damage"
@@ -537,63 +539,44 @@ func (s *EffectService) getTickInterval(effect *models.StatusEffect) time.Durati
 			if seconds, ok := interval.(int); ok {
 				return time.Duration(seconds) * time.Second
 			}
+			if seconds, ok := interval.(float64); ok {
+				return time.Duration(seconds) * time.Second
+			}
 		}
 	}
 	
 	return defaultInterval
 }
 
-// processPeriodicTick traite un tick d'effet périodique
+// processPeriodicTick traite un tick périodique
 func (s *EffectService) processPeriodicTick(effect *models.StatusEffect) error {
-	if effect.StatModifiers == nil {
-		return nil
-	}
+	// TODO: Implémenter la logique de traitement des ticks
+	// Par exemple, appliquer des dégâts ou des soins périodiques
 	
-	// Traiter les dégâts périodiques
-	if damage, exists := effect.StatModifiers["damage_per_tick"]; exists {
-		damageValue := s.getIntValue(damage, 0)
-		if damageValue > 0 {
-			s.logPeriodicDamage(effect, damageValue)
-			// TODO: Appliquer les dégâts au personnage via le service de combat
-		}
-	}
-	
-	// Traiter les soins périodiques
-	if healing, exists := effect.StatModifiers["healing_per_tick"]; exists {
-		healingValue := s.getIntValue(healing, 0)
-		if healingValue > 0 {
-			s.logPeriodicHealing(effect, healingValue)
-			// TODO: Appliquer les soins au personnage via le service de combat
-		}
-	}
+	logrus.WithFields(logrus.Fields{
+		"effect_id":    effect.ID,
+		"character_id": effect.CharacterID,
+		"effect_name":  effect.Name,
+	}).Debug("Processing periodic tick")
 	
 	return nil
 }
 
 // areEffectsIncompatible vérifie si deux effets sont incompatibles
 func (s *EffectService) areEffectsIncompatible(existing, newEffect *models.StatusEffect) bool {
-	// Définir les groupes d'incompatibilité
-	incompatibleGroups := map[string][]string{
-		"movement": {"speed_boost", "slow", "root", "stun"},
-		"damage":   {"berserk", "pacify"},
-		"magic":    {"silence", "magic_immunity"},
+	// Logique d'incompatibilité basique
+	incompatiblePairs := map[string][]string{
+		"haste":     {"slow"},
+		"slow":      {"haste"},
+		"strength":  {"weakness"},
+		"weakness":  {"strength"},
 	}
 	
-	for _, group := range incompatibleGroups {
-		existingInGroup := false
-		newInGroup := false
-		
-		for _, effectName := range group {
-			if existing.Name == effectName {
-				existingInGroup = true
+	if incompatible, exists := incompatiblePairs[existing.Name]; exists {
+		for _, name := range incompatible {
+			if newEffect.Name == name {
+				return true
 			}
-			if newEffect.Name == effectName {
-				newInGroup = true
-			}
-		}
-		
-		if existingInGroup && newInGroup && existing.Name != newEffect.Name {
-			return true
 		}
 	}
 	
@@ -602,29 +585,15 @@ func (s *EffectService) areEffectsIncompatible(existing, newEffect *models.Statu
 
 // shouldSuppressExisting vérifie si un nouvel effet doit supprimer un existant
 func (s *EffectService) shouldSuppressExisting(existing, newEffect *models.StatusEffect) bool {
-	// Les immunités suppriment les effets correspondants
-	if newEffect.Type == "immunity" {
-		immunityType := newEffect.Name
-		switch immunityType {
-		case "poison_immunity":
-			return existing.Type == "poison"
-		case "magic_immunity":
-			return existing.Type == "debuff" && existing.Source == "spell"
-		case "charm_immunity":
-			return existing.Type == "charm" || existing.Type == "fear"
-		}
-	}
-	
-	// Les cleanses suppriment les debuffs
-	if newEffect.Type == "cleanse" {
-		return existing.Type == "debuff"
+	// Les nouveaux effets du même type mais plus puissants suppriment les anciens
+	if existing.Name == newEffect.Name && existing.Priority < newEffect.Priority {
+		return true
 	}
 	
 	return false
 }
 
-// Méthodes utilitaires pour les valeurs
-
+// getStatValue récupère une valeur de stat avec une valeur par défaut
 func (s *EffectService) getStatValue(stats map[string]interface{}, key string, defaultValue int) int {
 	if value, exists := stats[key]; exists {
 		if intVal, ok := value.(int); ok {
@@ -711,7 +680,7 @@ func (s *EffectService) logEffectRefreshed(effect *models.StatusEffect) {
 			SessionID: *effect.SessionID,
 			TargetID:  &effect.CharacterID,
 			EventType: "effect_refreshed",
-			Message:   fmt.Sprintf("refreshed %s", effect.Name),
+			Message:   fmt.Sprintf("%s refreshed", effect.Name),
 			Color:     s.getEffectColor(effect.Type),
 			Timestamp: time.Now(),
 		}
@@ -726,8 +695,8 @@ func (s *EffectService) logEffectExpired(effect *models.StatusEffect) {
 			SessionID: *effect.SessionID,
 			TargetID:  &effect.CharacterID,
 			EventType: "effect_expired",
-			Message:   fmt.Sprintf("%s faded", effect.Name),
-			Color:     "#888888",
+			Message:   fmt.Sprintf("%s expired", effect.Name),
+			Color:     "#999999",
 			Timestamp: time.Now(),
 		}
 		s.logRepo.CreateLog(logEntry)
@@ -741,8 +710,8 @@ func (s *EffectService) logEffectDispelled(effect *models.StatusEffect) {
 			SessionID: *effect.SessionID,
 			TargetID:  &effect.CharacterID,
 			EventType: "effect_dispelled",
-			Message:   fmt.Sprintf("dispelled %s", effect.Name),
-			Color:     "#FF69B4",
+			Message:   fmt.Sprintf("%s dispelled", effect.Name),
+			Color:     "#FF6B6B",
 			Timestamp: time.Now(),
 		}
 		s.logRepo.CreateLog(logEntry)
@@ -756,40 +725,8 @@ func (s *EffectService) logEffectResisted(effect *models.StatusEffect) {
 			SessionID: *effect.SessionID,
 			TargetID:  &effect.CharacterID,
 			EventType: "effect_resisted",
-			Message:   fmt.Sprintf("resisted %s", effect.Name),
+			Message:   fmt.Sprintf("%s resisted", effect.Name),
 			Color:     "#FFA500",
-			Timestamp: time.Now(),
-		}
-		s.logRepo.CreateLog(logEntry)
-	}
-}
-
-func (s *EffectService) logPeriodicDamage(effect *models.StatusEffect, damage int) {
-	if effect.SessionID != nil {
-		logEntry := &models.CombatLog{
-			ID:        uuid.New(),
-			SessionID: *effect.SessionID,
-			TargetID:  &effect.CharacterID,
-			EventType: "periodic_damage",
-			Message:   fmt.Sprintf("takes %d damage from %s", damage, effect.Name),
-			Value:     damage,
-			Color:     "#DC143C",
-			Timestamp: time.Now(),
-		}
-		s.logRepo.CreateLog(logEntry)
-	}
-}
-
-func (s *EffectService) logPeriodicHealing(effect *models.StatusEffect, healing int) {
-	if effect.SessionID != nil {
-		logEntry := &models.CombatLog{
-			ID:        uuid.New(),
-			SessionID: *effect.SessionID,
-			TargetID:  &effect.CharacterID,
-			EventType: "periodic_healing",
-			Message:   fmt.Sprintf("heals for %d from %s", healing, effect.Name),
-			Value:     healing,
-			Color:     "#32CD32",
 			Timestamp: time.Now(),
 		}
 		s.logRepo.CreateLog(logEntry)
@@ -798,21 +735,21 @@ func (s *EffectService) logPeriodicHealing(effect *models.StatusEffect, healing 
 
 func (s *EffectService) getEffectColor(effectType string) string {
 	colors := map[string]string{
-		"buff":         "#32CD32",
-		"debuff":       "#FF4500",
-		"poison":       "#9ACD32",
-		"burn":         "#FF6347",
-		"bleed":        "#DC143C",
-		"regeneration": "#90EE90",
-		"immunity":     "#FFD700",
-		"stun":         "#8B008B",
-		"root":         "#8B4513",
-		"silence":      "#4B0082",
+		"buff":         "#4CAF50", // Vert
+		"debuff":       "#F44336", // Rouge
+		"poison":       "#9C27B0", // Violet
+		"burn":         "#FF5722", // Orange rouge
+		"freeze":       "#2196F3", // Bleu
+		"stun":         "#FF9800", // Orange
+		"slow":         "#607D8B", // Gris bleu
+		"haste":        "#FFEB3B", // Jaune
+		"shield":       "#00BCD4", // Cyan
+		"regeneration": "#8BC34A", // Vert clair
 	}
 	
 	if color, exists := colors[effectType]; exists {
 		return color
 	}
 	
-	return "#FFFFFF" // Couleur par défaut
+	return "#FFFFFF" // Blanc par défaut
 }

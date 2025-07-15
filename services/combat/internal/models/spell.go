@@ -3,6 +3,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -128,8 +129,7 @@ type SpellCooldown struct {
 	IsActive    bool      `json:"is_active" db:"is_active"`
 }
 
-// internal/models/effect.go
-// StatusEffect représente un effet de statut actif sur un personnage
+// StatusEffect représente un effet de statut actif sur un personnage (MODÈLE COMPLET)
 type StatusEffect struct {
 	ID              uuid.UUID       `json:"id" db:"id"`
 	CharacterID     uuid.UUID       `json:"character_id" db:"character_id"`
@@ -137,109 +137,199 @@ type StatusEffect struct {
 	
 	// Type et source
 	Type            string          `json:"type" db:"type"` // buff, debuff, poison, burn, etc.
-	Source          string          `json:"source" db:"source"` // spell, item, environment
+	Source          string          `json:"source" db:"source"` // spell, item, environment, ability, consumable
 	SourceID        *uuid.UUID      `json:"source_id" db:"source_id"` // ID du sort/item qui a causé l'effet
 	CasterID        *uuid.UUID      `json:"caster_id" db:"caster_id"` // qui a lancé l'effet
 	
-	// Propriétés
+	// Propriétés de base
 	Name            string          `json:"name" db:"name"`
 	Description     string          `json:"description" db:"description"`
 	Icon            string          `json:"icon" db:"icon"`
 	
 	// Effets sur les stats
-	StatModifiers   StatModifiers   `json:"stat_modifiers" db:"stat_modifiers"`
+	StatModifiers   map[string]interface{} `json:"stat_modifiers" db:"stat_modifiers"`
 	
 	// Effets périodiques
 	PeriodicEffect  *PeriodicEffect `json:"periodic_effect" db:"periodic_effect"`
+	LastTick        *time.Time      `json:"last_tick" db:"last_tick"`
 	
 	// Timing
-	StartedAt       time.Time       `json:"started_at" db:"started_at"`
-	EndsAt          *time.Time      `json:"ends_at" db:"ends_at"` // null pour les effets permanents
-	Duration        *time.Duration  `json:"duration" db:"duration"`
+	AppliedAt       time.Time       `json:"applied_at" db:"started_at"` // Champ manquant ajouté
+	ExpiresAt       time.Time       `json:"expires_at" db:"ends_at"`    // Champ manquant ajouté
+	Duration        time.Duration   `json:"duration" db:"duration"`     // Corrigé de *time.Duration
 	
 	// Stack
-	StackCount      int             `json:"stack_count" db:"stack_count"`
+	Stacks          int             `json:"stacks" db:"stack_count"`    // Champ manquant ajouté
 	MaxStacks       int             `json:"max_stacks" db:"max_stacks"`
 	
 	// Propriétés spéciales
 	IsDispellable   bool            `json:"is_dispellable" db:"is_dispellable"`
-	DispelType      string          `json:"dispel_type" db:"dispel_type"` // magic, curse, poison, disease
-	Priority        int             `json:"priority" db:"priority"` // pour l'ordre d'application
-	
-	// État
+	DispelType      string          `json:"dispel_type" db:"dispel_type"`
+	Priority        int             `json:"priority" db:"priority"`
 	IsActive        bool            `json:"is_active" db:"is_active"`
+	
+	// Métadonnées
+	CreatedAt       time.Time       `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at" db:"updated_at"`
 }
 
-// StatModifiers représente les modifications de stats
-type StatModifiers struct {
-	// Stats de base (modificateurs additifs)
-	HealthBonus      int     `json:"health_bonus"`
-	ManaBonus        int     `json:"mana_bonus"`
-	StrengthBonus    int     `json:"strength_bonus"`
-	AgilityBonus     int     `json:"agility_bonus"`
-	IntelligenceBonus int    `json:"intelligence_bonus"`
-	VitalityBonus    int     `json:"vitality_bonus"`
-	
-	// Stats de combat (modificateurs additifs)
-	DamageBonus      int     `json:"damage_bonus"`
-	DefenseBonus     int     `json:"defense_bonus"`
-	
-	// Multiplicateurs (modificateurs multiplicatifs en pourcentage)
-	HealthMultiplier    float64 `json:"health_multiplier"`
-	ManaMultiplier      float64 `json:"mana_multiplier"`
-	DamageMultiplier    float64 `json:"damage_multiplier"`
-	DefenseMultiplier   float64 `json:"defense_multiplier"`
-	SpeedMultiplier     float64 `json:"speed_multiplier"`
-	CritChanceBonus     float64 `json:"crit_chance_bonus"`
-	CritDamageBonus     float64 `json:"crit_damage_bonus"`
-	
-	// Résistances (en pourcentage)
-	PhysicalResistance  float64 `json:"physical_resistance"`
-	MagicalResistance   float64 `json:"magical_resistance"`
-	FireResistance      float64 `json:"fire_resistance"`
-	IceResistance       float64 `json:"ice_resistance"`
-	LightningResistance float64 `json:"lightning_resistance"`
-	PoisonResistance    float64 `json:"poison_resistance"`
-	
-	// Immunités
-	Immunities          []string `json:"immunities"` // types d'effets auxquels le personnage est immunisé
-}
-
-// PeriodicEffect représente un effet qui se déclenche périodiquement
+// PeriodicEffect représente un effet qui se déclenche périodiquement (MODÈLE COMPLET)
 type PeriodicEffect struct {
-	Type        string        `json:"type"` // damage, heal, mana_drain, mana_restore
-	Value       int           `json:"value"` // valeur par tick
-	Interval    time.Duration `json:"interval"` // intervalle entre les ticks
-	TicksLeft   int           `json:"ticks_left"` // nombre de ticks restants
-	DamageType  string        `json:"damage_type,omitempty"` // physical, magical, true
-	Element     string        `json:"element,omitempty"`
+	Type            string          `json:"type"` // damage, healing, mana
+	Amount          int             `json:"amount"`
+	Interval        time.Duration   `json:"interval"` // intervalle entre les ticks
+	Conditions      []string        `json:"conditions,omitempty"` // conditions pour le déclenchement
+	ScalesWithLevel bool            `json:"scales_with_level"`
+	ScalesWithStats map[string]float64 `json:"scales_with_stats,omitempty"`
 }
 
-// DTOs pour les requêtes
+// Méthodes utilitaires pour StatusEffect
 
-// CreateSpellRequest requête pour créer un sort
-type CreateSpellRequest struct {
-	Name            string          `json:"name" binding:"required,min=3,max=50"`
-	Description     string          `json:"description" binding:"max=500"`
-	School          string          `json:"school" binding:"required"`
-	Type            string          `json:"type" binding:"required"`
-	TargetType      string          `json:"target_type" binding:"required"`
-	RequiredLevel   int             `json:"required_level" binding:"min=1,max=100"`
-	RequiredClass   []string        `json:"required_class"`
-	RequiredStats   StatRequirement `json:"required_stats"`
-	ManaCost        int             `json:"mana_cost" binding:"min=0"`
-	HealthCost      int             `json:"health_cost" binding:"min=0"`
-	CastTime        time.Duration   `json:"cast_time"`
-	Cooldown        time.Duration   `json:"cooldown"`
-	Duration        time.Duration   `json:"duration"`
-	Effects         []SpellEffect   `json:"effects" binding:"required,min=1"`
-	Range           float64         `json:"range" binding:"min=0"`
-	Radius          float64         `json:"radius" binding:"min=0"`
-	Accuracy        float64         `json:"accuracy" binding:"min=0,max=1"`
-	CanCrit         bool            `json:"can_crit"`
-	IsChanneled     bool            `json:"is_channeled"`
-	RequiresTarget  bool            `json:"requires_target"`
+// IsExpired vérifie si l'effet a expiré
+func (se *StatusEffect) IsExpired() bool {
+	return se.ExpiresAt.Before(time.Now())
+}
+
+// IsStackable vérifie si l'effet peut être stacké
+func (se *StatusEffect) IsStackable() bool {
+	return se.MaxStacks > 1
+}
+
+// CanAddStack vérifie si on peut ajouter un stack
+func (se *StatusEffect) CanAddStack() bool {
+	return se.IsStackable() && se.Stacks < se.MaxStacks
+}
+
+// GetRemainingDuration retourne la durée restante
+func (se *StatusEffect) GetRemainingDuration() time.Duration {
+	if se.ExpiresAt.IsZero() {
+		return time.Duration(0)
+	}
+	
+	remaining := time.Until(se.ExpiresAt)
+	if remaining < 0 {
+		return time.Duration(0)
+	}
+	
+	return remaining
+}
+
+// GetEffectiveness retourne l'efficacité de l'effet basée sur les stacks
+func (se *StatusEffect) GetEffectiveness() float64 {
+	if se.MaxStacks <= 1 {
+		return 1.0
+	}
+	
+	return float64(se.Stacks) / float64(se.MaxStacks)
+}
+
+// ApplyModifier applique un modificateur à une valeur de base
+func (se *StatusEffect) ApplyModifier(baseStat string, baseValue interface{}) interface{} {
+	if se.StatModifiers == nil {
+		return baseValue
+	}
+	
+	// Chercher les modificateurs pour cette stat
+	for modifierKey, modifierValue := range se.StatModifiers {
+		if modifierKey == baseStat+"_bonus" {
+			// Bonus additif
+			if baseInt, ok := baseValue.(int); ok {
+				if bonusInt, ok := modifierValue.(int); ok {
+					return baseInt + (bonusInt * se.Stacks)
+				}
+				if bonusFloat, ok := modifierValue.(float64); ok {
+					return baseInt + int(bonusFloat*float64(se.Stacks))
+				}
+			}
+		} else if modifierKey == baseStat+"_multiplier" {
+			// Multiplicateur
+			if baseInt, ok := baseValue.(int); ok {
+				if multiplier, ok := modifierValue.(float64); ok {
+					return int(float64(baseInt) * multiplier)
+				}
+			}
+			if baseFloat, ok := baseValue.(float64); ok {
+				if multiplier, ok := modifierValue.(float64); ok {
+					return baseFloat * multiplier
+				}
+			}
+		}
+	}
+	
+	return baseValue
+}
+
+// ShouldTick vérifie si l'effet doit déclencher un tick périodique
+func (se *StatusEffect) ShouldTick() bool {
+	if se.PeriodicEffect == nil {
+		return false
+	}
+	
+	if se.LastTick == nil {
+		return true
+	}
+	
+	return time.Since(*se.LastTick) >= se.PeriodicEffect.Interval
+}
+
+// Validate vérifie la validité de l'effet
+func (se *StatusEffect) Validate() error {
+	if se.Name == "" {
+		return fmt.Errorf("effect name is required")
+	}
+	
+	if se.Type == "" {
+		return fmt.Errorf("effect type is required")
+	}
+	
+	if se.CharacterID == uuid.Nil {
+		return fmt.Errorf("character ID is required")
+	}
+	
+	if se.MaxStacks < 1 {
+		return fmt.Errorf("max stacks must be at least 1")
+	}
+	
+	if se.Stacks < 1 || se.Stacks > se.MaxStacks {
+		return fmt.Errorf("stacks must be between 1 and %d", se.MaxStacks)
+	}
+	
+	if se.Duration < 0 {
+		return fmt.Errorf("duration cannot be negative")
+	}
+	
+	return nil
+}
+
+// GetDisplayInfo retourne les informations d'affichage de l'effet
+func (se *StatusEffect) GetDisplayInfo() map[string]interface{} {
+	info := map[string]interface{}{
+		"name":        se.Name,
+		"description": se.Description,
+		"type":        se.Type,
+		"stacks":      se.Stacks,
+		"max_stacks":  se.MaxStacks,
+		"remaining":   se.GetRemainingDuration().String(),
+		"icon":        se.Icon,
+	}
+	
+	if se.IsStackable() && se.Stacks > 1 {
+		info["display_name"] = fmt.Sprintf("%s (x%d)", se.Name, se.Stacks)
+	} else {
+		info["display_name"] = se.Name
+	}
+	
+	return info
+}
+
+// Structures pour les requêtes/réponses
+
+// SpellBookEntry représente un sort dans un livre de sorts
+type SpellBookEntry struct {
+	Spell           Spell           `json:"spell"`
+	CharacterSpell  CharacterSpell  `json:"character_spell"`
+	IsOnCooldown    bool            `json:"is_on_cooldown"`
+	CooldownRemaining time.Duration `json:"cooldown_remaining"`
 }
 
 // LearnSpellRequest requête pour apprendre un sort
@@ -277,3 +367,41 @@ type EffectSummary struct {
 	TimeLeft    *time.Duration `json:"time_left"`
 	IsPositive  bool          `json:"is_positive"`
 }
+
+// Constants pour les types d'effets
+const (
+	EffectTypeBuff         = "buff"
+	EffectTypeDebuff       = "debuff"
+	EffectTypePoison       = "poison"
+	EffectTypeBurn         = "burn"
+	EffectTypeFreeze       = "freeze"
+	EffectTypeStun         = "stun"
+	EffectTypeSlow         = "slow"
+	EffectTypeHaste        = "haste"
+	EffectTypeShield       = "shield"
+	EffectTypeRegeneration = "regeneration"
+	EffectTypeBleed        = "bleed"
+	EffectTypeSilence      = "silence"
+	EffectTypeImmunity     = "immunity"
+)
+
+// Constants pour les sources d'effets
+const (
+	EffectSourceSpell       = "spell"
+	EffectSourceItem        = "item"
+	EffectSourceEnvironment = "environment"
+	EffectSourceAbility     = "ability"
+	EffectSourceConsumable  = "consumable"
+	EffectSourcePassive     = "passive"
+)
+
+// Constants pour les types de dispel
+const (
+	DispelTypeMagic    = "magic"
+	DispelTypePoison   = "poison"
+	DispelTypeDisease  = "disease"
+	DispelTypeCurse    = "curse"
+	DispelTypePhysical = "physical"
+	DispelTypeNone     = "none"
+	DispelTypeAll      = "all"
+)
