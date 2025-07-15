@@ -276,3 +276,18 @@ func GetDefaultCombatSettings() CombatSettings {
 		CustomRules:    make(map[string]interface{}),
 	}
 }
+
+// CombatLog représente un log d'événement de combat
+type CombatLog struct {
+	ID         uuid.UUID  `json:"id" db:"id"`
+	CombatID   uuid.UUID  `json:"combat_id" db:"combat_id"`
+	LogType    string     `json:"log_type" db:"log_type"` // "action", "effect", "damage", "healing", "death", etc.
+	ActorID    *uuid.UUID `json:"actor_id" db:"actor_id"`
+	ActorName  string     `json:"actor_name" db:"actor_name"`
+	TargetID   *uuid.UUID `json:"target_id" db:"target_id"`
+	TargetName string     `json:"target_name" db:"target_name"`
+	Message    string     `json:"message" db:"message"`
+	TurnNumber *int       `json:"turn_number" db:"turn_number"`
+	Timestamp  time.Time  `json:"timestamp" db:"timestamp"`
+	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+}

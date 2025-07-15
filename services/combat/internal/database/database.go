@@ -3,9 +3,8 @@ package database
 import (
 	"fmt"
 	"time"
-
+	"context"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 
 	"combat/internal/config"

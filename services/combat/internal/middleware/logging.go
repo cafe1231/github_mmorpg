@@ -3,8 +3,6 @@ package middleware
 import (
 	"bytes"
 	"io"
-	"net/http"
-	"strconv"
 	"strings"
 	"time"
 

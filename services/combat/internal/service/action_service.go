@@ -107,7 +107,8 @@ func (s *ActionService) ExecuteAction(combat *models.CombatInstance, actor *mode
 		result.Success = false
 		result.Error = err.Error()
 		action.IsValidated = false
-		action.ValidationNotes = &err.Error()
+		errMsg := err.Error()
+		action.ValidationNotes = &errMsg
 	}
 
 	// Calculer le temps de traitement
@@ -797,13 +798,15 @@ func (s *ActionService) IsActionOnCooldown(actorID uuid.UUID, actionType models.
 func (s *ActionService) SetActionCooldown(actorID uuid.UUID, actionType models.ActionType, skillID string, duration time.Duration) error {
 	key := fmt.Sprintf("%s_%s_%s", actorID.String(), actionType, skillID)
 	
+	cooldownKey := fmt.Sprintf("%s_%s_%s", actorID.String(), actionType, skillID)
 	cooldown := &models.ActionCooldown{
-		ActorID:        actorID,
-		ActionType:     actionType,
-		SkillID:        skillID,
-		RemainingTurns: int(duration.Seconds()), // Conversion approximative
-		ExpiresAt:      time.Now().Add(duration),
-	}
+	ID:         cooldownKey,
+	ActorID:    actorID,
+	ActionType: actionType,
+	SkillID:    skillID,
+	ExpiresAt:  time.Now().Add(duration),
+	Duration:   duration,
+}
 
 	s.cooldowns[key] = cooldown
 	return nil

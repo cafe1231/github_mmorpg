@@ -71,27 +71,12 @@ type PvPChallengeResponse struct {
 
 // CombatListResponse représente la réponse de liste de combats
 type CombatListResponse struct {
-	Combats    []*CombatSummary `json:"combats"`
-	Total      int              `json:"total"`
-	Page       int              `json:"page"`
-	PageSize   int              `json:"page_size"`
-	HasMore    bool             `json:"has_more"`
-	Filters    *SearchFilters   `json:"filters,omitempty"`
-}
-
-// CombatSummary représente un résumé de combat pour les listes
-type CombatSummary struct {
-	ID              uuid.UUID       `json:"id"`
-	CombatType      CombatType      `json:"combat_type"`
-	Status          CombatStatus    `json:"status"`
-	ParticipantCount int            `json:"participant_count"`
-	MaxParticipants int             `json:"max_participants"`
-	Duration        time.Duration   `json:"duration"`
-	CreatedAt       time.Time       `json:"created_at"`
-	StartedAt       *time.Time      `json:"started_at,omitempty"`
-	EndedAt         *time.Time      `json:"ended_at,omitempty"`
-	WinnerTeam      *int            `json:"winner_team,omitempty"`
-	ZoneID          *string         `json:"zone_id,omitempty"`
+	Combats    []*CombatListItem `json:"combats"`  // <- Changer le type
+	Total      int               `json:"total"`
+	Page       int               `json:"page"`
+	PageSize   int               `json:"page_size"`
+	HasMore    bool              `json:"has_more"`
+	Filters    *SearchFilters    `json:"filters,omitempty"`
 }
 
 // SearchFilters représente les filtres de recherche appliqués
@@ -127,6 +112,21 @@ type CombatHistoryEntry struct {
 	Opponents       []string      `json:"opponents,omitempty"`
 	Rewards         *CombatReward `json:"rewards,omitempty"`
 	CreatedAt       time.Time     `json:"created_at"`
+}
+
+// Renommer CombatSummary en CombatListItem
+type CombatListItem struct {
+	ID              uuid.UUID       `json:"id"`
+	CombatType      CombatType      `json:"combat_type"`
+	Status          CombatStatus    `json:"status"`
+	ParticipantCount int            `json:"participant_count"`
+	MaxParticipants int             `json:"max_participants"`
+	Duration        time.Duration   `json:"duration"`
+	CreatedAt       time.Time       `json:"created_at"`
+	StartedAt       *time.Time      `json:"started_at,omitempty"`
+	EndedAt         *time.Time      `json:"ended_at,omitempty"`
+	WinnerTeam      *int            `json:"winner_team,omitempty"`
+	ZoneID          *string         `json:"zone_id,omitempty"`
 }
 
 // HistorySummary représente un résumé de l'historique
@@ -288,25 +288,32 @@ type ReplayEvent struct {
 	Description string      `json:"description"`
 }
 
-// ReplayMetadata représente les métadonnées du rejeu
+// ReplayMetadata représente les métadonnées de rejeu
 type ReplayMetadata struct {
-	CombatID      uuid.UUID `json:"combat_id"`
-	TotalTurns    int       `json:"total_turns"`
-	TotalEvents   int       `json:"total_events"`
-	Participants  []string  `json:"participants"`
-	Winner        string    `json:"winner,omitempty"`
-	Duration      time.Duration `json:"duration"`
-	GeneratedAt   time.Time `json:"generated_at"`
+	CombatID    uuid.UUID `json:"combat_id"`
+	Version     string    `json:"version"`
+	Duration    time.Duration `json:"duration"`
+	Players     []string  `json:"players"`
+	Winner      string    `json:"winner,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
-// ValidationResponse représente la réponse de validation
+// ValidationResponse représente la réponse de validation d'action
+// ValidationResponse représente la réponse de validation d'action
 type ValidationResponse struct {
-	Valid        bool     `json:"valid"`
-	Errors       []string `json:"errors,omitempty"`
-	Warnings     []string `json:"warnings,omitempty"`
-	Suggestions  []string `json:"suggestions,omitempty"`
-	AntiCheat    *AntiCheatResult `json:"anti_cheat,omitempty"`
+	Valid        bool              `json:"valid"`
+	Action       *CombatAction     `json:"action,omitempty"`
+	Warnings     []string          `json:"warnings,omitempty"`
+	Errors       []string          `json:"errors,omitempty"`
+	Suggestions  []string          `json:"suggestions,omitempty"`
+	CanExecute   bool              `json:"can_execute"`
+	Cooldown     *time.Duration    `json:"cooldown,omitempty"`
+	RequiredMana int               `json:"required_mana,omitempty"`
+	Message      string            `json:"message,omitempty"`
+	AntiCheat    *AntiCheatResult  `json:"anti_cheat,omitempty"` // <- AJOUTER CE CHAMP
 }
+
+
 
 // AntiCheatResult représente le résultat de la validation anti-triche
 type AntiCheatResult struct {

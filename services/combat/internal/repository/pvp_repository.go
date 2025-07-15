@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"combat/internal/database"
 	"combat/internal/models"
@@ -364,10 +363,10 @@ func (r *PvPRepository) GetPvPStatistics(playerID uuid.UUID) (*models.PvPStatist
 
 	var stats models.PvPStatistics
 	err := r.db.QueryRow(query, playerID).Scan(
-		&stats.PlayerID, &stats.UserID, &stats.BattlesWon, &stats.BattlesLost, &stats.Draws, &stats.CurrentRating,
-		&stats.TotalDamageDealt, &stats.TotalDamageTaken, &stats.TotalHealingDone,
-		&stats.UpdatedAt,
-	)
+	&stats.PlayerID, &stats.UserID, &stats.BattlesWon, &stats.BattlesLost, &stats.Draws, &stats.CurrentRating,
+	&stats.TotalDamageDealt, &stats.TotalDamageTaken, &stats.TotalHealingDone,
+	&stats.UpdatedAt,
+)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -409,7 +408,7 @@ func (r *PvPRepository) UpdatePvPStatistics(stats *models.PvPStatistics) error {
 		WHERE character_id = $1`
 
 	result, err := r.db.Exec(query, stats.PlayerID, stats.BattlesWon, stats.BattlesLost, 
-		stats.Draws, stats.CurrentRating, stats.UpdatedAt)
+	stats.Draws, stats.CurrentRating, stats.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to update pvp statistics: %w", err)
 	}
@@ -442,9 +441,9 @@ func (r *PvPRepository) CreatePvPStatistics(stats *models.PvPStatistics) error {
 			updated_at = EXCLUDED.updated_at`
 
 	_, err := r.db.Exec(query, uuid.New(),
-		stats.PlayerID, stats.UserID, 
-		stats.BattlesWon, stats.BattlesLost, stats.Draws, stats.CurrentRating,
-		time.Now(), time.Now())
+	stats.PlayerID, stats.UserID, 
+	stats.BattlesWon, stats.BattlesLost, stats.Draws, stats.CurrentRating,
+	time.Now(), time.Now())
 	if err != nil {
 		return fmt.Errorf("failed to create pvp statistics: %w", err)
 	}

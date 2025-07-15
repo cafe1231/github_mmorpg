@@ -2,7 +2,8 @@ package models
 
 import (
 	"time"
-
+	"fmt"      // <- AJOUTER CETTE LIGNE
+	"math"     // <- AJOUTER CETTE LIGNE 
 	"github.com/google/uuid"
 )
 
@@ -70,6 +71,13 @@ type PvPChallenge struct {
 	Combat        *CombatInstance `json:"combat,omitempty" db:"-"`
 }
 
+// RespondToChallengeRequest représente une réponse à un défi
+type RespondToChallengeRequest struct {
+	PlayerID uuid.UUID `json:"player_id" binding:"required"`
+	Accept   bool      `json:"accept" binding:"required"`
+	Message  string    `json:"message,omitempty"`
+}
+
 // PvPStakes représente les enjeux d'un défi PvP
 type PvPStakes struct {
 	Gold           int                    `json:"gold,omitempty"`
@@ -85,6 +93,93 @@ type StakeItem struct {
 	ItemID   string `json:"item_id"`
 	Quantity int    `json:"quantity"`
 	Quality  string `json:"quality,omitempty"`
+}
+
+// ChallengeResponse représente la réponse à un défi
+type ChallengeResponse struct {
+	Success     bool         `json:"success"`
+	Challenge   *PvPChallenge `json:"challenge,omitempty"`
+	Match       *PvPMatch    `json:"match,omitempty"` // Si accepté et match créé
+	Message     string       `json:"message,omitempty"`
+	Error       string       `json:"error,omitempty"`
+}
+
+// GetRankingsRequest représente une demande de classements
+type GetRankingsRequest struct {
+	Season     string        `json:"season,omitempty"`
+	Type       ChallengeType `json:"type,omitempty"`
+	Limit      int           `json:"limit,omitempty"`
+	Offset     int           `json:"offset,omitempty"`
+	PlayerID   *uuid.UUID    `json:"player_id,omitempty"` // Pour obtenir le rang du joueur
+}
+
+// RankingsResponse représente la réponse de classements
+type RankingsResponse struct {
+	Rankings    []*PvPRanking `json:"rankings"`
+	PlayerRank  *PvPRanking   `json:"player_rank,omitempty"`
+	Total       int           `json:"total"`
+	Page        int           `json:"page"`
+	PageSize    int           `json:"page_size"`
+	Season      string        `json:"season"`
+}
+
+// MatchResult représente le résultat d'un match
+type MatchResult struct {
+	MatchID      uuid.UUID `json:"match_id" binding:"required"`
+	WinnerID     uuid.UUID `json:"winner_id" binding:"required"`
+	LoserID      uuid.UUID `json:"loser_id" binding:"required"`
+	ResultType   ResultType `json:"result_type" binding:"required"`
+	Duration     time.Duration `json:"duration"`
+	WinnerRating int       `json:"winner_rating"`
+	LoserRating  int       `json:"loser_rating"`
+	RatingChange int       `json:"rating_change"`
+}
+
+// SeasonInfo représente les informations de saison
+type SeasonInfo struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	StartDate   time.Time `json:"start_date"`
+	EndDate     time.Time `json:"end_date"`
+	IsActive    bool      `json:"is_active"`
+	IsCurrent   bool      `json:"is_current"`
+	Rewards     []SeasonReward `json:"rewards,omitempty"`
+}
+
+// SeasonReward représente une récompense de saison
+type SeasonReward struct {
+	RankRequired string     `json:"rank_required"`
+	Title        string     `json:"title,omitempty"`
+	Items        []RewardItem `json:"items,omitempty"`
+	Gold         int        `json:"gold,omitempty"`
+	Experience   int        `json:"experience,omitempty"`
+}
+
+// JoinQueueRequest représente une demande d'entrée en file d'attente
+type JoinQueueRequest struct {
+	PlayerID    uuid.UUID         `json:"player_id" binding:"required"`
+	QueueType   ChallengeType     `json:"queue_type" binding:"required"`
+	Preferences *QueuePreferences `json:"preferences,omitempty"`
+}
+
+// QueueResponse représente la réponse d'entrée en file d'attente
+type QueueResponse struct {
+	Success       bool              `json:"success"`
+	QueueEntry    *PvPQueueEntry    `json:"queue_entry,omitempty"`
+	Position      int               `json:"position"`
+	EstimatedWait time.Duration     `json:"estimated_wait"`
+	Message       string            `json:"message,omitempty"`
+	Error         string            `json:"error,omitempty"`
+}
+
+// QueueStatus représente le statut de file d'attente
+type QueueStatus struct {
+	InQueue       bool              `json:"in_queue"`
+	QueueEntry    *PvPQueueEntry    `json:"queue_entry,omitempty"`
+	Position      int               `json:"position"`
+	EstimatedWait time.Duration     `json:"estimated_wait"`
+	QueueSize     int               `json:"queue_size"`
 }
 
 // PlayerSummary représente un résumé d'informations joueur
@@ -156,13 +251,27 @@ type RespondChallengeRequest struct {
 
 // PvPQueueEntry représente une entrée dans la file d'attente PvP
 type PvPQueueEntry struct {
-	ID           uuid.UUID     `json:"id"`
-	PlayerID     uuid.UUID     `json:"player_id"`
-	QueueType    ChallengeType `json:"queue_type"`
-	Rating       int           `json:"rating"`
-	QueuedAt     time.Time     `json:"queued_at"`
-	EstimatedWait time.Duration `json:"estimated_wait"`
-	Preferences  *QueuePreferences `json:"preferences,omitempty"`
+	ID            uuid.UUID         `json:"id" db:"id"`
+	PlayerID      uuid.UUID         `json:"player_id" db:"player_id"`
+	QueueType     ChallengeType     `json:"queue_type" db:"queue_type"`
+	ChallengeType ChallengeType     `json:"challenge_type" db:"challenge_type"` // Alias pour QueueType
+	Rating        int               `json:"rating" db:"rating"`
+	MinRating     int               `json:"min_rating" db:"min_rating"`
+	MaxRating     int               `json:"max_rating" db:"max_rating"`
+	QueuedAt      time.Time         `json:"queued_at" db:"queued_at"`
+	JoinedAt      time.Time         `json:"joined_at" db:"joined_at"`  // Alias pour QueuedAt
+	UpdatedAt     time.Time         `json:"updated_at" db:"updated_at"`
+	EstimatedWait time.Duration     `json:"estimated_wait" db:"-"`      // Calculé
+	Preferences   *QueuePreferences `json:"preferences,omitempty" db:"preferences"`
+}
+
+// GetChallengesRequest représente une demande de récupération de défis
+type GetChallengesRequest struct {
+	PlayerID uuid.UUID `json:"player_id" binding:"required"`
+	Status   string    `json:"status,omitempty"`   // "pending", "accepted", "completed", etc.
+	Type     string    `json:"type,omitempty"`     // "sent", "received", "all"
+	Limit    int       `json:"limit,omitempty"`
+	Offset   int       `json:"offset,omitempty"`
 }
 
 // QueuePreferences représente les préférences de file d'attente
@@ -181,21 +290,24 @@ type RatingRange struct {
 
 // PvPStatistics représente les statistiques PvP d'un joueur
 type PvPStatistics struct {
-	PlayerID           uuid.UUID `json:"player_id"`
-	CurrentRating      int       `json:"current_rating"`
-	HighestRating      int       `json:"highest_rating"`
-	TotalMatches       int       `json:"total_matches"`
-	Wins               int       `json:"wins"`
-	Losses             int       `json:"losses"`
-	Draws              int       `json:"draws"`
-	WinRate            float64   `json:"win_rate"`
-	CurrentStreak      int       `json:"current_streak"`
-	BestStreak         int       `json:"best_streak"`
-	AverageDamage      float64   `json:"average_damage"`
-	AverageMatchDuration time.Duration `json:"average_match_duration"`
-	FavoriteOpponent   *uuid.UUID    `json:"favorite_opponent,omitempty"`
-	LastMatchAt        *time.Time    `json:"last_match_at,omitempty"`
-	UpdatedAt          time.Time     `json:"updated_at"`
+	PlayerID         uuid.UUID `json:"player_id" db:"player_id"`
+	UserID           uuid.UUID `json:"user_id" db:"user_id"`
+	CurrentRating    int       `json:"current_rating" db:"current_rating"`
+	HighestRating    int       `json:"highest_rating" db:"highest_rating"`
+	BattlesWon       int       `json:"battles_won" db:"battles_won"`
+	BattlesLost      int       `json:"battles_lost" db:"battles_lost"`
+	Draws            int       `json:"draws" db:"draws"`
+	TotalMatches     int       `json:"total_matches" db:"-"` // Calculé
+	WinRate          float64   `json:"win_rate" db:"-"`      // Calculé
+	CurrentStreak    int       `json:"current_streak" db:"current_streak"`
+	BestStreak       int       `json:"best_streak" db:"best_streak"`
+	TotalDamageDealt int64     `json:"total_damage_dealt" db:"total_damage_dealt"`
+	TotalDamageTaken int64     `json:"total_damage_taken" db:"total_damage_taken"`
+	TotalHealingDone int64     `json:"total_healing_done" db:"total_healing_done"`
+	RankName         string    `json:"rank_name" db:"-"`     // Calculé
+	LastMatchAt      *time.Time `json:"last_match_at" db:"last_match_at"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // IsExpired vérifie si le défi a expiré
@@ -248,25 +360,23 @@ func CalculateRatingChange(winnerRating, loserRating int, isWinner bool) int {
 	return int(math.Round(change))
 }
 
-// GetRankFromRating retourne le rang basé sur le classement
+// GetRankFromRating retourne le nom du rang basé sur le rating
 func GetRankFromRating(rating int) string {
 	switch {
 	case rating >= 2400:
-		return "Grandmaster"
-	case rating >= 2200:
+		return "Grand Master"
+	case rating >= 2100:
 		return "Master"
-	case rating >= 2000:
-		return "Diamond"
 	case rating >= 1800:
+		return "Diamond"
+	case rating >= 1500:
 		return "Platinum"
-	case rating >= 1600:
-		return "Gold"
-	case rating >= 1400:
-		return "Silver"
 	case rating >= 1200:
-		return "Bronze"
+		return "Gold"
+	case rating >= 900:
+		return "Silver"
 	default:
-		return "Novice"
+		return "Bronze"
 	}
 }
 

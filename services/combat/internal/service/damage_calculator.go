@@ -3,7 +3,7 @@ package service
 import (
 	"math"
 	"math/rand"
-
+	"fmt"
 	"combat/internal/config"
 	"combat/internal/models"
 )

@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-
+	"fmt"
 	"github.com/google/uuid"
 )
 
@@ -417,12 +417,15 @@ func (r *AdminActionRequest) Validate() error {
 
 // GetDefaultCreateCombatRequest retourne une demande par défaut
 func GetDefaultCreateCombatRequest() *CreateCombatRequest {
+	// Créer une variable temporaire pour pouvoir prendre son adresse
+	defaultSettings := GetDefaultCombatSettings()
+	
 	return &CreateCombatRequest{
 		CombatType:      CombatTypePvE,
 		MaxParticipants: 4,
 		TurnTimeLimit:   30,
 		MaxDuration:     300,
-		Settings:        &GetDefaultCombatSettings(),
+		Settings:        &defaultSettings,  // Maintenant on peut prendre l'adresse
 		Participants:    []ParticipantRequest{},
 	}
 }

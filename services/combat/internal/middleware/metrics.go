@@ -294,20 +294,7 @@ func normalizeEndpoint(path string) string {
 
 	// Remplacer les IDs par des placeholders
 	normalized := path
-	
-	// Patterns courants à normaliser
-	patterns := map[string]string{
-		"/api/v1/combat/[^/]+$":                    "/api/v1/combat/:id",
-		"/api/v1/combat/[^/]+/":                   "/api/v1/combat/:id/",
-		"/api/v1/combat/[^/]+/action":             "/api/v1/combat/:id/action",
-		"/api/v1/combat/[^/]+/participants":       "/api/v1/combat/:id/participants",
-		"/api/v1/combat/[^/]+/status":             "/api/v1/combat/:id/status",
-		"/api/v1/combat/[^/]+/start":              "/api/v1/combat/:id/start",
-		"/api/v1/combat/[^/]+/end":                "/api/v1/combat/:id/end",
-		"/api/v1/pvp/challenges/[^/]+$":           "/api/v1/pvp/challenges/:id",
-		"/api/v1/pvp/challenges/[^/]+/respond":    "/api/v1/pvp/challenges/:id/respond",
-		"/api/v1/pvp/statistics/[^/]+$":           "/api/v1/pvp/statistics/:characterId",
-	}
+
 
 	// Appliquer les patterns de normalisation
 	// Note: Dans un vrai projet, vous utiliseriez regexp pour cela

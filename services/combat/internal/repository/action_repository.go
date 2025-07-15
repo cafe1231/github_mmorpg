@@ -37,6 +37,9 @@ type ActionRepositoryInterface interface {
 	GetRecentActionsByActor(actorID uuid.UUID, timeWindow time.Duration) ([]*models.CombatAction, error)
 	MarkAsInvalid(actionID uuid.UUID, reason string) error
 	GetInvalidActions(combatID uuid.UUID) ([]*models.CombatAction, error)
+	
+	GetActionStatistics(actorID uuid.UUID, timeWindow time.Duration) (*models.ActionStatistics, error)
+	
 }
 
 // ActionRepository implémente l'interface ActionRepositoryInterface
@@ -218,6 +221,8 @@ func (r *ActionRepository) GetRecentActions(combatID uuid.UUID, limit int) ([]*m
 	return actions, nil
 }
 
+
+
 // GetByActor récupère toutes les actions d'un acteur
 func (r *ActionRepository) GetByActor(actorID uuid.UUID) ([]*models.CombatAction, error) {
 	var actions []*models.CombatAction
@@ -393,8 +398,7 @@ func (r *ActionRepository) GetInvalidActions(combatID uuid.UUID) ([]*models.Comb
 	return actions, nil
 }
 
-// GetActionStatistics récupère des statistiques d'actions pour un acteur
-func (r *ActionRepository) GetActionStatistics(actorID uuid.UUID, timeWindow time.Duration) (*ActionStatistics, error) {
+func (r *ActionRepository) GetActionStatistics(actorID uuid.UUID, timeWindow time.Duration) (*models.ActionStatistics, error) {
 	since := time.Now().Add(-timeWindow)
 	
 	query := `
@@ -410,7 +414,7 @@ func (r *ActionRepository) GetActionStatistics(actorID uuid.UUID, timeWindow tim
 		FROM combat_actions 
 		WHERE actor_id = $1 AND server_timestamp >= $2`
 
-	var stats ActionStatistics
+	var stats models.ActionStatistics // <- CHANGEMENT ICI
 	err := r.db.Get(&stats, query, actorID, since)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get action statistics: %w", err)
@@ -427,21 +431,7 @@ func (r *ActionRepository) GetActionStatistics(actorID uuid.UUID, timeWindow tim
 	return &stats, nil
 }
 
-// ActionStatistics représente les statistiques d'actions
-type ActionStatistics struct {
-	TotalActions        int     `json:"total_actions" db:"total_actions"`
-	CriticalHits        int     `json:"critical_hits" db:"critical_hits"`
-	Misses              int     `json:"misses" db:"misses"`
-	Blocks              int     `json:"blocks" db:"blocks"`
-	AvgDamage          float64 `json:"avg_damage" db:"avg_damage"`
-	MaxDamage          int     `json:"max_damage" db:"max_damage"`
-	AvgHealing         float64 `json:"avg_healing" db:"avg_healing"`
-	AvgProcessingTime  float64 `json:"avg_processing_time" db:"avg_processing_time"`
-	CriticalRate       float64 `json:"critical_rate"`
-	MissRate           float64 `json:"miss_rate"`
-	BlockRate          float64 `json:"block_rate"`
-	AccuracyRate       float64 `json:"accuracy_rate"`
-}
+
 
 // GetActionsByType récupère les actions par type pour un combat
 func (r *ActionRepository) GetActionsByType(combatID uuid.UUID, actionType models.ActionType) ([]*models.CombatAction, error) {

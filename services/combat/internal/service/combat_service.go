@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 	"time"
-
+	"math"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
@@ -606,18 +606,19 @@ func (s *CombatService) SearchCombats(req *models.SearchCombatsRequest) (*models
 	}
 
 	// Convertir en résumés
-	summaries := make([]*models.CombatSummary, len(combats))
-	for i, combat := range combats {
-		summaries[i] = s.combatToSummary(combat)
-	}
+summaries := make([]*models.CombatListItem, len(combats))
+for i, combat := range combats {
+	summaries[i] = s.combatToSummary(combat)
+}
 
-	return &models.CombatListResponse{
-		Combats:  summaries,
-		Total:    total,
-		Page:     req.Offset/req.Limit + 1,
-		PageSize: req.Limit,
-		HasMore:  req.Offset+req.Limit < total,
-	}, nil
+return &models.CombatListResponse{
+	Combats:  summaries,
+	Total:    total,
+	Page:     req.Offset/req.Limit + 1,
+	PageSize: req.Limit,
+	HasMore:  req.Offset+req.Limit < total,
+}, nil
+
 }
 
 // GetCombatHistory récupère l'historique de combat
@@ -886,18 +887,14 @@ func (s *CombatService) checkWinConditions(participants []*models.CombatParticip
 
 	// Si une seule équipe a des survivants, elle gagne
 	aliveTeams := 0
-	var winningTeam int
 	var winner uuid.UUID
 	
-	for team, members := range teamAlive {
-		if len(members) > 0 {
-			aliveTeams++
-			winningTeam = team
-			if len(members) == 1 {
-				winner = members[0]
-			}
-		}
+	for team, count := range teamAlive {
+	if count > 0 {
+		result.WinningTeam = &team
+		break
 	}
+}
 
 	if aliveTeams <= 1 {
 		return &winner
@@ -906,8 +903,8 @@ func (s *CombatService) checkWinConditions(participants []*models.CombatParticip
 	return nil
 }
 
-func (s *CombatService) combatToSummary(combat *models.CombatInstance) *models.CombatSummary {
-	summary := &models.CombatSummary{
+func (s *CombatService) combatToSummary(combat *models.CombatInstance) *models.CombatListItem {
+	summary := &models.CombatListItem{  // <- Changer le type
 		ID:              combat.ID,
 		CombatType:      combat.CombatType,
 		Status:          combat.Status,
@@ -919,7 +916,7 @@ func (s *CombatService) combatToSummary(combat *models.CombatInstance) *models.C
 		ZoneID:          combat.ZoneID,
 	}
 
-	// Compter les participants (devrait être chargé séparément pour l'efficacité)
+	// Compter les participants
 	if combat.Participants != nil {
 		summary.ParticipantCount = len(combat.Participants)
 	}

@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +18,22 @@ const (
 	ActionTypeFlee    ActionType = "flee"
 	ActionTypeWait    ActionType = "wait"
 )
+
+// ActionStatistics représente les statistiques d'actions
+type ActionStatistics struct {
+	TotalActions       int     `json:"total_actions" db:"total_actions"`
+	CriticalHits       int     `json:"critical_hits" db:"critical_hits"`
+	Misses             int     `json:"misses" db:"misses"`
+	Blocks             int     `json:"blocks" db:"blocks"`
+	AvgDamage          float64 `json:"avg_damage" db:"avg_damage"`
+	MaxDamage          int     `json:"max_damage" db:"max_damage"`
+	AvgHealing         float64 `json:"avg_healing" db:"avg_healing"`
+	AvgProcessingTime  float64 `json:"avg_processing_time" db:"avg_processing_time"`
+	CriticalRate       float64 `json:"critical_rate" db:"-"`
+	MissRate           float64 `json:"miss_rate" db:"-"`
+	BlockRate          float64 `json:"block_rate" db:"-"`
+	AccuracyRate       float64 `json:"accuracy_rate" db:"-"`
+}
 
 // CombatAction représente une action dans un combat
 type CombatAction struct {
@@ -220,12 +235,12 @@ type HealingInfo struct {
 
 // ActionCooldown représente un cooldown d'action
 type ActionCooldown struct {
-	ActorID         uuid.UUID `json:"actor_id"`
-	ActionType      ActionType `json:"action_type,omitempty"`
-	SkillID         string    `json:"skill_id,omitempty"`
-	ItemID          string    `json:"item_id,omitempty"`
-	RemainingTurns  int       `json:"remaining_turns"`
-	ExpiresAt       time.Time `json:"expires_at"`
+	ID         string        `json:"id"`
+	ActorID    uuid.UUID     `json:"actor_id"`
+	ActionType ActionType    `json:"action_type"`
+	SkillID    string        `json:"skill_id,omitempty"`
+	ExpiresAt  time.Time     `json:"expires_at"`
+	Duration   time.Duration `json:"duration"`
 }
 
 // GetActionTemplates retourne les modèles d'actions disponibles

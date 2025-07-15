@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
+	"github.com/lib/pq"
 	"combat/internal/database"
 	"combat/internal/models"
 )
