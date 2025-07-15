@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -72,30 +73,16 @@ func (r *PvPRepository) CreateChallenge(challenge *models.PvPChallenge) error {
 			status, winner_id, loser_id, result_type,
 			created_at, responded_at, expires_at, completed_at
 		) VALUES (
-			:id, :challenger_id, :challenged_id, :combat_id, :challenge_type, :message, :stakes,
-			:status, :winner_id, :loser_id, :result_type,
-			:created_at, :responded_at, :expires_at, :completed_at
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
 		)`
 
-	data := map[string]interface{}{
-		"id":             challenge.ID,
-		"challenger_id":  challenge.ChallengerID,
-		"challenged_id":  challenge.ChallengedID,
-		"combat_id":      challenge.CombatID,
-		"challenge_type": challenge.ChallengeType,
-		"message":        challenge.Message,
-		"stakes":         stakesJSON,
-		"status":         challenge.Status,
-		"winner_id":      challenge.WinnerID,
-		"loser_id":       challenge.LoserID,
-		"result_type":    challenge.ResultType,
-		"created_at":     challenge.CreatedAt,
-		"responded_at":   challenge.RespondedAt,
-		"expires_at":     challenge.ExpiresAt,
-		"completed_at":   challenge.CompletedAt,
-	}
+	_, err = r.db.Exec(query,
+		challenge.ID, challenge.ChallengerID, challenge.ChallengedID, challenge.CombatID,
+		challenge.ChallengeType, challenge.Message, stakesJSON, challenge.Status,
+		challenge.WinnerID, challenge.LoserID, challenge.ResultType,
+		challenge.CreatedAt, challenge.RespondedAt, challenge.ExpiresAt, challenge.CompletedAt,
+	)
 
-	_, err = r.db.NamedExec(query, data)
 	if err != nil {
 		return fmt.Errorf("failed to create challenge: %w", err)
 	}
@@ -115,8 +102,7 @@ func (r *PvPRepository) GetChallengeByID(id uuid.UUID) (*models.PvPChallenge, er
 		FROM pvp_challenges 
 		WHERE id = $1`
 
-	row := r.db.QueryRow(query, id)
-	err := row.Scan(
+	err := r.db.QueryRow(query, id).Scan(
 		&challenge.ID, &challenge.ChallengerID, &challenge.ChallengedID, &challenge.CombatID,
 		&challenge.ChallengeType, &challenge.Message, &stakesJSON, &challenge.Status,
 		&challenge.WinnerID, &challenge.LoserID, &challenge.ResultType,
@@ -140,7 +126,7 @@ func (r *PvPRepository) GetChallengeByID(id uuid.UUID) (*models.PvPChallenge, er
 
 // UpdateChallenge met à jour un défi
 func (r *PvPRepository) UpdateChallenge(challenge *models.PvPChallenge) error {
-	// Sérialiser les stakes
+	// Sérialiser les stakes en JSON
 	stakesJSON, err := json.Marshal(challenge.Stakes)
 	if err != nil {
 		return fmt.Errorf("failed to marshal stakes: %w", err)
@@ -148,29 +134,17 @@ func (r *PvPRepository) UpdateChallenge(challenge *models.PvPChallenge) error {
 
 	query := `
 		UPDATE pvp_challenges SET
-			combat_id = :combat_id,
-			status = :status,
-			winner_id = :winner_id,
-			loser_id = :loser_id,
-			result_type = :result_type,
-			responded_at = :responded_at,
-			completed_at = :completed_at,
-			stakes = :stakes
-		WHERE id = :id`
+			challenged_id = $2, combat_id = $3, challenge_type = $4, message = $5, stakes = $6,
+			status = $7, winner_id = $8, loser_id = $9, result_type = $10,
+			responded_at = $11, expires_at = $12, completed_at = $13
+		WHERE id = $1`
 
-	data := map[string]interface{}{
-		"id":           challenge.ID,
-		"combat_id":    challenge.CombatID,
-		"status":       challenge.Status,
-		"winner_id":    challenge.WinnerID,
-		"loser_id":     challenge.LoserID,
-		"result_type":  challenge.ResultType,
-		"responded_at": challenge.RespondedAt,
-		"completed_at": challenge.CompletedAt,
-		"stakes":       stakesJSON,
-	}
+	result, err := r.db.Exec(query,
+		challenge.ID, challenge.ChallengedID, challenge.CombatID, challenge.ChallengeType,
+		challenge.Message, stakesJSON, challenge.Status, challenge.WinnerID, challenge.LoserID,
+		challenge.ResultType, challenge.RespondedAt, challenge.ExpiresAt, challenge.CompletedAt,
+	)
 
-	result, err := r.db.NamedExec(query, data)
 	if err != nil {
 		return fmt.Errorf("failed to update challenge: %w", err)
 	}
@@ -187,7 +161,28 @@ func (r *PvPRepository) UpdateChallenge(challenge *models.PvPChallenge) error {
 	return nil
 }
 
-// GetChallengesByPlayer récupère les défis d'un joueur
+// DeleteChallenge supprime un défi
+func (r *PvPRepository) DeleteChallenge(id uuid.UUID) error {
+	query := `DELETE FROM pvp_challenges WHERE id = $1`
+
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete challenge: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("challenge not found")
+	}
+
+	return nil
+}
+
+// GetChallengesByPlayer récupère tous les défis d'un joueur
 func (r *PvPRepository) GetChallengesByPlayer(playerID uuid.UUID) ([]*models.PvPChallenge, error) {
 	var challenges []*models.PvPChallenge
 
@@ -196,7 +191,7 @@ func (r *PvPRepository) GetChallengesByPlayer(playerID uuid.UUID) ([]*models.PvP
 		       status, winner_id, loser_id, result_type,
 		       created_at, responded_at, expires_at, completed_at
 		FROM pvp_challenges 
-		WHERE challenger_id = $1 OR challenged_id = $1 
+		WHERE challenger_id = $1 OR challenged_id = $1
 		ORDER BY created_at DESC`
 
 	rows, err := r.db.Query(query, playerID)
@@ -360,8 +355,6 @@ func (r *PvPRepository) GetExpiredChallenges() ([]*models.PvPChallenge, error) {
 
 // GetPvPStatistics récupère les statistiques PvP d'un joueur
 func (r *PvPRepository) GetPvPStatistics(playerID uuid.UUID) (*models.PvPStatistics, error) {
-	// Pour l'instant, on récupère depuis combat_statistics
-	// Dans une vraie implémentation, on aurait une table séparée pour les stats PvP
 	query := `
 		SELECT character_id, user_id, pvp_battles_won, pvp_battles_lost, pvp_draws, pvp_rating,
 		       total_damage_dealt, total_damage_taken, total_healing_done,
@@ -448,7 +441,8 @@ func (r *PvPRepository) CreatePvPStatistics(stats *models.PvPStatistics) error {
 			pvp_rating = EXCLUDED.pvp_rating,
 			updated_at = EXCLUDED.updated_at`
 
-	_, err := r.db.Exec(query, uuid.New(), stats.PlayerID, stats.UserID, 
+	_, err := r.db.Exec(query, uuid.New(),
+		stats.PlayerID, stats.UserID, 
 		stats.BattlesWon, stats.BattlesLost, stats.Draws, stats.CurrentRating,
 		time.Now(), time.Now())
 	if err != nil {
@@ -514,7 +508,7 @@ func (r *PvPRepository) GetPlayerRank(playerID uuid.UUID) (int, error) {
 		SELECT rank FROM ranked_players WHERE character_id = $1`
 
 	var rank int
-	err := r.db.Get(&rank, query, playerID)
+	err := r.db.QueryRow(query, playerID).Scan(&rank)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, fmt.Errorf("player not ranked")
@@ -563,38 +557,184 @@ func (r *PvPRepository) GetPlayersInRatingRange(minRating, maxRating int) ([]*mo
 	return rankings, nil
 }
 
-// Note: Les méthodes de file d'attente suivantes nécessiteraient une table séparée
-// Pour l'instant, on utilise une implémentation en mémoire ou on peut créer une table temporaire
-
-// AddToQueue ajoute un joueur à la file d'attente
+// AddToQueue ajoute un joueur à la file d'attente PvP
 func (r *PvPRepository) AddToQueue(entry *models.PvPQueueEntry) error {
-	// TODO: Implémenter avec une vraie table de file d'attente
-	// Pour l'instant, retourner une implémentation stub
-	return fmt.Errorf("queue functionality not implemented yet")
+	query := `
+		INSERT INTO pvp_queue (
+			player_id, challenge_type, min_rating, max_rating, preferences,
+			joined_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7
+		) ON CONFLICT (player_id) DO UPDATE SET
+			challenge_type = EXCLUDED.challenge_type,
+			min_rating = EXCLUDED.min_rating,
+			max_rating = EXCLUDED.max_rating,
+			preferences = EXCLUDED.preferences,
+			updated_at = EXCLUDED.updated_at`
+
+	preferencesJSON, err := json.Marshal(entry.Preferences)
+	if err != nil {
+		return fmt.Errorf("failed to marshal preferences: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
+		entry.PlayerID, entry.ChallengeType, entry.MinRating, entry.MaxRating,
+		preferencesJSON, entry.JoinedAt, entry.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to add to queue: %w", err)
+	}
+
+	return nil
 }
 
 // RemoveFromQueue retire un joueur de la file d'attente
 func (r *PvPRepository) RemoveFromQueue(playerID uuid.UUID) error {
-	// TODO: Implémenter
-	return fmt.Errorf("queue functionality not implemented yet")
+	query := `DELETE FROM pvp_queue WHERE player_id = $1`
+
+	result, err := r.db.Exec(query, playerID)
+	if err != nil {
+		return fmt.Errorf("failed to remove from queue: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("player not in queue")
+	}
+
+	return nil
 }
 
 // GetQueueEntry récupère l'entrée de file d'attente d'un joueur
 func (r *PvPRepository) GetQueueEntry(playerID uuid.UUID) (*models.PvPQueueEntry, error) {
-	// TODO: Implémenter
-	return nil, fmt.Errorf("queue functionality not implemented yet")
+	var entry models.PvPQueueEntry
+	var preferencesJSON []byte
+
+	query := `
+		SELECT player_id, challenge_type, min_rating, max_rating, preferences,
+		       joined_at, updated_at
+		FROM pvp_queue 
+		WHERE player_id = $1`
+
+	err := r.db.QueryRow(query, playerID).Scan(
+		&entry.PlayerID, &entry.ChallengeType, &entry.MinRating, &entry.MaxRating,
+		&preferencesJSON, &entry.JoinedAt, &entry.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("player not in queue")
+		}
+		return nil, fmt.Errorf("failed to get queue entry: %w", err)
+	}
+
+	// Désérialiser les préférences
+	if err := json.Unmarshal(preferencesJSON, &entry.Preferences); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal preferences: %w", err)
+	}
+
+	return &entry, nil
 }
 
-// GetQueueByType récupère les entrées de file d'attente par type
+// GetQueueByType récupère tous les joueurs en file d'attente par type
 func (r *PvPRepository) GetQueueByType(queueType models.ChallengeType) ([]*models.PvPQueueEntry, error) {
-	// TODO: Implémenter
-	return nil, fmt.Errorf("queue functionality not implemented yet")
+	var entries []*models.PvPQueueEntry
+
+	query := `
+		SELECT player_id, challenge_type, min_rating, max_rating, preferences,
+		       joined_at, updated_at
+		FROM pvp_queue 
+		WHERE challenge_type = $1
+		ORDER BY joined_at ASC`
+
+	rows, err := r.db.Query(query, queueType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get queue by type: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var entry models.PvPQueueEntry
+		var preferencesJSON []byte
+
+		err := rows.Scan(
+			&entry.PlayerID, &entry.ChallengeType, &entry.MinRating, &entry.MaxRating,
+			&preferencesJSON, &entry.JoinedAt, &entry.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan queue entry: %w", err)
+		}
+
+		// Désérialiser les préférences
+		if err := json.Unmarshal(preferencesJSON, &entry.Preferences); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal preferences: %w", err)
+		}
+
+		entries = append(entries, &entry)
+	}
+
+	return entries, nil
 }
 
 // FindMatchmakingCandidates trouve des candidats pour le matchmaking
 func (r *PvPRepository) FindMatchmakingCandidates(entry *models.PvPQueueEntry) ([]*models.PvPQueueEntry, error) {
-	// TODO: Implémenter un algorithme de matchmaking basé sur le rating
-	return nil, fmt.Errorf("matchmaking not implemented yet")
+	var candidates []*models.PvPQueueEntry
+
+	// Rechercher des joueurs compatibles (même type, rating proche, pas le même joueur)
+	query := `
+		SELECT q.player_id, q.challenge_type, q.min_rating, q.max_rating, q.preferences,
+		       q.joined_at, q.updated_at
+		FROM pvp_queue q
+		JOIN combat_statistics cs ON cs.character_id = q.player_id
+		WHERE q.challenge_type = $1 
+		  AND q.player_id != $2
+		  AND cs.pvp_rating BETWEEN $3 AND $4
+		  AND q.min_rating <= $5 
+		  AND q.max_rating >= $6
+		ORDER BY q.joined_at ASC
+		LIMIT 10`
+
+	// Calculer les limites de rating
+	playerRating := entry.MinRating // Utiliser le rating min comme référence
+	minRatingRange := playerRating - 100 // ±100 points de rating
+	maxRatingRange := playerRating + 100
+
+	rows, err := r.db.Query(query, 
+		entry.ChallengeType, entry.PlayerID,
+		minRatingRange, maxRatingRange,
+		playerRating, playerRating,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find matchmaking candidates: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var candidate models.PvPQueueEntry
+		var preferencesJSON []byte
+
+		err := rows.Scan(
+			&candidate.PlayerID, &candidate.ChallengeType, &candidate.MinRating, &candidate.MaxRating,
+			&preferencesJSON, &candidate.JoinedAt, &candidate.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan candidate: %w", err)
+		}
+
+		// Désérialiser les préférences
+		if err := json.Unmarshal(preferencesJSON, &candidate.Preferences); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal preferences: %w", err)
+		}
+
+		candidates = append(candidates, &candidate)
+	}
+
+	return candidates, nil
 }
 
 // CleanupExpiredChallenges nettoie les défis expirés
@@ -615,7 +755,7 @@ func (r *PvPRepository) CleanupExpiredChallenges() error {
 	}
 
 	if rowsAffected > 0 {
-		fmt.Printf("Marked %d challenges as expired\n", rowsAffected)
+		fmt.Printf("Cleaned up %d expired challenges\n", rowsAffected)
 	}
 
 	return nil
@@ -623,51 +763,24 @@ func (r *PvPRepository) CleanupExpiredChallenges() error {
 
 // CleanupOldQueue nettoie les anciennes entrées de file d'attente
 func (r *PvPRepository) CleanupOldQueue() error {
-	// TODO: Implémenter
+	// Supprimer les entrées de plus de 30 minutes
+	query := `
+		DELETE FROM pvp_queue 
+		WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL '30 minutes'`
+
+	result, err := r.db.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to cleanup old queue: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rowsAffected > 0 {
+		fmt.Printf("Cleaned up %d old queue entries\n", rowsAffected)
+	}
+
 	return nil
 }
-
-// GetChallengeStatistics récupère des statistiques sur les défis
-func (r *PvPRepository) GetChallengeStatistics() (*ChallengeStatistics, error) {
-	query := `
-		SELECT 
-			COUNT(*) as total_challenges,
-			COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_challenges,
-			COUNT(CASE WHEN status = 'accepted' THEN 1 END) as accepted_challenges,
-			COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_challenges,
-			COUNT(CASE WHEN status = 'declined' THEN 1 END) as declined_challenges,
-			COUNT(CASE WHEN status = 'expired' THEN 1 END) as expired_challenges,
-			AVG(EXTRACT(EPOCH FROM (responded_at - created_at))/60) as avg_response_time_minutes
-		FROM pvp_challenges 
-		WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'`
-
-	var stats ChallengeStatistics
-	err := r.db.Get(&stats, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get challenge statistics: %w", err)
-	}
-
-	return &stats, nil
-}
-
-// ChallengeStatistics représente les statistiques des défis
-type ChallengeStatistics struct {
-	TotalChallenges     int     `json:"total_challenges" db:"total_challenges"`
-	PendingChallenges   int     `json:"pending_challenges" db:"pending_challenges"`
-	AcceptedChallenges  int     `json:"accepted_challenges" db:"accepted_challenges"`
-	CompletedChallenges int     `json:"completed_challenges" db:"completed_challenges"`
-	DeclinedChallenges  int     `json:"declined_challenges" db:"declined_challenges"`
-	ExpiredChallenges   int     `json:"expired_challenges" db:"expired_challenges"`
-	AvgResponseTime     float64 `json:"avg_response_time_minutes" db:"avg_response_time_minutes"`
-}
-
-// DeleteChallenge supprime un défi
-func (r *PvPRepository) DeleteChallenge(id uuid.UUID) error {
-	query := `DELETE FROM pvp_challenges WHERE id = $1`
-	
-	result, err := r.db.Exec(query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete challenge: %w", err)
-	}
-
-	rowsAffecte
