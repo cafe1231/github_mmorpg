@@ -69,7 +69,7 @@ func main() {
 
 	// Initialisation des handlers
 	authHandler := handlers.NewAuthHandler(authService, cfg)
-	healthHandler := handlers.NewHealthHandler(cfg, db)
+	healthHandler := handlers.NewHealthHandler(cfg, db) // ← CORRECTION ICI
 
 	// Configuration du mode Gin
 	if cfg.Server.Environment == "production" {
@@ -235,152 +235,32 @@ func setupRoutes(
 				admin.DELETE("/sessions/:id", authHandler.AdminRevokeSession)
 				admin.POST("/users/:id/logout-all", authHandler.AdminLogoutUser)
 			}
-
-			// Routes moderator (pour les modérateurs)
-			moderator := protected.Group("/moderator")
-			moderator.Use(middleware.RequireRole("moderator", "admin", "superuser"))
-			{
-				moderator.GET("/users/search", authHandler.SearchUsers)
-				moderator.GET("/users/:id/sessions", authHandler.GetUserSessionsAdmin)
-				moderator.POST("/users/:id/warnings", authHandler.AddUserWarning)
-				moderator.GET("/users/:id/warnings", authHandler.GetUserWarnings)
-			}
-		}
-
-		// Routes de validation pour les autres services (authentification de service)
-		services := v1.Group("/services")
-		services.Use(middleware.ServiceAuth()) // Middleware spécial pour les services internes
-		{
-			services.POST("/validate", authHandler.ValidateToken)
-			services.GET("/user/:id", authHandler.GetUserInfo)
-			services.POST("/user/:id/update-activity", authHandler.UpdateUserActivity)
-			services.GET("/user/:id/permissions", authHandler.GetUserPermissions)
 		}
 	}
-
-	// Routes directes pour compatibilité avec le gateway
-	router.POST("/register", authHandler.Register)
-	router.POST("/login", authHandler.Login)
-	router.POST("/refresh", authHandler.RefreshToken)
-	router.GET("/health", healthHandler.HealthCheck)
-	router.GET("/metrics", healthHandler.Metrics)
 
 	return router
 }
 
-// initLogger initialise le logger global
+// initLogger configure le logger
 func initLogger() {
-	logrus.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat: time.RFC3339,
-	})
-
-	// Niveau de log selon l'environnement
-	level := os.Getenv("AUTH_LOG_LEVEL")
-	switch level {
-	case "debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "warn":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	default:
-		if os.Getenv("AUTH_ENVIRONMENT") == "production" {
-			logrus.SetLevel(logrus.InfoLevel)
-		} else {
-			logrus.SetLevel(logrus.DebugLevel)
-		}
-	}
-
-	logrus.WithField("service", "auth").Info("Logger initialized")
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetLevel(logrus.InfoLevel)
 }
 
-// gracefulShutdown gère l'arrêt gracieux du serveur
-func gracefulShutdown(server *http.Server, authService service.AuthServiceInterface) {
-	// Canal pour capturer les signaux système
+// gracefulShutdown gère l'arrêt propre du serveur
+func gracefulShutdown(server *http.Server, authService *service.AuthService) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	// Attendre un signal
 	<-quit
-	logrus.Info("🛑 Auth Service shutting down...")
 
-	// Timeout pour l'arrêt gracieux
+	logrus.Info("🔐 Shutting down Auth Service...")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Arrêter d'accepter de nouvelles connexions
 	if err := server.Shutdown(ctx); err != nil {
-		logrus.Error("Auth Service forced to shutdown:", err)
-		return
+		logrus.Fatal("Server forced to shutdown: ", err)
 	}
 
-	// Nettoyage des ressources
-	if authService != nil {
-		logrus.Info("Cleaning up auth service resources...")
-		
-		// Révoquer les sessions actives si nécessaire
-		// authService.CleanupOnShutdown()
-	}
-
-	logrus.Info("✅ Auth Service stopped gracefully")
-}
-
-// Fonctions utilitaires pour le déploiement
-
-// GetBuildInfo retourne les informations de build
-func GetBuildInfo() map[string]string {
-	return map[string]string{
-		"version":    Version,
-		"build_time": BuildTime,
-		"git_commit": GitCommit,
-		"go_version": fmt.Sprintf("%s %s/%s", 
-			os.Getenv("GO_VERSION"), 
-			os.Getenv("GOOS"), 
-			os.Getenv("GOARCH")),
-	}
-}
-
-// HealthCheckEndpoint endpoint simple pour les load balancers
-func HealthCheckEndpoint(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":    "healthy",
-		"service":   "auth",
-		"version":   Version,
-		"timestamp": time.Now().Unix(),
-	})
-}
-
-// PreflightHandler gère les requêtes OPTIONS pour CORS
-func PreflightHandler(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Request-ID")
-	c.Header("Access-Control-Max-Age", "86400")
-	c.Status(http.StatusNoContent)
-}
-
-// NotFoundHandler gère les routes non trouvées
-func NotFoundHandler(c *gin.Context) {
-	c.JSON(http.StatusNotFound, gin.H{
-		"error":      "Not Found",
-		"message":    "The requested endpoint does not exist",
-		"path":       c.Request.URL.Path,
-		"method":     c.Request.Method,
-		"timestamp":  time.Now(),
-		"request_id": c.GetHeader("X-Request-ID"),
-	})
-}
-
-// MethodNotAllowedHandler gère les méthodes HTTP non autorisées
-func MethodNotAllowedHandler(c *gin.Context) {
-	c.JSON(http.StatusMethodNotAllowed, gin.H{
-		"error":      "Method Not Allowed",
-		"message":    fmt.Sprintf("Method %s is not allowed for this endpoint", c.Request.Method),
-		"path":       c.Request.URL.Path,
-		"method":     c.Request.Method,
-		"timestamp":  time.Now(),
-		"request_id": c.GetHeader("X-Request-ID"),
-	})
+	logrus.Info("🔐 Auth Service stopped gracefully")
 }

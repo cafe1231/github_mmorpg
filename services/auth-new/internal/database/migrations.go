@@ -172,12 +172,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);`
 const createTriggers = `
 -- Fonction pour mettre à jour updated_at automatiquement
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$ language 'plpgsql';
+$$ language 'plpgsql';
 
 -- Trigger pour users
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
@@ -196,14 +196,23 @@ CREATE TRIGGER update_oauth_accounts_updated_at
 // Migration 11: Contraintes supplémentaires et vues
 const createConstraintsAndViews = `
 -- Contraintes de validation supplémentaires
-ALTER TABLE users ADD CONSTRAINT check_username_length 
-    CHECK (char_length(username) >= 3);
-
-ALTER TABLE users ADD CONSTRAINT check_email_format 
-    CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,});
-
-ALTER TABLE users ADD CONSTRAINT check_password_hash_length 
-    CHECK (char_length(password_hash) >= 8);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_username_length') THEN
+        ALTER TABLE users ADD CONSTRAINT check_username_length 
+            CHECK (char_length(username) >= 3);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_email_format') THEN
+        ALTER TABLE users ADD CONSTRAINT check_email_format 
+            CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_password_hash_length') THEN
+        ALTER TABLE users ADD CONSTRAINT check_password_hash_length 
+            CHECK (char_length(password_hash) >= 8);
+    END IF;
+END $$;
 
 -- Vue pour les statistiques des utilisateurs
 CREATE OR REPLACE VIEW user_statistics AS
