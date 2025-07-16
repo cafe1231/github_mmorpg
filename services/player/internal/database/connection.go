@@ -80,27 +80,31 @@ func (db *DB) HealthCheck() error {
 func RunMigrations(db *DB) error {
 	logrus.Info("Running player database migrations...")
 
-	// Migrations SQL
-	migrations := []string{
-		createPlayersTable,
-		createCharactersTable,
-		createCharacterStatsTable,
-		createCombatStatsTable,
-		createStatModifiersTable,
-		createIndexes,
-		createTriggers,
-	}
-
-	// Exécuter chaque migration
-	for i, migration := range migrations {
-		logrus.WithField("migration", i+1).Debug("Executing migration")
-		
-		if _, err := db.Exec(migration); err != nil {
-			return fmt.Errorf("failed to execute migration %d: %w", i+1, err)
+	// ANCIEN SYSTÈME - Désactivé car nous utilisons maintenant les migrations dans migrations/
+	// Les migrations sont maintenant dans le dossier migrations/ et doivent être exécutées séparément
+	/*
+		// Migrations SQL
+		migrations := []string{
+			createPlayersTable,
+			createCharactersTable,
+			createCharacterStatsTable,
+			createCombatStatsTable,
+			createStatModifiersTable,
+			createIndexes,
+			createTriggers,
 		}
-	}
 
-	logrus.Info("Player database migrations completed successfully")
+		// Exécuter chaque migration
+		for i, migration := range migrations {
+			logrus.WithField("migration", i+1).Debug("Executing migration")
+
+			if _, err := db.Exec(migration); err != nil {
+				return fmt.Errorf("failed to execute migration %d: %w", i+1, err)
+			}
+		}
+	*/
+
+	logrus.Info("Player database migrations completed successfully - using migrations/ folder")
 	return nil
 }
 

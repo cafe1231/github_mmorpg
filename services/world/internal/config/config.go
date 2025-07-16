@@ -66,7 +66,7 @@ func LoadConfig() (*Config, error) {
 			Port:         5432,
 			Name:         "world_db",
 			User:         "auth_user",
-			Password:     "auth_pass",
+			Password:     "auth_password",
 			SSLMode:      "disable",
 			MaxOpenConns: 25,
 			MaxIdleConns: 5,

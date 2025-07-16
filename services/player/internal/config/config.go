@@ -21,24 +21,24 @@ type Config struct {
 
 // ServerConfig configuration du serveur Player
 type ServerConfig struct {
-	Port        int           `mapstructure:"port"`
-	Host        string        `mapstructure:"host"`
-	Environment string        `mapstructure:"environment"`
-	Debug       bool          `mapstructure:"debug"`
-	ReadTimeout time.Duration `mapstructure:"read_timeout"`
+	Port         int           `mapstructure:"port"`
+	Host         string        `mapstructure:"host"`
+	Environment  string        `mapstructure:"environment"`
+	Debug        bool          `mapstructure:"debug"`
+	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 }
 
 // DatabaseConfig configuration PostgreSQL
 type DatabaseConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Name     string `mapstructure:"name"`
-	SSLMode  string `mapstructure:"ssl_mode"`
-	MaxOpenConns int `mapstructure:"max_open_conns"`
-	MaxIdleConns int `mapstructure:"max_idle_conns"`
+	Host         string `mapstructure:"host"`
+	Port         int    `mapstructure:"port"`
+	User         string `mapstructure:"user"`
+	Password     string `mapstructure:"password"`
+	Name         string `mapstructure:"name"`
+	SSLMode      string `mapstructure:"ssl_mode"`
+	MaxOpenConns int    `mapstructure:"max_open_conns"`
+	MaxIdleConns int    `mapstructure:"max_idle_conns"`
 }
 
 // AuthConfig configuration pour la communication avec le service Auth
@@ -63,22 +63,22 @@ type MonitoringConfig struct {
 
 // GameConfig configuration spécifique au jeu
 type GameConfig struct {
-	MaxCharactersPerPlayer int      `mapstructure:"max_characters_per_player"`
-	AvailableClasses      []string `mapstructure:"available_classes"`
-	AvailableRaces        []string `mapstructure:"available_races"`
-	MaxLevel              int      `mapstructure:"max_level"`
-	StartingLevel         int      `mapstructure:"starting_level"`
-	StartingStats         StatConfig `mapstructure:"starting_stats"`
+	MaxCharactersPerPlayer int        `mapstructure:"max_characters_per_player"`
+	AvailableClasses       []string   `mapstructure:"available_classes"`
+	AvailableRaces         []string   `mapstructure:"available_races"`
+	MaxLevel               int        `mapstructure:"max_level"`
+	StartingLevel          int        `mapstructure:"starting_level"`
+	StartingStats          StatConfig `mapstructure:"starting_stats"`
 }
 
 // StatConfig configuration des statistiques de base
 type StatConfig struct {
-	Health    int `mapstructure:"health"`
-	Mana      int `mapstructure:"mana"`
-	Strength  int `mapstructure:"strength"`
-	Agility   int `mapstructure:"agility"`
+	Health       int `mapstructure:"health"`
+	Mana         int `mapstructure:"mana"`
+	Strength     int `mapstructure:"strength"`
+	Agility      int `mapstructure:"agility"`
 	Intelligence int `mapstructure:"intelligence"`
-	Vitality  int `mapstructure:"vitality"`
+	Vitality     int `mapstructure:"vitality"`
 }
 
 // LoadConfig charge la configuration
@@ -94,12 +94,12 @@ func LoadConfig() (*Config, error) {
 			WriteTimeout: 30 * time.Second,
 		},
 		Database: DatabaseConfig{
-			Host:     "localhost",
-			Port:     5432,
-			User:     "player_user",
-			Password: "player_pass",
-			Name:     "player_db",
-			SSLMode:  "disable",
+			Host:         "localhost",
+			Port:         5432,
+			User:         "auth_user",
+			Password:     "auth_password",
+			Name:         "player_db",
+			SSLMode:      "disable",
 			MaxOpenConns: 25,
 			MaxIdleConns: 5,
 		},
@@ -119,10 +119,10 @@ func LoadConfig() (*Config, error) {
 		},
 		Game: GameConfig{
 			MaxCharactersPerPlayer: 5,
-			AvailableClasses:      []string{"warrior", "mage", "archer", "rogue"},
-			AvailableRaces:        []string{"human", "elf", "dwarf", "orc"},
-			MaxLevel:              100,
-			StartingLevel:         1,
+			AvailableClasses:       []string{"warrior", "mage", "archer", "rogue"},
+			AvailableRaces:         []string{"human", "elf", "dwarf", "orc"},
+			MaxLevel:               100,
+			StartingLevel:          1,
 			StartingStats: StatConfig{
 				Health:       100,
 				Mana:         50,

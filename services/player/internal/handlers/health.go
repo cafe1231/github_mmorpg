@@ -64,22 +64,22 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	runtime.ReadMemStats(&m)
 
 	systemInfo := map[string]interface{}{
-		"goroutines":     runtime.NumGoroutine(),
-		"memory_alloc":   bToMb(m.Alloc),
-		"memory_total":   bToMb(m.TotalAlloc),
-		"memory_sys":     bToMb(m.Sys),
-		"gc_cycles":      m.NumGC,
+		"goroutines":   runtime.NumGoroutine(),
+		"memory_alloc": bToMb(m.Alloc),
+		"memory_total": bToMb(m.TotalAlloc),
+		"memory_sys":   bToMb(m.Sys),
+		"gc_cycles":    m.NumGC,
 	}
 
 	health := map[string]interface{}{
-		"status":       status,
-		"service":      "player",
-		"version":      "1.0.0",
-		"timestamp":    time.Now().Unix(),
-		"uptime":       time.Since(startTime).Seconds(),
-		"environment":  h.config.Server.Environment,
-		"checks":       checks,
-		"system":       systemInfo,
+		"status":      status,
+		"service":     "player",
+		"version":     "1.0.0",
+		"timestamp":   time.Now().Unix(),
+		"uptime":      time.Since(startTime).Seconds(),
+		"environment": h.config.Server.Environment,
+		"checks":      checks,
+		"system":      systemInfo,
 	}
 
 	// Définir le code de statut HTTP selon l'état de santé
@@ -119,11 +119,11 @@ func (h *HealthHandler) DetailedHealthCheck(c *gin.Context) {
 
 	// Vérifications de configuration
 	configChecks := map[string]interface{}{
-		"server_port":        h.config.Server.Port,
-		"database_host":      h.config.Database.Host,
-		"max_characters":     h.config.Game.MaxCharactersPerPlayer,
-		"available_classes":  len(h.config.Game.AvailableClasses),
-		"available_races":    len(h.config.Game.AvailableRaces),
+		"server_port":       h.config.Server.Port,
+		"database_host":     h.config.Database.Host,
+		"max_characters":    h.config.Game.MaxCharactersPerPlayer,
+		"available_classes": len(h.config.Game.AvailableClasses),
+		"available_races":   len(h.config.Game.AvailableRaces),
 	}
 	checks["configuration"] = configChecks
 
@@ -132,31 +132,31 @@ func (h *HealthHandler) DetailedHealthCheck(c *gin.Context) {
 	runtime.ReadMemStats(&m)
 
 	systemInfo := map[string]interface{}{
-		"go_version":     runtime.Version(),
-		"goroutines":     runtime.NumGoroutine(),
+		"go_version": runtime.Version(),
+		"goroutines": runtime.NumGoroutine(),
 		"memory": map[string]interface{}{
-			"alloc_mb":      bToMb(m.Alloc),
+			"alloc_mb":       bToMb(m.Alloc),
 			"total_alloc_mb": bToMb(m.TotalAlloc),
-			"sys_mb":        bToMb(m.Sys),
-			"heap_alloc_mb": bToMb(m.HeapAlloc),
-			"heap_sys_mb":   bToMb(m.HeapSys),
+			"sys_mb":         bToMb(m.Sys),
+			"heap_alloc_mb":  bToMb(m.HeapAlloc),
+			"heap_sys_mb":    bToMb(m.HeapSys),
 		},
 		"gc": map[string]interface{}{
-			"num_gc":        m.NumGC,
-			"pause_total":   m.PauseTotalNs,
-			"last_gc":       time.Unix(0, int64(m.LastGC)).Format(time.RFC3339),
+			"num_gc":      m.NumGC,
+			"pause_total": m.PauseTotalNs,
+			"last_gc":     time.Unix(0, int64(m.LastGC)).Format(time.RFC3339),
 		},
 	}
 
 	health := map[string]interface{}{
-		"status":       status,
-		"service":      "player",
-		"version":      "1.0.0",
-		"timestamp":    time.Now().Unix(),
-		"uptime":       time.Since(startTime).Seconds(),
-		"environment":  h.config.Server.Environment,
-		"checks":       checks,
-		"system":       systemInfo,
+		"status":      status,
+		"service":     "player",
+		"version":     "1.0.0",
+		"timestamp":   time.Now().Unix(),
+		"uptime":      time.Since(startTime).Seconds(),
+		"environment": h.config.Server.Environment,
+		"checks":      checks,
+		"system":      systemInfo,
 		"dependencies": map[string]interface{}{
 			"auth_service": h.config.Auth.ServiceURL,
 		},
@@ -230,12 +230,12 @@ func (h *HealthHandler) Liveness(c *gin.Context) {
 	}
 
 	liveness := map[string]interface{}{
-		"status":      status,
-		"service":     "player",
-		"timestamp":   time.Now().Unix(),
-		"uptime":      time.Since(startTime).Seconds(),
-		"memory_mb":   currentMemoryMB,
-		"goroutines":  runtime.NumGoroutine(),
+		"status":     status,
+		"service":    "player",
+		"timestamp":  time.Now().Unix(),
+		"uptime":     time.Since(startTime).Seconds(),
+		"memory_mb":  currentMemoryMB,
+		"goroutines": runtime.NumGoroutine(),
 	}
 
 	httpStatus := http.StatusOK
@@ -282,10 +282,10 @@ func (h *HealthHandler) Info(c *gin.Context) {
 			"available_races":           h.config.Game.AvailableRaces,
 		},
 		"runtime": map[string]interface{}{
-			"go_version":  runtime.Version(),
-			"num_cpu":     runtime.NumCPU(),
-			"goroutines":  runtime.NumGoroutine(),
-			"memory_mb":   bToMb(m.Alloc),
+			"go_version": runtime.Version(),
+			"num_cpu":    runtime.NumCPU(),
+			"goroutines": runtime.NumGoroutine(),
+			"memory_mb":  bToMb(m.Alloc),
 		},
 	}
 
@@ -322,7 +322,7 @@ func (h *HealthHandler) ListRoutes(router *gin.Engine) gin.HandlerFunc {
 		}
 
 		routes := []gin.H{}
-		
+
 		for _, route := range router.Routes() {
 			routes = append(routes, gin.H{
 				"method": route.Method,
@@ -359,7 +359,7 @@ func (h *HealthHandler) ShowConfig(c *gin.Context) {
 			"max_open_conns": h.config.Database.MaxOpenConns,
 			"max_idle_conns": h.config.Database.MaxIdleConns,
 		},
-		"game": h.config.Game,
+		"game":       h.config.Game,
 		"rate_limit": h.config.RateLimit,
 		"monitoring": h.config.Monitoring,
 	}
@@ -377,17 +377,17 @@ func (h *HealthHandler) DatabaseStats(c *gin.Context) {
 	// Si le db implémente une interface pour les stats
 	if db, ok := h.db.(*database.DB); ok {
 		stats := db.Stats()
-		
+
 		dbStats := map[string]interface{}{
-			"max_open_connections":     stats.MaxOpenConnections,
-			"open_connections":         stats.OpenConnections,
-			"in_use":                   stats.InUse,
-			"idle":                     stats.Idle,
-			"wait_count":               stats.WaitCount,
-			"wait_duration":            stats.WaitDuration.Milliseconds(),
-			"max_idle_closed":          stats.MaxIdleClosed,
-			"max_idle_time_closed":     stats.MaxIdleTimeClosed,
-			"max_lifetime_closed":      stats.MaxLifetimeClosed,
+			"max_open_connections": stats.MaxOpenConnections,
+			"open_connections":     stats.OpenConnections,
+			"in_use":               stats.InUse,
+			"idle":                 stats.Idle,
+			"wait_count":           stats.WaitCount,
+			"wait_duration":        stats.WaitDuration.Milliseconds(),
+			"max_idle_closed":      stats.MaxIdleClosed,
+			"max_idle_time_closed": stats.MaxIdleTimeClosed,
+			"max_lifetime_closed":  stats.MaxLifetimeClosed,
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -435,10 +435,10 @@ func (h *HealthHandler) MemoryProfile(c *gin.Context) {
 			"stack_sys_mb":   bToMb(m.StackSys),
 		},
 		"gc": map[string]interface{}{
-			"next_gc_mb":      bToMb(m.NextGC),
-			"last_gc":         time.Unix(0, int64(m.LastGC)).Format(time.RFC3339),
-			"pause_total_ms":  m.PauseTotalNs / 1000000,
-			"num_forced_gc":   m.NumForcedGC,
+			"next_gc_mb":     bToMb(m.NextGC),
+			"last_gc":        time.Unix(0, int64(m.LastGC)).Format(time.RFC3339),
+			"pause_total_ms": m.PauseTotalNs / 1000000,
+			"num_forced_gc":  m.NumForcedGC,
 		},
 	}
 
@@ -456,15 +456,15 @@ func (h *HealthHandler) GCStats(c *gin.Context) {
 	runtime.ReadMemStats(&m)
 
 	gcInfo := map[string]interface{}{
-		"num_gc":           m.NumGC,
-		"num_forced_gc":    m.NumForcedGC,
-		"gc_cpu_fraction":  m.GCCPUFraction,
-		"pause_total_ns":   m.PauseTotalNs,
-		"pause_ns":         m.PauseNs,
-		"pause_end":        m.PauseEnd,
-		"last_gc":          time.Unix(0, int64(m.LastGC)).Format(time.RFC3339),
-		"next_gc":          m.NextGC,
-		"gc_sys":           bToMb(m.GCSys),
+		"num_gc":          m.NumGC,
+		"num_forced_gc":   m.NumForcedGC,
+		"gc_cpu_fraction": m.GCCPUFraction,
+		"pause_total_ns":  m.PauseTotalNs,
+		"pause_ns":        m.PauseNs,
+		"pause_end":       m.PauseEnd,
+		"last_gc":         time.Unix(0, int64(m.LastGC)).Format(time.RFC3339),
+		"next_gc":         m.NextGC,
+		"gc_sys":          bToMb(m.GCSys),
 	}
 
 	c.JSON(http.StatusOK, gcInfo)
