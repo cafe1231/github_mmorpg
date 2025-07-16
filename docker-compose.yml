@@ -1,0 +1,293 @@
+version: '3.9'
+
+services:
+  gateway:
+    build: ./services/gateway
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - GATEWAY_SERVER_HOST=0.0.0.0
+      - GATEWAY_SERVER_PORT=8080
+    depends_on:
+      - auth
+      - player
+      - world
+      - combat
+      - inventory
+      - guild
+      - chat
+      - analytics
+    networks:
+      - mmorpg
+
+  auth:
+    build: ./services/auth-new
+    container_name: auth
+    ports:
+      - "8081:8081"
+    environment:
+      - AUTH_DB_HOST=auth_db
+      - AUTH_DB_PORT=5432
+      - AUTH_DB_USER=auth_user
+      - AUTH_DB_PASSWORD=auth_password
+      - AUTH_DB_NAME=auth_db
+      - AUTH_DB_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8081
+    depends_on:
+      - auth_db
+    networks:
+      - mmorpg
+
+  player:
+    build: ./services/player
+    container_name: player
+    ports:
+      - "8082:8082"
+    environment:
+      - PLAYER_DB_HOST=player_db
+      - PLAYER_DB_PORT=5432
+      - PLAYER_DB_USER=auth_user
+      - PLAYER_DB_PASSWORD=auth_password
+      - PLAYER_DB_NAME=player_db
+      - PLAYER_DB_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8082
+    depends_on:
+      - player_db
+    networks:
+      - mmorpg
+
+  world:
+    build: ./services/world
+    container_name: world
+    ports:
+      - "8083:8083"
+    environment:
+      - WORLD_DB_HOST=world_db
+      - WORLD_DB_PORT=5432
+      - WORLD_DB_USER=auth_user
+      - WORLD_DB_PASSWORD=auth_password
+      - WORLD_DB_NAME=world_db
+      - WORLD_DB_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8083
+    depends_on:
+      - world_db
+    networks:
+      - mmorpg
+
+  combat:
+    build: ./services/combat
+    container_name: combat
+    ports:
+      - "8085:8085"
+    environment:
+      - DATABASE_HOST=combat_db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=auth_user
+      - DATABASE_PASSWORD=auth_password
+      - DATABASE_NAME=combat_db
+      - DATABASE_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8085
+    depends_on:
+      - combat_db
+    networks:
+      - mmorpg
+
+  inventory:
+    build: ./services/inventory
+    container_name: inventory
+    ports:
+      - "8084:8084"
+    environment:
+      - INVENTORY_DB_HOST=inventory_db
+      - INVENTORY_DB_PORT=5432
+      - INVENTORY_DB_USER=auth_user
+      - INVENTORY_DB_PASSWORD=auth_password
+      - INVENTORY_DB_NAME=inventory_db
+      - INVENTORY_DB_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8084
+    depends_on:
+      - inventory_db
+    networks:
+      - mmorpg
+
+  guild:
+    build: ./services/guild
+    container_name: guild
+    ports:
+      - "8086:8086"
+    environment:
+      - GUILD_DB_HOST=guild_db
+      - GUILD_DB_PORT=5432
+      - GUILD_DB_USER=auth_user
+      - GUILD_DB_PASSWORD=auth_password
+      - GUILD_DB_NAME=guild_db
+      - GUILD_DB_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8086
+    depends_on:
+      - guild_db
+    networks:
+      - mmorpg
+
+  chat:
+    build: ./services/chat
+    container_name: chat
+    ports:
+      - "8087:8087"
+    environment:
+      - CHAT_DB_HOST=chat_db
+      - CHAT_DB_PORT=5432
+      - CHAT_DB_USER=auth_user
+      - CHAT_DB_PASSWORD=auth_password
+      - CHAT_DB_NAME=chat_db
+      - CHAT_DB_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8087
+    depends_on:
+      - chat_db
+    networks:
+      - mmorpg
+
+  analytics:
+    build: ./services/analytics
+    container_name: analytics
+    ports:
+      - "8088:8088"
+    environment:
+      - ANALYTICS_DB_HOST=analytics_db
+      - ANALYTICS_DB_PORT=5432
+      - ANALYTICS_DB_USER=auth_user
+      - ANALYTICS_DB_PASSWORD=auth_password
+      - ANALYTICS_DB_NAME=analytics_db
+      - ANALYTICS_DB_SSL_MODE=disable
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8088
+    depends_on:
+      - analytics_db
+    networks:
+      - mmorpg
+
+  # Bases de données PostgreSQL (une par service)
+  auth_db:
+    image: postgres:14
+    container_name: auth_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+  player_db:
+    image: postgres:14
+    container_name: player_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: player_db
+    volumes:
+      - player_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+  world_db:
+    image: postgres:14
+    container_name: world_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: world_db
+    volumes:
+      - world_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+  combat_db:
+    image: postgres:14
+    container_name: combat_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: combat_db
+    volumes:
+      - combat_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+  inventory_db:
+    image: postgres:14
+    container_name: inventory_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: inventory_db
+    volumes:
+      - inventory_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+  guild_db:
+    image: postgres:14
+    container_name: guild_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: guild_db
+    volumes:
+      - guild_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+  chat_db:
+    image: postgres:14
+    container_name: chat_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: chat_db
+    volumes:
+      - chat_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+  analytics_db:
+    image: postgres:14
+    container_name: analytics_db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: analytics_db
+    volumes:
+      - analytics_db_data:/var/lib/postgresql/data
+    networks:
+      - mmorpg
+
+volumes:
+  auth_db_data:
+  player_db_data:
+  world_db_data:
+  combat_db_data:
+  inventory_db_data:
+  guild_db_data:
+  chat_db_data:
+  analytics_db_data:
+
+networks:
+  mmorpg:
+    driver: bridge

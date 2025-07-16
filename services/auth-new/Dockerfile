@@ -1,5 +1,5 @@
-# Dockerfile pour le service inventory
-FROM golang:1.24-alpine AS builder
+# Dockerfile pour le service auth-new
+FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go mod download
@@ -11,5 +11,5 @@ COPY --from=builder /app/main ./main
 COPY --from=builder /app/internal ./internal
 COPY --from=builder /app/go.mod ./go.mod
 COPY --from=builder /app/go.sum ./go.sum
-EXPOSE 8084
-CMD ["./main"]
+EXPOSE 8081
+CMD ["./main"] 
