@@ -14,6 +14,7 @@ import (
 
 	"gateway/internal/config"
 	"gateway/internal/gateway"
+	"gateway/internal/handlers"
 	"gateway/internal/middleware"
 	"gateway/internal/monitoring"
 )
@@ -42,8 +43,25 @@ func main() {
 	// Initialisation du monitoring
 	monitoring.Init(cfg.Monitoring.PrometheusPort)
 
+	// Définition des services connus (nom -> URL)
+	services := map[string]string{
+		"auth":      "http://localhost:8081",
+		"player":    "http://localhost:8082",
+		"world":     "http://localhost:8083",
+		"inventory": "http://localhost:8084",
+		"guild":     "http://localhost:8086",
+		"chat":      "http://localhost:8087",
+		"analytics": "http://localhost:8088",
+		"combat":    "http://localhost:8085",
+	}
+	version := "1.0.0"
+	commit := "dev"
+	build := time.Now().Format(time.RFC3339)
+
+	gatewayHandler := handlers.NewGatewayHandler(services, version, commit, build)
+
 	// Configuration des routes
-	router := setupRoutes(gatewayServer, cfg)
+	router := setupRoutes(gatewayServer, cfg, gatewayHandler)
 
 	// Configuration du serveur HTTP
 	server := &http.Server{
@@ -71,7 +89,7 @@ func main() {
 }
 
 // setupRoutes configure toutes les routes du gateway
-func setupRoutes(gatewayServer *gateway.Server, cfg *config.Config) *gin.Engine {
+func setupRoutes(gatewayServer *gateway.Server, cfg *config.Config, gatewayHandler *handlers.GatewayHandler) *gin.Engine {
 	router := gin.New()
 
 	// Middleware globaux
@@ -98,10 +116,21 @@ func setupRoutes(gatewayServer *gateway.Server, cfg *config.Config) *gin.Engine 
 		authDirect.POST("/forgot-password", gatewayServer.ProxyTo("auth"))
 		authDirect.POST("/reset-password", gatewayServer.ProxyTo("auth"))
 		authDirect.GET("/verify-email/:token", gatewayServer.ProxyTo("auth"))
-		
+
 		// OAuth endpoints
 		authDirect.GET("/oauth/:provider", gatewayServer.ProxyTo("auth"))
 		authDirect.POST("/oauth/:provider/callback", gatewayServer.ProxyTo("auth"))
+	}
+
+	// Handlers spécifiques Gateway
+	gw := router.Group("/gateway")
+	{
+		gw.GET("/status", gatewayHandler.Status)
+		gw.GET("/services", gatewayHandler.ServicesList)
+		gw.GET("/version", gatewayHandler.VersionInfo)
+		gw.GET("/info", gatewayHandler.Info)
+		gw.GET("/health/all", gatewayHandler.HealthAll)
+		gw.POST("/reload", gatewayHandler.Reload)
 	}
 
 	// API Gateway routes (structure complète)
