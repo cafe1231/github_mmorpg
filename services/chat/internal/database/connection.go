@@ -1,0 +1,71 @@
+package database
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+
+	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
+
+	"chat/internal/config"
+)
+
+// DB structure pour encapsuler la connexion
+type DB struct {
+	*sql.DB
+}
+
+// NewConnection crée une nouvelle connexion à la base de données
+func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
+	logrus.Info("Connecting to PostgreSQL database...")
+
+	db, err := sql.Open("postgres", cfg.GetDatabaseURL())
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database connection: %w", err)
+	}
+
+	// Configuration du pool de connexions
+	db.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.MaxLifetime)
+
+	// Test de la connexion
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"host":           cfg.Host,
+		"port":           cfg.Port,
+		"database":       cfg.Name,
+		"max_open_conns": cfg.MaxOpenConns,
+		"max_idle_conns": cfg.MaxIdleConns,
+	}).Info("Successfully connected to database")
+
+	return &DB{db}, nil
+}
+
+// Close ferme la connexion à la base de données
+func (db *DB) Close() error {
+	logrus.Info("Closing database connection...")
+	return db.DB.Close()
+}
+
+// HealthCheck vérifie la santé de la connexion
+func (db *DB) HealthCheck() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := db.PingContext(ctx); err != nil {
+		return fmt.Errorf("database health check failed: %w", err)
+	}
+
+	return nil
+}
+
+// GetStats retourne les statistiques de la base de données
+func (db *DB) GetStats() sql.DBStats {
+	return db.Stats()
+}
