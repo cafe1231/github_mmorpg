@@ -1,9 +1,10 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"time"
-	"context"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 
@@ -66,11 +67,11 @@ func (db *DB) GetStats() map[string]interface{} {
 	return map[string]interface{}{
 		"max_open_connections": stats.MaxOpenConnections,
 		"open_connections":     stats.OpenConnections,
-		"in_use":              stats.InUse,
-		"idle":                stats.Idle,
-		"wait_count":          stats.WaitCount,
-		"wait_duration":       stats.WaitDuration.String(),
-		"max_idle_closed":     stats.MaxIdleClosed,
+		"in_use":               stats.InUse,
+		"idle":                 stats.Idle,
+		"wait_count":           stats.WaitCount,
+		"wait_duration":        stats.WaitDuration.String(),
+		"max_idle_closed":      stats.MaxIdleClosed,
 		"max_idle_time_closed": stats.MaxIdleTimeClosed,
 		"max_lifetime_closed":  stats.MaxLifetimeClosed,
 	}
@@ -81,17 +82,19 @@ func RunMigrations(db *DB) error {
 	logrus.Info("Running database migrations...")
 
 	migrations := []string{
-		createCombatInstancesTable,
-		createCombatActionsTable,
-		createCombatEffectsTable,
-		createPvPChallengesTable,
-		createCombatLogsTable,
-		createIndexes,
+		createCombatInstancesTable,    // 1
+		createCombatParticipantsTable, // 2
+		createCombatActionsTable,      // 3
+		createCombatEffectsTable,      // 4
+		createPvPChallengesTable,      // 5
+		createCombatLogsTable,         // 6
+		createCombatStatsTable,        // 7
+		createIndexes,                 // 8
 	}
 
 	for i, migration := range migrations {
 		logrus.WithField("migration", i+1).Debug("Executing migration")
-		
+
 		if _, err := db.Exec(migration); err != nil {
 			return fmt.Errorf("failed to execute migration %d: %w", i+1, err)
 		}
