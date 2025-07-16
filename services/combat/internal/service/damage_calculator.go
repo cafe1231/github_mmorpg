@@ -1,11 +1,10 @@
 package service
 
 import (
-	"math"
-	"math/rand"
-	"fmt"
 	"combat/internal/config"
 	"combat/internal/models"
+	"fmt"
+	"math/rand"
 )
 
 // DamageCalculatorInterface définit les méthodes du calculateur de dégâts
@@ -13,22 +12,22 @@ type DamageCalculatorInterface interface {
 	// Calculs de base
 	CalculateDamage(attacker, defender *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) *DamageResult
 	CalculateHealing(caster, target *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) *HealingResult
-	
+
 	// Calculs spécialisés
 	CalculatePhysicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int
 	CalculateMagicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int
 	CalculateTrueDamage(baseDamage int, modifiers map[string]float64) int
-	
+
 	// Chances et critiques
 	CalculateCriticalChance(attacker *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) float64
 	CalculateHitChance(attacker, defender *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) float64
 	CalculateBlockChance(defender *models.CombatParticipant, modifiers map[string]float64) float64
-	
+
 	// Modificateurs et résistances
 	ApplyArmorReduction(damage int, armor int, damageType string) int
 	ApplyResistances(damage int, resistances map[string]float64, damageType string) int
 	ApplyVulnerabilities(damage int, vulnerabilities map[string]float64, damageType string) int
-	
+
 	// Calculs avancés
 	CalculateElementalDamage(attacker *models.CombatParticipant, element string, baseDamage int) int
 	CalculateDamageOverTime(effect *models.CombatEffect, target *models.CombatParticipant) int
@@ -42,33 +41,33 @@ type DamageCalculator struct {
 
 // DamageResult représente le résultat d'un calcul de dégâts
 type DamageResult struct {
-	FinalDamage    int                    `json:"final_damage"`
-	BaseDamage     int                    `json:"base_damage"`
-	DamageType     string                 `json:"damage_type"`
-	IsCritical     bool                   `json:"is_critical"`
-	IsBlocked      bool                   `json:"is_blocked"`
-	IsMiss         bool                   `json:"is_miss"`
-	ArmorReduction int                    `json:"armor_reduction"`
-	Modifiers      map[string]float64     `json:"modifiers"`
-	Elements       map[string]int         `json:"elements,omitempty"`
-	Breakdown      []DamageComponent      `json:"breakdown"`
+	FinalDamage    int                `json:"final_damage"`
+	BaseDamage     int                `json:"base_damage"`
+	DamageType     string             `json:"damage_type"`
+	IsCritical     bool               `json:"is_critical"`
+	IsBlocked      bool               `json:"is_blocked"`
+	IsMiss         bool               `json:"is_miss"`
+	ArmorReduction int                `json:"armor_reduction"`
+	Modifiers      map[string]float64 `json:"modifiers"`
+	Elements       map[string]int     `json:"elements,omitempty"`
+	Breakdown      []DamageComponent  `json:"breakdown"`
 }
 
 // HealingResult représente le résultat d'un calcul de soins
 type HealingResult struct {
-	FinalHealing   int                `json:"final_healing"`
-	BaseHealing    int                `json:"base_healing"`
-	IsCritical     bool               `json:"is_critical"`
-	Modifiers      map[string]float64 `json:"modifiers"`
-	Overheal       int                `json:"overheal"`
+	FinalHealing int                `json:"final_healing"`
+	BaseHealing  int                `json:"base_healing"`
+	IsCritical   bool               `json:"is_critical"`
+	Modifiers    map[string]float64 `json:"modifiers"`
+	Overheal     int                `json:"overheal"`
 }
 
 // DamageComponent représente un composant de dégâts
 type DamageComponent struct {
-	Type        string  `json:"type"`
-	Value       int     `json:"value"`
-	Source      string  `json:"source"`
-	Multiplier  float64 `json:"multiplier,omitempty"`
+	Type       string  `json:"type"`
+	Value      int     `json:"value"`
+	Source     string  `json:"source"`
+	Multiplier float64 `json:"multiplier,omitempty"`
 }
 
 // NewDamageCalculator crée un nouveau calculateur de dégâts
@@ -143,7 +142,7 @@ func (dc *DamageCalculator) CalculateDamage(attacker, defender *models.CombatPar
 	if rand.Float64() < critChance {
 		result.IsCritical = true
 		critMultiplier := 1.5 // Multiplicateur de base
-		
+
 		// Vérifier si la compétence a un multiplicateur spécial
 		if skill != nil {
 			if customCrit, exists := skill.Modifiers["critical_multiplier"]; exists {
@@ -200,7 +199,7 @@ func (dc *DamageCalculator) CalculateHealing(caster, target *models.CombatPartic
 
 	// Appliquer les modificateurs du lanceur
 	healing := float64(baseHealing)
-	
+
 	if skill.Type == "magical" {
 		// Les soins magiques sont améliorés par la puissance magique
 		magicalBonus := float64(caster.MagicalDamage) * 0.6
@@ -413,10 +412,10 @@ func (dc *DamageCalculator) ApplyVulnerabilities(damage int, vulnerabilities map
 // CalculateElementalDamage calcule les dégâts élémentaires
 func (dc *DamageCalculator) CalculateElementalDamage(attacker *models.CombatParticipant, element string, baseDamage int) int {
 	elementalPower := dc.getElementalPower(attacker, element)
-	
+
 	// Les dégâts élémentaires sont basés sur la puissance magique et l'affinité élémentaire
 	elementalDamage := float64(baseDamage) + (float64(attacker.MagicalDamage) * elementalPower)
-	
+
 	return int(elementalDamage)
 }
 
@@ -428,21 +427,21 @@ func (dc *DamageCalculator) CalculateDamageOverTime(effect *models.CombatEffect,
 
 	// Dégâts de base * nombre de stacks
 	baseDamage := effect.ModifierValue * effect.CurrentStacks
-	
+
 	// Réduction basée sur la résistance magique (la plupart des DoTs sont magiques)
 	finalDamage := dc.ApplyArmorReduction(baseDamage, target.MagicalDefense/2, "magical")
-	
+
 	return finalDamage
 }
 
 // CalculateStatusEffectChance calcule la chance d'appliquer un effet de statut
 func (dc *DamageCalculator) CalculateStatusEffectChance(caster *models.CombatParticipant, target *models.CombatParticipant, effect models.SkillEffect) float64 {
 	baseChance := effect.Probability
-	
+
 	// Modifier selon la différence de puissance magique
-	powerDiff := float64(caster.MagicalDamage - target.MagicalDefense) / 200.0
+	powerDiff := float64(caster.MagicalDamage-target.MagicalDefense) / 200.0
 	finalChance := baseChance + powerDiff
-	
+
 	// Limiter entre 5% et 95%
 	if finalChance < 0.05 {
 		finalChance = 0.05
@@ -450,7 +449,7 @@ func (dc *DamageCalculator) CalculateStatusEffectChance(caster *models.CombatPar
 	if finalChance > 0.95 {
 		finalChance = 0.95
 	}
-	
+
 	return finalChance
 }
 
@@ -468,11 +467,11 @@ func (dc *DamageCalculator) getElementalPower(participant *models.CombatParticip
 		"dark":      0.85,
 		"light":     0.8,
 	}
-	
+
 	if power, exists := elementalPowers[element]; exists {
 		return power
 	}
-	
+
 	return 0.5 // Valeur par défaut
 }
 
@@ -481,15 +480,15 @@ func (dc *DamageCalculator) CalculateLifesteal(attacker *models.CombatParticipan
 	if lifestealPercent <= 0 || damageDealt <= 0 {
 		return 0
 	}
-	
+
 	lifestealAmount := float64(damageDealt) * lifestealPercent
-	
+
 	// Limiter le vol de vie (ne peut pas dépasser la vie manquante)
 	missingHealth := attacker.MaxHealth - attacker.Health
 	if int(lifestealAmount) > missingHealth {
 		lifestealAmount = float64(missingHealth)
 	}
-	
+
 	return int(lifestealAmount)
 }
 
@@ -498,12 +497,12 @@ func (dc *DamageCalculator) CalculateManaBurn(target *models.CombatParticipant, 
 	if target.Mana <= 0 || burnAmount <= 0 {
 		return 0
 	}
-	
+
 	actualBurn := burnAmount
 	if actualBurn > target.Mana {
 		actualBurn = target.Mana
 	}
-	
+
 	return actualBurn
 }
 
@@ -511,9 +510,9 @@ func (dc *DamageCalculator) CalculateManaBurn(target *models.CombatParticipant, 
 func (dc *DamageCalculator) CalculateKnockback(attacker, target *models.CombatParticipant, baseKnockback float64) float64 {
 	// La force de projection dépend de la différence de "poids" ou de résistance
 	massRatio := float64(attacker.PhysicalDamage) / float64(target.PhysicalDefense+50)
-	
+
 	knockback := baseKnockback * massRatio
-	
+
 	// Limiter la projection
 	if knockback > 10.0 {
 		knockback = 10.0
@@ -521,7 +520,7 @@ func (dc *DamageCalculator) CalculateKnockback(attacker, target *models.CombatPa
 	if knockback < 0.1 {
 		knockback = 0.1
 	}
-	
+
 	return knockback
 }
 
@@ -531,15 +530,15 @@ func (dc *DamageCalculator) CalculateComboMultiplier(comboCount int) float64 {
 	if comboCount <= 0 {
 		return 1.0
 	}
-	
+
 	// Formule: 1 + (combo * 0.1) / (1 + combo * 0.05)
 	multiplier := 1.0 + (float64(comboCount)*0.1)/(1.0+float64(comboCount)*0.05)
-	
+
 	// Limiter le multiplicateur maximum
 	if multiplier > 3.0 {
 		multiplier = 3.0
 	}
-	
+
 	return multiplier
 }
 
@@ -547,64 +546,64 @@ func (dc *DamageCalculator) CalculateComboMultiplier(comboCount int) float64 {
 func (dc *DamageCalculator) CalculateExperienceGain(victorLevel, defeatedLevel int, damageContribution float64) int {
 	// Expérience de base selon le niveau de l'ennemi
 	baseExp := defeatedLevel * 10
-	
+
 	// Modifier selon la différence de niveau
 	levelDiff := defeatedLevel - victorLevel
 	levelMultiplier := 1.0 + (float64(levelDiff) * 0.1)
-	
+
 	// Appliquer la contribution aux dégâts
 	finalExp := float64(baseExp) * levelMultiplier * damageContribution
-	
+
 	// S'assurer d'un minimum d'expérience
 	if finalExp < 1 {
 		finalExp = 1
 	}
-	
+
 	return int(finalExp)
 }
 
 // CalculateThreat calcule le niveau de menace généré
 func (dc *DamageCalculator) CalculateThreat(action *models.CombatAction, participant *models.CombatParticipant) int {
 	threat := 0
-	
+
 	switch action.ActionType {
 	case models.ActionTypeAttack:
 		// Les attaques génèrent de la menace basée sur les dégâts
 		threat = action.DamageDealt
-		
+
 	case models.ActionTypeSkill:
 		// Les compétences offensives génèrent plus de menace
 		threat = action.DamageDealt
 		if action.DamageDealt > 0 {
 			threat = int(float64(action.DamageDealt) * 1.2)
 		}
-		
+
 	case models.ActionTypeItem:
 		// Les objets de soin génèrent de la menace
 		if action.HealingDone > 0 {
 			threat = action.HealingDone / 2
 		}
-		
+
 	case models.ActionTypeDefend:
 		// La défense génère peu de menace
 		threat = 1
-		
+
 	default:
 		threat = 0
 	}
-	
+
 	// Modifier selon le rôle/classe du personnage
 	// TODO: Intégrer avec le système de classes
-	
+
 	return threat
 }
 
 // AdvancedDamageResult représente un résultat de calcul avancé
 type AdvancedDamageResult struct {
 	*DamageResult
-	Lifesteal      int     `json:"lifesteal,omitempty"`
-	ManaBurn       int     `json:"mana_burn,omitempty"`
-	Knockback      float64 `json:"knockback,omitempty"`
+	Lifesteal       int     `json:"lifesteal,omitempty"`
+	ManaBurn        int     `json:"mana_burn,omitempty"`
+	Knockback       float64 `json:"knockback,omitempty"`
 	ComboMultiplier float64 `json:"combo_multiplier,omitempty"`
 	ThreatGenerated int     `json:"threat_generated,omitempty"`
 }
@@ -616,39 +615,39 @@ func (dc *DamageCalculator) CalculateAdvancedDamage(
 	modifiers map[string]float64,
 	comboCount int,
 ) *AdvancedDamageResult {
-	
+
 	// Calcul de base
 	baseResult := dc.CalculateDamage(attacker, defender, skill, modifiers)
-	
+
 	result := &AdvancedDamageResult{
 		DamageResult: baseResult,
 	}
-	
+
 	// Effets avancés seulement si l'attaque touche
 	if !result.IsMiss && !result.IsBlocked && result.FinalDamage > 0 {
-		
+
 		// Multiplicateur de combo
 		if comboCount > 0 {
 			result.ComboMultiplier = dc.CalculateComboMultiplier(comboCount)
 			result.FinalDamage = int(float64(result.FinalDamage) * result.ComboMultiplier)
 		}
-		
+
 		// Vol de vie
 		if lifestealPercent, exists := modifiers["lifesteal"]; exists {
 			result.Lifesteal = dc.CalculateLifesteal(attacker, result.FinalDamage, lifestealPercent)
 		}
-		
+
 		// Destruction de mana
 		if manaBurnAmount, exists := modifiers["mana_burn"]; exists {
 			result.ManaBurn = dc.CalculateManaBurn(defender, int(manaBurnAmount))
 		}
-		
+
 		// Projection
 		if knockbackForce, exists := modifiers["knockback"]; exists {
 			result.Knockback = dc.CalculateKnockback(attacker, defender, knockbackForce)
 		}
 	}
-	
+
 	return result
 }
 
@@ -657,9 +656,9 @@ func (dc *DamageCalculator) GetDamageBreakdown(result *DamageResult) string {
 	if len(result.Breakdown) == 0 {
 		return "No damage breakdown available"
 	}
-	
+
 	breakdown := fmt.Sprintf("Base damage: %d\n", result.BaseDamage)
-	
+
 	for _, component := range result.Breakdown {
 		if component.Multiplier > 0 {
 			breakdown += fmt.Sprintf("%s: %d (x%.2f)\n", component.Type, component.Value, component.Multiplier)
@@ -667,8 +666,8 @@ func (dc *DamageCalculator) GetDamageBreakdown(result *DamageResult) string {
 			breakdown += fmt.Sprintf("%s: %d\n", component.Type, component.Value)
 		}
 	}
-	
+
 	breakdown += fmt.Sprintf("Final damage: %d", result.FinalDamage)
-	
+
 	return breakdown
 }

@@ -2,8 +2,9 @@ package service
 
 import (
 	"fmt"
-	"time"
 	"math"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
@@ -20,28 +21,28 @@ type CombatServiceInterface interface {
 	GetCombatStatus(id uuid.UUID, req *models.GetCombatStatusRequest) (*models.CombatStatusResponse, error)
 	StartCombat(id uuid.UUID) error
 	EndCombat(id uuid.UUID, req *models.EndCombatRequest) (*models.CombatResult, error)
-	
+
 	// Gestion des participants
 	JoinCombat(combatID uuid.UUID, req *models.JoinCombatRequest) error
 	LeaveCombat(combatID, characterID uuid.UUID, req *models.LeaveCombatRequest) error
 	GetParticipants(combatID uuid.UUID) ([]*models.CombatParticipant, error)
 	UpdateParticipant(participant *models.CombatParticipant) error
-	
+
 	// Actions de combat
 	ExecuteAction(combatID, actorID uuid.UUID, req *models.ActionRequest) (*models.ActionResult, error)
 	ValidateAction(combatID, actorID uuid.UUID, req *models.ValidateActionRequest) (*models.ValidationResponse, error)
 	GetAvailableActions(combatID, actorID uuid.UUID) ([]*models.ActionTemplate, error)
-	
+
 	// Gestion des tours
 	ProcessTurn(combatID uuid.UUID) error
 	AdvanceTurn(combatID uuid.UUID) error
 	GetCurrentTurn(combatID uuid.UUID) (*models.TurnInfo, error)
-	
+
 	// Recherche et historique
 	SearchCombats(req *models.SearchCombatsRequest) (*models.CombatListResponse, error)
 	GetCombatHistory(req *models.GetCombatHistoryRequest) (*models.CombatHistoryResponse, error)
 	GetStatistics(req *models.GetStatisticsRequest) (*models.StatisticsResponse, error)
-	
+
 	// Maintenance
 	CleanupExpiredCombats() error
 	GetActiveCombatCount() (int, error)
@@ -165,9 +166,9 @@ func (s *CombatService) CreateCombat(req *models.CreateCombatRequest) (*models.C
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"combat_id":   combat.ID,
-		"combat_type": combat.CombatType,
-		"zone_id":     combat.ZoneID,
+		"combat_id":    combat.ID,
+		"combat_type":  combat.CombatType,
+		"zone_id":      combat.ZoneID,
 		"participants": len(req.Participants),
 	}).Info("Combat created")
 
@@ -322,15 +323,15 @@ func (s *CombatService) EndCombat(id uuid.UUID, req *models.EndCombatRequest) (*
 	result := s.calculateCombatResult(combat, participants, req)
 
 	// Mettre à jour les statistiques des participants
-	if err := s.updateParticipantStatistics(participants, result); err != nil {
+	if err := s.updateParticipantStatistics(combat, participants, result); err != nil {
 		logrus.WithError(err).Error("Failed to update participant statistics")
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"combat_id":     combat.ID,
-		"duration":      result.Duration,
-		"winning_team":  result.WinningTeam,
-		"end_reason":    result.EndReason,
+		"combat_id":    combat.ID,
+		"duration":     result.Duration,
+		"winning_team": result.WinningTeam,
+		"end_reason":   result.EndReason,
 	}).Info("Combat ended")
 
 	return result, nil
@@ -481,13 +482,13 @@ func (s *CombatService) ExecuteAction(combatID, actorID uuid.UUID, req *models.A
 	// Validation anti-cheat
 	if validation := s.antiCheat.ValidateAction(actor, req); !validation.Valid {
 		logrus.WithFields(logrus.Fields{
-			"combat_id":    combatID,
-			"actor_id":     actorID,
-			"action_type":  req.ActionType,
-			"errors":       validation.Errors,
-			"suspicious":   validation.AntiCheat.Suspicious,
+			"combat_id":   combatID,
+			"actor_id":    actorID,
+			"action_type": req.ActionType,
+			"errors":      validation.Errors,
+			"suspicious":  validation.AntiCheat.Suspicious,
 		}).Warn("Suspicious action detected")
-		
+
 		if validation.AntiCheat.Action == "block" {
 			return &models.ActionResult{
 				Success: false,
@@ -557,7 +558,7 @@ func (s *CombatService) ProcessTurn(combatID uuid.UUID) error {
 	if winner := s.checkWinConditions(participants); winner != nil {
 		endReq := &models.EndCombatRequest{
 			Reason:   "victory_condition",
-			WinnerID: winner,
+			WinnerID: winner, // winner est déjà un *int
 		}
 		_, err := s.EndCombat(combatID, endReq)
 		return err
@@ -606,18 +607,18 @@ func (s *CombatService) SearchCombats(req *models.SearchCombatsRequest) (*models
 	}
 
 	// Convertir en résumés
-summaries := make([]*models.CombatListItem, len(combats))
-for i, combat := range combats {
-	summaries[i] = s.combatToSummary(combat)
-}
+	summaries := make([]*models.CombatListItem, len(combats))
+	for i, combat := range combats {
+		summaries[i] = s.combatToSummary(combat)
+	}
 
-return &models.CombatListResponse{
-	Combats:  summaries,
-	Total:    total,
-	Page:     req.Offset/req.Limit + 1,
-	PageSize: req.Limit,
-	HasMore:  req.Offset+req.Limit < total,
-}, nil
+	return &models.CombatListResponse{
+		Combats:  summaries,
+		Total:    total,
+		Page:     req.Offset/req.Limit + 1,
+		PageSize: req.Limit,
+		HasMore:  req.Offset+req.Limit < total,
+	}, nil
 
 }
 
@@ -688,12 +689,7 @@ func (s *CombatService) calculateCombatResult(combat *models.CombatInstance, par
 
 	// Déterminer l'équipe gagnante
 	if req.WinnerID != nil {
-		for _, p := range participants {
-			if p.CharacterID == *req.WinnerID {
-				result.WinningTeam = &p.Team
-				break
-			}
-		}
+		result.WinningTeam = req.WinnerID
 	} else {
 		// Déterminer automatiquement le gagnant
 		teamAlive := make(map[int]int)
@@ -702,7 +698,6 @@ func (s *CombatService) calculateCombatResult(combat *models.CombatInstance, par
 				teamAlive[p.Team]++
 			}
 		}
-
 		for team, count := range teamAlive {
 			if count > 0 {
 				result.WinningTeam = &team
@@ -773,7 +768,7 @@ func (s *CombatService) createCombatSummary(combat *models.CombatInstance, parti
 	}
 }
 
-func (s *CombatService) updateParticipantStatistics(participants []*models.CombatParticipant, result *models.CombatResult) error {
+func (s *CombatService) updateParticipantStatistics(combat *models.CombatInstance, participants []*models.CombatParticipant, result *models.CombatResult) error {
 	for _, participant := range participants {
 		// Récupérer les statistiques existantes
 		stats, err := s.combatRepo.GetStatistics(participant.CharacterID)
@@ -803,7 +798,7 @@ func (s *CombatService) updateParticipantStatistics(participants []*models.Comba
 		// Mettre à jour les statistiques selon le type de combat
 		isWinner := result.WinningTeam != nil && participant.Team == *result.WinningTeam
 
-		switch result.Combat.CombatType {
+		switch combat.CombatType {
 		case models.CombatTypePvE:
 			if isWinner {
 				stats.PvEBattlesWon++
@@ -865,7 +860,7 @@ func (s *CombatService) calculatePvPRatingChange(participant *models.CombatParti
 
 	// Calcul Elo
 	expectedScore := 1.0 / (1.0 + math.Pow(10, float64(avgOpponentRating-1000)/400.0))
-	
+
 	actualScore := 0.0
 	if isWinner {
 		actualScore = 1.0
@@ -875,28 +870,27 @@ func (s *CombatService) calculatePvPRatingChange(participant *models.CombatParti
 	return int(change)
 }
 
-func (s *CombatService) checkWinConditions(participants []*models.CombatParticipant) *uuid.UUID {
+func (s *CombatService) checkWinConditions(participants []*models.CombatParticipant) *int {
 	// Compter les joueurs vivants par équipe
-	teamAlive := make(map[int][]uuid.UUID)
-	
+	teamAlive := make(map[int]int)
+
 	for _, p := range participants {
 		if p.IsAlive {
-			teamAlive[p.Team] = append(teamAlive[p.Team], p.CharacterID)
+			teamAlive[p.Team]++
 		}
 	}
 
 	// Si une seule équipe a des survivants, elle gagne
 	aliveTeams := 0
-	var winner uuid.UUID
-	
+	var winner int
 	for team, count := range teamAlive {
-	if count > 0 {
-		result.WinningTeam = &team
-		break
+		if count > 0 {
+			aliveTeams++
+			winner = team
+		}
 	}
-}
 
-	if aliveTeams <= 1 {
+	if aliveTeams == 1 {
 		return &winner
 	}
 
@@ -904,7 +898,7 @@ func (s *CombatService) checkWinConditions(participants []*models.CombatParticip
 }
 
 func (s *CombatService) combatToSummary(combat *models.CombatInstance) *models.CombatListItem {
-	summary := &models.CombatListItem{  // <- Changer le type
+	summary := &models.CombatListItem{ // <- Changer le type
 		ID:              combat.ID,
 		CombatType:      combat.CombatType,
 		Status:          combat.Status,
@@ -979,13 +973,13 @@ func (s *CombatService) formatStatisticsResponse(stats *models.CombatStatistics,
 	// Statistiques générales
 	totalCombats := stats.PvEBattlesWon + stats.PvEBattlesLost + stats.PvPBattlesWon + stats.PvPBattlesLost + stats.PvPDraws
 	response.General = &models.GeneralStats{
-		TotalCombats:        totalCombats,
-		TotalDamageDealt:    stats.TotalDamageDealt,
-		TotalDamageTaken:    stats.TotalDamageTaken,
-		TotalHealingDone:    stats.TotalHealingDone,
-		TotalDeaths:         stats.TotalDeaths,
-		HighestDamageDealt:  stats.HighestDamageDealt,
-		LongestCombat:       time.Duration(stats.LongestCombatDuration) * time.Second,
+		TotalCombats:       totalCombats,
+		TotalDamageDealt:   stats.TotalDamageDealt,
+		TotalDamageTaken:   stats.TotalDamageTaken,
+		TotalHealingDone:   stats.TotalHealingDone,
+		TotalDeaths:        stats.TotalDeaths,
+		HighestDamageDealt: stats.HighestDamageDealt,
+		LongestCombat:      time.Duration(stats.LongestCombatDuration) * time.Second,
 	}
 
 	if totalCombats > 0 {

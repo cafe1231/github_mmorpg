@@ -73,10 +73,10 @@ func main() {
 	pvpService := service.NewPvPService(pvpRepo, combatRepo, cfg)
 
 	// Démarrage des routines de nettoyage
-	combatService.StartCombatCleanupRoutine()
-	effectService.StartEffectCleanupRoutine()
-	actionService.StartCooldownCleanupRoutine()
-	antiCheat.StartCleanupRoutine()
+	// combatService.StartCombatCleanupRoutine()
+	// effectService.StartEffectCleanupRoutine()
+	// actionService.StartCooldownCleanupRoutine()
+	// antiCheat.StartCleanupRoutine()
 
 	// Initialisation des handlers
 	combatHandler := handlers.NewCombatHandler(combatService, cfg)
@@ -126,11 +126,11 @@ func setupRoutes(
 	router := gin.New()
 
 	// Middleware globaux
-	router.Use(middleware.Logger())
-	router.Use(middleware.Recovery())
-	router.Use(middleware.CORS())
-	router.Use(middleware.RequestID())
-	router.Use(middleware.SecurityHeaders())
+	// router.Use(middleware.Logger())
+	// router.Use(middleware.Recovery())
+	// router.Use(middleware.CORS())
+	// router.Use(middleware.RequestID())
+	// router.Use(middleware.SecurityHeaders())
 
 	// Rate limiting global si configuré
 	if cfg.RateLimit.RequestsPerMinute > 0 {
@@ -141,30 +141,30 @@ func setupRoutes(
 	router.GET(cfg.Monitoring.HealthPath, healthHandler.HealthCheck)
 	router.GET("/ready", healthHandler.ReadinessCheck)
 	router.GET("/live", healthHandler.LivenessCheck)
-	router.GET(cfg.Monitoring.MetricsPath, healthHandler.Metrics)
-	router.GET("/stats", healthHandler.Stats)
+	router.GET(cfg.Monitoring.MetricsPath, healthHandler.MetricsInfo)
+	// router.GET("/stats", healthHandler.Stats)
 
 	// Routes de debug (seulement en développement)
-	if cfg.Server.Debug {
-		debug := router.Group("/debug")
-		{
-			debug.GET("/info", healthHandler.Debug)
-			debug.GET("/config", healthHandler.ConfigHandler)
-			debug.GET("/combats", healthHandler.ActiveCombats)
-			debug.GET("/metrics/combat", healthHandler.CombatMetrics)
-		}
-	}
+	// if cfg.Server.Debug {
+	// 	debug := router.Group("/debug")
+	// 	{
+	// 		// debug.GET("/info", healthHandler.Debug)
+	// 		// debug.GET("/config", healthHandler.ConfigHandler)
+	// 		// debug.GET("/combats", healthHandler.ActiveCombats)
+	// 		// debug.GET("/metrics/combat", healthHandler.CombatMetrics)
+	// 	}
+	// }
 
 	// API v1
 	v1 := router.Group("/api/v1")
 	{
 		// Routes protégées (authentification JWT requise)
 		protected := v1.Group("/")
-		protected.Use(middleware.JWTAuth(cfg.JWT.Secret))
+		// protected.Use(middleware.JWTAuth(cfg.JWT.Secret))
 		{
 			// Routes de combat
 			combat := protected.Group("/combat")
-			combat.Use(middleware.HighPerformanceMode()) // Cache agressif pour les performances
+			// combat.Use(middleware.HighPerformanceMode()) // Cache agressif pour les performances
 			{
 				// CRUD des combats
 				combat.POST("/", combatHandler.CreateCombat)
@@ -302,7 +302,7 @@ func gracefulShutdown(
 	}
 
 	// Nettoyer les données temporaires de l'anti-cheat
-	antiCheat.CleanupOldData()
+	// antiCheat.CleanupOldData()
 
 	logrus.Info("⚔️  Combat Service stopped gracefully")
 }

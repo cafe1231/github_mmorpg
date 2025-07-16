@@ -1,19 +1,20 @@
 package models
 
 import (
-	"time"
 	"fmt"
+	"time"
+
 	"github.com/google/uuid"
 )
 
 // CreateCombatRequest représente une demande de création de combat
 type CreateCombatRequest struct {
-	CombatType      CombatType     `json:"combat_type" binding:"required"`
-	ZoneID          string         `json:"zone_id,omitempty"`
-	MaxParticipants int            `json:"max_participants,omitempty"`
-	TurnTimeLimit   int            `json:"turn_time_limit,omitempty"`
-	MaxDuration     int            `json:"max_duration,omitempty"`
-	Settings        *CombatSettings `json:"settings,omitempty"`
+	CombatType      CombatType           `json:"combat_type" binding:"required"`
+	ZoneID          string               `json:"zone_id,omitempty"`
+	MaxParticipants int                  `json:"max_participants,omitempty"`
+	TurnTimeLimit   int                  `json:"turn_time_limit,omitempty"`
+	MaxDuration     int                  `json:"max_duration,omitempty"`
+	Settings        *CombatSettings      `json:"settings,omitempty"`
 	Participants    []ParticipantRequest `json:"participants,omitempty"`
 }
 
@@ -44,27 +45,27 @@ type StartCombatRequest struct {
 
 // EndCombatRequest représente une demande de fin de combat
 type EndCombatRequest struct {
-	Reason    string     `json:"reason" binding:"required"`
-	WinnerID  *uuid.UUID `json:"winner_id,omitempty"`
-	ForceEnd  bool       `json:"force_end,omitempty"`
+	Reason   string `json:"reason" binding:"required"`
+	WinnerID *int   `json:"winner_id,omitempty"`
+	ForceEnd bool   `json:"force_end,omitempty"`
 }
 
 // GetCombatStatusRequest représente une demande de statut de combat
 type GetCombatStatusRequest struct {
-	IncludeParticipants bool `json:"include_participants,omitempty"`
-	IncludeActions      bool `json:"include_actions,omitempty"`
-	IncludeEffects      bool `json:"include_effects,omitempty"`
-	IncludeLogs         bool `json:"include_logs,omitempty"`
+	IncludeParticipants bool       `json:"include_participants,omitempty"`
+	IncludeActions      bool       `json:"include_actions,omitempty"`
+	IncludeEffects      bool       `json:"include_effects,omitempty"`
+	IncludeLogs         bool       `json:"include_logs,omitempty"`
 	LastActionID        *uuid.UUID `json:"last_action_id,omitempty"`
 }
 
 // UpdateParticipantRequest représente une demande de mise à jour de participant
 type UpdateParticipantRequest struct {
-	Health          *int     `json:"health,omitempty"`
-	Mana            *int     `json:"mana,omitempty"`
-	IsReady         *bool    `json:"is_ready,omitempty"`
-	Position        *int     `json:"position,omitempty"`
-	Team            *int     `json:"team,omitempty"`
+	Health   *int  `json:"health,omitempty"`
+	Mana     *int  `json:"mana,omitempty"`
+	IsReady  *bool `json:"is_ready,omitempty"`
+	Position *int  `json:"position,omitempty"`
+	Team     *int  `json:"team,omitempty"`
 }
 
 // SearchCombatsRequest représente une demande de recherche de combats
@@ -82,69 +83,69 @@ type SearchCombatsRequest struct {
 
 // GetCombatHistoryRequest représente une demande d'historique de combat
 type GetCombatHistoryRequest struct {
-	CharacterID   *uuid.UUID    `json:"character_id,omitempty"`
-	UserID        *uuid.UUID    `json:"user_id,omitempty"`
-	CombatType    *CombatType   `json:"combat_type,omitempty"`
-	DateFrom      *time.Time    `json:"date_from,omitempty"`
-	DateTo        *time.Time    `json:"date_to,omitempty"`
-	WinsOnly      bool          `json:"wins_only,omitempty"`
-	LossesOnly    bool          `json:"losses_only,omitempty"`
-	Limit         int           `json:"limit,omitempty"`
-	Offset        int           `json:"offset,omitempty"`
+	CharacterID *uuid.UUID  `json:"character_id,omitempty"`
+	UserID      *uuid.UUID  `json:"user_id,omitempty"`
+	CombatType  *CombatType `json:"combat_type,omitempty"`
+	DateFrom    *time.Time  `json:"date_from,omitempty"`
+	DateTo      *time.Time  `json:"date_to,omitempty"`
+	WinsOnly    bool        `json:"wins_only,omitempty"`
+	LossesOnly  bool        `json:"losses_only,omitempty"`
+	Limit       int         `json:"limit,omitempty"`
+	Offset      int         `json:"offset,omitempty"`
 }
 
 // GetStatisticsRequest représente une demande de statistiques
 type GetStatisticsRequest struct {
-	CharacterID   *uuid.UUID  `json:"character_id,omitempty"`
-	UserID        *uuid.UUID  `json:"user_id,omitempty"`
-	CombatType    *CombatType `json:"combat_type,omitempty"`
-	Period        string      `json:"period,omitempty"` // "day", "week", "month", "year", "all"
-	Detailed      bool        `json:"detailed,omitempty"`
+	CharacterID *uuid.UUID  `json:"character_id,omitempty"`
+	UserID      *uuid.UUID  `json:"user_id,omitempty"`
+	CombatType  *CombatType `json:"combat_type,omitempty"`
+	Period      string      `json:"period,omitempty"` // "day", "week", "month", "year", "all"
+	Detailed    bool        `json:"detailed,omitempty"`
 }
 
 // ApplyEffectRequest représente une demande d'application d'effet
 type ApplyEffectRequest struct {
-	EffectID      string     `json:"effect_id" binding:"required"`
-	TargetID      uuid.UUID  `json:"target_id" binding:"required"`
-	CasterID      *uuid.UUID `json:"caster_id,omitempty"`
-	Duration      *int       `json:"duration,omitempty"`
-	Stacks        *int       `json:"stacks,omitempty"`
-	CustomValue   *int       `json:"custom_value,omitempty"`
-	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+	EffectID    string                 `json:"effect_id" binding:"required"`
+	TargetID    uuid.UUID              `json:"target_id" binding:"required"`
+	CasterID    *uuid.UUID             `json:"caster_id,omitempty"`
+	Duration    *int                   `json:"duration,omitempty"`
+	Stacks      *int                   `json:"stacks,omitempty"`
+	CustomValue *int                   `json:"custom_value,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // RemoveEffectRequest représente une demande de suppression d'effet
 type RemoveEffectRequest struct {
-	EffectID      *uuid.UUID `json:"effect_id,omitempty"`
-	EffectType    *EffectType `json:"effect_type,omitempty"`
-	TargetID      uuid.UUID  `json:"target_id" binding:"required"`
-	RemoveAll     bool       `json:"remove_all,omitempty"`
-	OnlyDebuffs   bool       `json:"only_debuffs,omitempty"`
-	OnlyBuffs     bool       `json:"only_buffs,omitempty"`
+	EffectID    *uuid.UUID  `json:"effect_id,omitempty"`
+	EffectType  *EffectType `json:"effect_type,omitempty"`
+	TargetID    uuid.UUID   `json:"target_id" binding:"required"`
+	RemoveAll   bool        `json:"remove_all,omitempty"`
+	OnlyDebuffs bool        `json:"only_debuffs,omitempty"`
+	OnlyBuffs   bool        `json:"only_buffs,omitempty"`
 }
 
 // ProcessTurnRequest représente une demande de traitement de tour
 type ProcessTurnRequest struct {
-	AdvanceTurn   bool `json:"advance_turn,omitempty"`
-	ProcessEffects bool `json:"process_effects,omitempty"`
+	AdvanceTurn        bool `json:"advance_turn,omitempty"`
+	ProcessEffects     bool `json:"process_effects,omitempty"`
 	CheckWinConditions bool `json:"check_win_conditions,omitempty"`
 }
 
 // ValidateActionRequest représente une demande de validation d'action
 type ValidateActionRequest struct {
-	Action        *ActionRequest `json:"action" binding:"required"`
-	ActorID       uuid.UUID      `json:"actor_id" binding:"required"`
-	Strict        bool           `json:"strict,omitempty"`
-	CheckCooldowns bool          `json:"check_cooldowns,omitempty"`
-	CheckResources bool          `json:"check_resources,omitempty"`
+	Action         *ActionRequest `json:"action" binding:"required"`
+	ActorID        uuid.UUID      `json:"actor_id" binding:"required"`
+	Strict         bool           `json:"strict,omitempty"`
+	CheckCooldowns bool           `json:"check_cooldowns,omitempty"`
+	CheckResources bool           `json:"check_resources,omitempty"`
 }
 
 // BulkActionRequest représente une demande d'actions multiples
 type BulkActionRequest struct {
-	Actions       []ActionRequest `json:"actions" binding:"required"`
-	Atomic        bool            `json:"atomic,omitempty"` // Toutes ou aucune
-	Sequential    bool            `json:"sequential,omitempty"` // Exécuter dans l'ordre
-	StopOnError   bool            `json:"stop_on_error,omitempty"`
+	Actions     []ActionRequest `json:"actions" binding:"required"`
+	Atomic      bool            `json:"atomic,omitempty"`     // Toutes ou aucune
+	Sequential  bool            `json:"sequential,omitempty"` // Exécuter dans l'ordre
+	StopOnError bool            `json:"stop_on_error,omitempty"`
 }
 
 // ReplayRequest représente une demande de rejeu de combat
@@ -158,11 +159,11 @@ type ReplayRequest struct {
 
 // AdminActionRequest représente une demande d'action administrative
 type AdminActionRequest struct {
-	Action        string                 `json:"action" binding:"required"`
-	TargetID      uuid.UUID              `json:"target_id" binding:"required"`
-	Parameters    map[string]interface{} `json:"parameters,omitempty"`
-	Reason        string                 `json:"reason,omitempty"`
-	Silent        bool                   `json:"silent,omitempty"`
+	Action     string                 `json:"action" binding:"required"`
+	TargetID   uuid.UUID              `json:"target_id" binding:"required"`
+	Parameters map[string]interface{} `json:"parameters,omitempty"`
+	Reason     string                 `json:"reason,omitempty"`
+	Silent     bool                   `json:"silent,omitempty"`
 }
 
 // Validate valide une demande de création de combat
@@ -380,7 +381,7 @@ func (r *AdminActionRequest) Validate() error {
 		"grant_victory",
 		"cancel_combat",
 	}
-	
+
 	isValid := false
 	for _, action := range validActions {
 		if r.Action == action {
@@ -419,13 +420,13 @@ func (r *AdminActionRequest) Validate() error {
 func GetDefaultCreateCombatRequest() *CreateCombatRequest {
 	// Créer une variable temporaire pour pouvoir prendre son adresse
 	defaultSettings := GetDefaultCombatSettings()
-	
+
 	return &CreateCombatRequest{
 		CombatType:      CombatTypePvE,
 		MaxParticipants: 4,
 		TurnTimeLimit:   30,
 		MaxDuration:     300,
-		Settings:        &defaultSettings,  // Maintenant on peut prendre l'adresse
+		Settings:        &defaultSettings, // Maintenant on peut prendre l'adresse
 		Participants:    []ParticipantRequest{},
 	}
 }

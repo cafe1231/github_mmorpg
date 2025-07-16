@@ -58,9 +58,8 @@ func (h *PvPHandler) CreateChallenge(c *gin.Context) {
 		})
 		return
 	}
-	req.ChallengerID = challengerID
 
-	challenge, err := h.pvpService.CreateChallenge(&req)
+	challenge, err := h.pvpService.CreateChallenge(challengerID, &req)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create PvP challenge")
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -142,7 +141,7 @@ func (h *PvPHandler) GetChallenge(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		logrus.WithError(err).Error("Failed to get challenge")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":      "Failed to retrieve challenge",
@@ -207,7 +206,7 @@ func (h *PvPHandler) RespondToChallenge(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		logrus.WithError(err).Error("Failed to respond to challenge")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":      err.Error(),
@@ -257,7 +256,7 @@ func (h *PvPHandler) CancelChallenge(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		logrus.WithError(err).Error("Failed to cancel challenge")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":      err.Error(),
@@ -348,7 +347,7 @@ func (h *PvPHandler) GetPvPStatistics(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		logrus.WithError(err).Error("Failed to get PvP statistics")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":      "Failed to retrieve statistics",

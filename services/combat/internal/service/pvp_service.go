@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,28 +16,28 @@ import (
 // PvPServiceInterface définit les méthodes du service PvP
 type PvPServiceInterface interface {
 	// Gestion des défis
-	CreateChallenge(req *models.CreateChallengeRequest) (*models.PvPChallenge, error)
+	CreateChallenge(challengerID uuid.UUID, req *models.CreateChallengeRequest) (*models.PvPChallenge, error)
 	GetChallenge(id uuid.UUID) (*models.PvPChallenge, error)
 	GetChallenges(req *models.GetChallengesRequest) ([]*models.PvPChallenge, error)
 	RespondToChallenge(challengeID uuid.UUID, req *models.RespondToChallengeRequest) (*models.ChallengeResponse, error)
 	CancelChallenge(challengeID, playerID uuid.UUID) error
-	
+
 	// Classements et statistiques
 	GetRankings(req *models.GetRankingsRequest) (*models.RankingsResponse, error)
 	GetPlayerStatistics(playerID uuid.UUID, season string) (*models.PvPStatistics, error)
 	UpdatePlayerStatistics(playerID uuid.UUID, result *models.MatchResult) error
 	GetCurrentSeasonInfo() (*models.SeasonInfo, error)
-	
+
 	// File d'attente et matchmaking
 	JoinQueue(req *models.JoinQueueRequest) (*models.QueueResponse, error)
 	LeaveQueue(playerID uuid.UUID) error
 	GetQueueStatus(playerID uuid.UUID) (*models.QueueStatus, error)
 	ProcessMatchmaking() error
-	
+
 	// Gestion des matches
 	StartMatch(player1ID, player2ID uuid.UUID, matchType models.ChallengeType) (*models.PvPMatch, error)
 	EndMatch(matchID uuid.UUID, result *models.MatchResult) error
-	
+
 	// Nettoyage et maintenance
 	CleanupExpiredChallenges() error
 	CleanupOldQueue() error
@@ -70,20 +71,20 @@ func NewPvPService(
 }
 
 // CreateChallenge crée un nouveau défi PvP
-func (s *PvPService) CreateChallenge(req *models.CreateChallengeRequest) (*models.PvPChallenge, error) {
+func (s *PvPService) CreateChallenge(challengerID uuid.UUID, req *models.CreateChallengeRequest) (*models.PvPChallenge, error) {
 	// Validation de base
-	if req.ChallengerID == req.ChallengedID {
+	if challengerID == req.ChallengedID {
 		return nil, fmt.Errorf("cannot challenge yourself")
 	}
 
 	// Vérifier que le joueur n'a pas déjà un défi en attente avec cette personne
-	existingChallenges, err := s.pvpRepo.GetChallengesByPlayer(req.ChallengerID)
+	existingChallenges, err := s.pvpRepo.GetChallengesByPlayer(challengerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing challenges: %w", err)
 	}
 
 	for _, challenge := range existingChallenges {
-		if challenge.ChallengedID == req.ChallengedID && challenge.Status == models.ChallengePending {
+		if challenge.ChallengedID == req.ChallengedID && challenge.Status == models.ChallengeStatusPending {
 			return nil, fmt.Errorf("challenge already pending with this player")
 		}
 	}
@@ -91,14 +92,20 @@ func (s *PvPService) CreateChallenge(req *models.CreateChallengeRequest) (*model
 	// Créer le défi
 	challenge := &models.PvPChallenge{
 		ID:            uuid.New(),
-		ChallengerID:  req.ChallengerID,
+		ChallengerID:  challengerID,
 		ChallengedID:  req.ChallengedID,
 		ChallengeType: req.ChallengeType,
-		Message:       req.Message,
-		Stakes:        req.Stakes,
-		Status:        models.ChallengePending,
-		CreatedAt:     time.Now(),
-		ExpiresAt:     time.Now().Add(24 * time.Hour), // 24h d'expiration
+		Message:       &req.Message,
+		Stakes: func() models.PvPStakes {
+			if req.Stakes != nil {
+				return *req.Stakes
+			} else {
+				return models.PvPStakes{}
+			}
+		}(),
+		Status:    models.ChallengeStatusPending,
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(24 * time.Hour), // 24h d'expiration
 	}
 
 	if err := s.pvpRepo.CreateChallenge(challenge); err != nil {
@@ -107,9 +114,9 @@ func (s *PvPService) CreateChallenge(req *models.CreateChallengeRequest) (*model
 
 	logrus.WithFields(logrus.Fields{
 		"challenge_id":  challenge.ID,
-		"challenger_id": req.ChallengerID,
+		"challenger_id": challengerID,
 		"challenged_id": req.ChallengedID,
-		"type":         req.ChallengeType,
+		"type":          req.ChallengeType,
 	}).Info("PvP challenge created")
 
 	return challenge, nil
@@ -133,12 +140,12 @@ func (s *PvPService) GetChallenges(req *models.GetChallengesRequest) ([]*models.
 		if err != nil {
 			return nil, err
 		}
-		
+
 		received, err := s.pvpRepo.GetPendingChallenges(req.PlayerID)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Combiner et dédupliquer
 		allChallenges := append(sent, received...)
 		return s.deduplicateChallenges(allChallenges), nil
@@ -157,7 +164,7 @@ func (s *PvPService) RespondToChallenge(challengeID uuid.UUID, req *models.Respo
 		return nil, fmt.Errorf("only the challenged player can respond")
 	}
 
-	if challenge.Status != models.ChallengePending {
+	if challenge.Status != models.ChallengeStatusPending {
 		return nil, fmt.Errorf("challenge is no longer pending")
 	}
 
@@ -166,17 +173,16 @@ func (s *PvPService) RespondToChallenge(challengeID uuid.UUID, req *models.Respo
 	}
 
 	response := &models.ChallengeResponse{
-		ChallengeID: challengeID,
-		PlayerID:    req.PlayerID,
-		Accepted:    req.Accept,
-		Message:     req.Message,
-		Timestamp:   time.Now(),
+		Success:   true,
+		Challenge: challenge,
+		Message:   req.Message,
 	}
 
 	if req.Accept {
 		// Accepter le défi - créer un combat
-		challenge.Status = models.ChallengeAccepted
-		challenge.AcceptedAt = &response.Timestamp
+		challenge.Status = models.ChallengeStatusAccepted
+		now := time.Now()
+		challenge.RespondedAt = &now
 
 		// Créer un combat PvP
 		combat, err := s.createPvPCombat(challenge)
@@ -185,7 +191,7 @@ func (s *PvPService) RespondToChallenge(challengeID uuid.UUID, req *models.Respo
 		}
 
 		challenge.CombatID = &combat.ID
-		response.CombatID = &combat.ID
+		response.Match = nil // ou response.Match = ... si tu veux retourner le match
 
 		logrus.WithFields(logrus.Fields{
 			"challenge_id": challengeID,
@@ -195,8 +201,10 @@ func (s *PvPService) RespondToChallenge(challengeID uuid.UUID, req *models.Respo
 		}).Info("PvP challenge accepted and combat created")
 	} else {
 		// Refuser le défi
-		challenge.Status = models.ChallengeDeclined
-		
+		challenge.Status = models.ChallengeStatusDeclined
+		now := time.Now()
+		challenge.RespondedAt = &now
+
 		logrus.WithFields(logrus.Fields{
 			"challenge_id": challengeID,
 			"challenger":   challenge.ChallengerID,
@@ -223,12 +231,12 @@ func (s *PvPService) CancelChallenge(challengeID, playerID uuid.UUID) error {
 		return fmt.Errorf("only the challenger can cancel the challenge")
 	}
 
-	if challenge.Status != models.ChallengePending {
+	if challenge.Status != models.ChallengeStatusPending {
 		return fmt.Errorf("can only cancel pending challenges")
 	}
 
-	challenge.Status = models.ChallengeCancelled
-	
+	challenge.Status = models.ChallengeStatusCancelled
+
 	if err := s.pvpRepo.UpdateChallenge(challenge); err != nil {
 		return fmt.Errorf("failed to update challenge: %w", err)
 	}
@@ -254,10 +262,9 @@ func (s *PvPService) GetRankings(req *models.GetRankingsRequest) (*models.Rankin
 	}
 
 	response := &models.RankingsResponse{
-		Season:    req.Season,
-		Rankings:  rankings,
-		Total:     len(rankings),
-		UpdatedAt: time.Now(),
+		Season:   req.Season,
+		Rankings: rankings,
+		Total:    len(rankings),
 	}
 
 	return response, nil
@@ -270,16 +277,6 @@ func (s *PvPService) GetPlayerStatistics(playerID uuid.UUID, season string) (*mo
 		return nil, fmt.Errorf("failed to get PvP statistics: %w", err)
 	}
 
-	// Calculer le rang du joueur
-	rank, err := s.pvpRepo.GetPlayerRank(playerID)
-	if err != nil {
-		logrus.WithError(err).Warn("Failed to get player rank")
-		rank = 0
-	}
-
-	stats.Rank = rank
-	stats.Season = season
-
 	return stats, nil
 }
 
@@ -289,47 +286,45 @@ func (s *PvPService) UpdatePlayerStatistics(playerID uuid.UUID, result *models.M
 	if err != nil {
 		// Créer de nouvelles statistiques si elles n'existent pas
 		stats = &models.PvPStatistics{
-			PlayerID: playerID,
-			Rating:   1000, // Rating de départ
+			PlayerID:      playerID,
+			CurrentRating: 1000, // Rating de départ
 		}
 	}
 
 	// Mettre à jour les statistiques en fonction du résultat
-	switch result.Result {
-	case "win":
-		stats.Wins++
-		stats.Rating += s.calculateRatingChange(stats.Rating, result.OpponentRating, true)
-	case "loss":
-		stats.Losses++
-		stats.Rating += s.calculateRatingChange(stats.Rating, result.OpponentRating, false)
-	case "draw":
-		stats.Draws++
-		// Pas de changement de rating pour un match nul
-	}
-
-	stats.TotalMatches = stats.Wins + stats.Losses + stats.Draws
-
-	// Calculer le taux de victoire
-	if stats.TotalMatches > 0 {
-		stats.WinRate = float64(stats.Wins) / float64(stats.TotalMatches) * 100
-	}
-
-	// Mettre à jour la streak
-	if result.Result == "win" {
-		if stats.LastResult == "win" {
-			stats.CurrentStreak++
+	switch result.ResultType {
+	case models.ResultTypeVictory:
+		stats.BattlesWon++
+		if playerID == result.WinnerID {
+			stats.CurrentRating = result.WinnerRating
 		} else {
-			stats.CurrentStreak = 1
+			stats.CurrentRating = result.LoserRating
 		}
+	case models.ResultTypeDefeat:
+		stats.BattlesLost++
+		if playerID == result.LoserID {
+			stats.CurrentRating = result.LoserRating
+		} else {
+			stats.CurrentRating = result.WinnerRating
+		}
+	case models.ResultTypeDraw:
+		stats.Draws++
+	}
+	stats.TotalMatches = stats.BattlesWon + stats.BattlesLost + stats.Draws
+	if stats.TotalMatches > 0 {
+		stats.WinRate = float64(stats.BattlesWon) / float64(stats.TotalMatches) * 100
+	}
+	// Streaks (simplifié)
+	if result.ResultType == models.ResultTypeVictory {
+		stats.CurrentStreak++
 		if stats.CurrentStreak > stats.BestStreak {
 			stats.BestStreak = stats.CurrentStreak
 		}
-	} else if result.Result == "loss" {
+	} else if result.ResultType == models.ResultTypeDefeat {
 		stats.CurrentStreak = 0
 	}
-
-	stats.LastResult = result.Result
-	stats.LastMatchAt = time.Now()
+	now := time.Now()
+	stats.LastMatchAt = &now
 
 	// Sauvegarder
 	if err := s.pvpRepo.UpdatePvPStatistics(stats); err != nil {
@@ -346,7 +341,7 @@ func (s *PvPService) GetCurrentSeasonInfo() (*models.SeasonInfo, error) {
 		Name:      "Season 1",
 		StartDate: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		EndDate:   time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC),
-		Active:    true,
+		IsActive:  true,
 	}, nil
 }
 
@@ -360,11 +355,10 @@ func (s *PvPService) JoinQueue(req *models.JoinQueueRequest) (*models.QueueRespo
 
 	// Créer l'entrée de file d'attente
 	entry := &models.PvPQueueEntry{
-		PlayerID:     req.PlayerID,
-		QueueType:    req.QueueType,
-		Rating:       req.Rating,
-		JoinedAt:     time.Now(),
-		Preferences:  req.Preferences,
+		PlayerID:    req.PlayerID,
+		QueueType:   req.QueueType,
+		JoinedAt:    time.Now(),
+		Preferences: req.Preferences,
 	}
 
 	if err := s.pvpRepo.AddToQueue(entry); err != nil {
@@ -376,17 +370,16 @@ func (s *PvPService) JoinQueue(req *models.JoinQueueRequest) (*models.QueueRespo
 	estimatedWait := s.estimateWaitTime(queueCount)
 
 	response := &models.QueueResponse{
-		PlayerID:       req.PlayerID,
-		QueueType:      req.QueueType,
-		Position:       queueCount + 1,
-		EstimatedWait:  estimatedWait,
-		JoinedAt:       entry.JoinedAt,
+		Success:       true,
+		QueueEntry:    entry,
+		Position:      queueCount + 1,
+		EstimatedWait: estimatedWait,
+		Message:       "Player joined PvP queue",
 	}
 
 	logrus.WithFields(logrus.Fields{
 		"player_id":      req.PlayerID,
 		"queue_type":     req.QueueType,
-		"rating":         req.Rating,
 		"estimated_wait": estimatedWait,
 	}).Info("Player joined PvP queue")
 
@@ -428,22 +421,18 @@ func (s *PvPService) GetQueueStatus(playerID uuid.UUID) (*models.QueueStatus, er
 	}
 
 	return &models.QueueStatus{
-		InQueue:            true,
-		QueueType:          entry.QueueType,
-		JoinedAt:           entry.JoinedAt,
-		WaitTime:           waitTime,
-		EstimatedRemaining: estimatedRemaining,
-		Position:           queueCount, // Approximation
+		InQueue:       true,
+		QueueEntry:    entry,
+		Position:      queueCount, // Approximation
+		EstimatedWait: estimatedRemaining,
+		QueueSize:     queueCount,
 	}, nil
 }
 
 // ProcessMatchmaking traite le matchmaking automatique
 func (s *PvPService) ProcessMatchmaking() error {
 	// Récupérer toutes les files d'attente
-	queueTypes := []models.ChallengeType{
-		models.ChallengeRanked,
-		models.ChallengeCasual,
-	}
+	queueTypes := []models.ChallengeType{"ranked", "casual"}
 
 	for _, queueType := range queueTypes {
 		entries, err := s.pvpRepo.GetQueueByType(queueType)
@@ -469,16 +458,17 @@ func (s *PvPService) StartMatch(player1ID, player2ID uuid.UUID, matchType models
 		MaxDuration:     300,
 	}
 
-	combat, err := s.combatRepo.Create(&models.CombatInstance{
+	combat := &models.CombatInstance{
 		ID:              uuid.New(),
 		CombatType:      combatReq.CombatType,
-		Status:          models.CombatStatusPending,
+		Status:          "pending",
 		MaxParticipants: combatReq.MaxParticipants,
 		TurnTimeLimit:   combatReq.TurnTimeLimit,
 		MaxDuration:     combatReq.MaxDuration,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
-	})
+	}
+	err := s.combatRepo.Create(combat)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create combat: %w", err)
 	}
@@ -487,11 +477,8 @@ func (s *PvPService) StartMatch(player1ID, player2ID uuid.UUID, matchType models
 	match := &models.PvPMatch{
 		ID:        uuid.New(),
 		CombatID:  combat.ID,
-		Player1ID: player1ID,
-		Player2ID: player2ID,
+		Players:   []*models.PlayerSummary{{ID: player1ID, Name: "Player 1"}, {ID: player2ID, Name: "Player 2"}},
 		MatchType: matchType,
-		Status:    models.MatchStatusActive,
-		StartedAt: time.Now(),
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -508,24 +495,30 @@ func (s *PvPService) StartMatch(player1ID, player2ID uuid.UUID, matchType models
 // EndMatch termine un match PvP
 func (s *PvPService) EndMatch(matchID uuid.UUID, result *models.MatchResult) error {
 	// Mettre à jour les statistiques des deux joueurs
-	if err := s.UpdatePlayerStatistics(result.Player1ID, &models.MatchResult{
-		Result:        result.Player1Result,
-		OpponentRating: result.Player2Rating,
+	if err := s.UpdatePlayerStatistics(result.WinnerID, &models.MatchResult{
+		ResultType:   result.ResultType,
+		WinnerID:     result.WinnerID,
+		LoserID:      result.LoserID,
+		WinnerRating: result.WinnerRating,
+		LoserRating:  result.LoserRating,
 	}); err != nil {
 		logrus.WithError(err).Error("Failed to update player 1 statistics")
 	}
 
-	if err := s.UpdatePlayerStatistics(result.Player2ID, &models.MatchResult{
-		Result:        result.Player2Result,
-		OpponentRating: result.Player1Rating,
+	if err := s.UpdatePlayerStatistics(result.LoserID, &models.MatchResult{
+		ResultType:   result.ResultType,
+		WinnerID:     result.LoserID,
+		LoserID:      result.WinnerID,
+		WinnerRating: result.LoserRating,
+		LoserRating:  result.WinnerRating,
 	}); err != nil {
 		logrus.WithError(err).Error("Failed to update player 2 statistics")
 	}
 
 	logrus.WithFields(logrus.Fields{
 		"match_id":       matchID,
-		"player1_result": result.Player1Result,
-		"player2_result": result.Player2Result,
+		"player1_result": result.ResultType,
+		"player2_result": result.ResultType,
 		"duration":       result.Duration,
 	}).Info("PvP match ended")
 
@@ -579,7 +572,7 @@ func (s *PvPService) createPvPCombat(challenge *models.PvPChallenge) (*models.Co
 	combat := &models.CombatInstance{
 		ID:              uuid.New(),
 		CombatType:      models.CombatTypePvP,
-		Status:          models.CombatStatusPending,
+		Status:          "pending",
 		MaxParticipants: 2,
 		CurrentTurn:     0,
 		TurnTimeLimit:   30,
@@ -611,17 +604,17 @@ func (s *PvPService) deduplicateChallenges(challenges []*models.PvPChallenge) []
 
 func (s *PvPService) calculateRatingChange(playerRating, opponentRating int, won bool) int {
 	// Système ELO simplifié
-	k := 32 // Facteur K
-	
+	k := 32.0 // Facteur K
+
 	expectedScore := 1.0 / (1.0 + math.Pow(10, float64(opponentRating-playerRating)/400))
-	
+
 	var actualScore float64
 	if won {
 		actualScore = 1.0
 	} else {
 		actualScore = 0.0
 	}
-	
+
 	change := k * (actualScore - expectedScore)
 	return int(change)
 }

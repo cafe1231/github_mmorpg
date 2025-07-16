@@ -55,7 +55,7 @@ var serviceStartTime = time.Now()
 // @Router /health [get]
 func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	startTime := time.Now()
-	
+
 	response := HealthResponse{
 		Service:   "combat",
 		Version:   "1.0.0", // TODO: Récupérer depuis les variables de build
@@ -90,7 +90,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	}
 
 	response.Status = overallStatus
-	
+
 	// Log des vérifications importantes
 	duration := time.Since(startTime)
 	logrus.WithFields(logrus.Fields{
@@ -118,9 +118,9 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 // @Router /ready [get]
 func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 	checks := make(map[string]interface{})
-	
+
 	// Vérification critique: base de données
-	if err := h.db.HealthCheck(); err != nil {
+	if err := h.db.Health(); err != nil {
 		logrus.WithError(err).Error("Database readiness check failed")
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"status":  "not_ready",
@@ -167,15 +167,15 @@ func (h *HealthHandler) LivenessCheck(c *gin.Context) {
 // @Router /metrics-info [get]
 func (h *HealthHandler) MetricsInfo(c *gin.Context) {
 	dbStats := h.db.GetStats()
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"service":   "combat",
 		"timestamp": time.Now(),
 		"uptime":    time.Since(serviceStartTime).String(),
 		"database": gin.H{
-			"open_connections": dbStats.OpenConnections,
-			"in_use":          dbStats.InUse,
-			"idle":            dbStats.Idle,
+			"open_connections": dbStats["open_connections"],
+			"in_use":           dbStats["in_use"],
+			"idle":             dbStats["idle"],
 		},
 		"memory": h.getMemoryUsage(),
 	})
@@ -184,8 +184,8 @@ func (h *HealthHandler) MetricsInfo(c *gin.Context) {
 // checkDatabase vérifie la santé de la base de données
 func (h *HealthHandler) checkDatabase() HealthCheck {
 	start := time.Now()
-	
-	if err := h.db.HealthCheck(); err != nil {
+
+	if err := h.db.Health(); err != nil {
 		return HealthCheck{
 			Status:  "unhealthy",
 			Message: "Database connection failed",
@@ -198,10 +198,10 @@ func (h *HealthHandler) checkDatabase() HealthCheck {
 
 	// Obtenir les statistiques de la DB
 	stats := h.db.GetStats()
-	
+
 	// Vérifier si on a trop de connexions ouvertes
 	status := "healthy"
-	if stats.OpenConnections > 20 {
+	if stats["open_connections"].(int) > 20 {
 		status = "degraded"
 	}
 
@@ -209,10 +209,10 @@ func (h *HealthHandler) checkDatabase() HealthCheck {
 		Status:  status,
 		Message: "Database connection successful",
 		Details: map[string]interface{}{
-			"open_connections": stats.OpenConnections,
-			"in_use":          stats.InUse,
-			"idle":            stats.Idle,
-			"max_open":        stats.MaxOpenConnections,
+			"open_connections": stats["open_connections"],
+			"in_use":           stats["in_use"],
+			"idle":             stats["idle"],
+			"max_open":         stats["max_open_connections"],
 		},
 		Latency: time.Since(start).String(),
 	}
@@ -221,19 +221,19 @@ func (h *HealthHandler) checkDatabase() HealthCheck {
 // checkMemory vérifie l'utilisation de la mémoire
 func (h *HealthHandler) checkMemory() HealthCheck {
 	memUsage := h.getMemoryUsage()
-	
+
 	status := "healthy"
 	message := "Memory usage normal"
-	
+
 	// Convertir en MB pour les seuils
 	allocMB := memUsage["alloc"].(uint64) / 1024 / 1024
 	sysMB := memUsage["sys"].(uint64) / 1024 / 1024
-	
+
 	if allocMB > 512 || sysMB > 1024 {
 		status = "degraded"
 		message = "High memory usage detected"
 	}
-	
+
 	if allocMB > 1024 || sysMB > 2048 {
 		status = "unhealthy"
 		message = "Critical memory usage"
@@ -250,7 +250,7 @@ func (h *HealthHandler) checkMemory() HealthCheck {
 func (h *HealthHandler) checkExternalServices() HealthCheck {
 	// TODO: Implémenter les vérifications des services externes
 	// comme auth, player, world services
-	
+
 	// Pour l'instant, on retourne toujours healthy
 	return HealthCheck{
 		Status:  "healthy",
@@ -268,10 +268,10 @@ func (h *HealthHandler) getMemoryUsage() map[string]interface{} {
 	// Note: Dans un vrai projet, vous utiliseriez runtime.MemStats
 	// Pour simplifier, on retourne des valeurs simulées
 	return map[string]interface{}{
-		"alloc":         uint64(50 * 1024 * 1024), // 50MB
-		"total_alloc":   uint64(100 * 1024 * 1024), // 100MB
-		"sys":          uint64(200 * 1024 * 1024), // 200MB
-		"num_gc":       uint32(10),
-		"goroutines":   100,
+		"alloc":       uint64(50 * 1024 * 1024),  // 50MB
+		"total_alloc": uint64(100 * 1024 * 1024), // 100MB
+		"sys":         uint64(200 * 1024 * 1024), // 200MB
+		"num_gc":      uint32(10),
+		"goroutines":  100,
 	}
 }

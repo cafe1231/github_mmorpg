@@ -18,15 +18,15 @@ type EffectServiceInterface interface {
 	ApplyEffect(req *models.ApplyEffectRequest) (*models.EffectResult, error)
 	RemoveEffect(req *models.RemoveEffectRequest) error
 	GetActiveEffects(targetID uuid.UUID) ([]*models.CombatEffect, error)
-	
+
 	// Traitement des effets
 	ProcessEffects(participant *models.CombatParticipant) error
 	ProcessEffectTurn(effect *models.CombatEffect) (*models.EffectProcessResult, error)
-	
+
 	// Effets par combat
 	GetCombatEffects(combatID uuid.UUID) ([]*models.CombatEffect, error)
 	CleanupExpiredEffects(combatID uuid.UUID) error
-	
+
 	// Utilitaires
 	StackEffect(existingEffect *models.CombatEffect, newEffect *models.CombatEffect) (*models.CombatEffect, error)
 	CalculateEffectModifiers(participant *models.CombatParticipant) (map[string]float64, error)
@@ -74,12 +74,20 @@ func (s *EffectService) ApplyEffect(req *models.ApplyEffectRequest) (*models.Eff
 	}
 
 	// Créer l'application d'effet
+	duration := 0
+	if req.Duration != nil {
+		duration = *req.Duration
+	}
+	stacks := 1
+	if req.Stacks != nil {
+		stacks = *req.Stacks
+	}
 	application := &models.EffectApplication{
 		EffectTemplate: template,
 		TargetID:       req.TargetID,
 		CasterID:       req.CasterID,
-		Duration:       req.Duration,
-		Stacks:         req.Stacks,
+		Duration:       duration,
+		Stacks:         stacks,
 		CustomModifier: req.CustomValue,
 		Metadata:       req.Metadata,
 	}
@@ -131,7 +139,7 @@ func (s *EffectService) ApplyEffect(req *models.ApplyEffectRequest) (*models.Eff
 			// Rafraîchir l'effet existant
 			existingEffect.RemainingTurns = template.BaseDuration
 			if application.Duration > 0 {
-				existingEffect.RemainingTurns = *application.Duration
+				existingEffect.RemainingTurns = application.Duration
 			}
 			existingEffect.UpdatedAt = time.Now()
 
@@ -154,7 +162,7 @@ func (s *EffectService) ApplyEffect(req *models.ApplyEffectRequest) (*models.Eff
 
 	// Créer un nouvel effet
 	newEffect := models.CreateEffectFromTemplate(template, application)
-	
+
 	// TODO: Récupérer le combat ID depuis le participant
 	// Pour l'instant, on va devoir le passer différemment ou le récupérer
 	// newEffect.CombatID = ...
@@ -294,9 +302,9 @@ func (s *EffectService) ProcessEffects(participant *models.CombatParticipant) er
 		}
 
 		logrus.WithFields(logrus.Fields{
-			"participant_id": participant.CharacterID,
-			"total_damage":   totalDamage,
-			"total_healing":  totalHealing,
+			"participant_id":  participant.CharacterID,
+			"total_damage":    totalDamage,
+			"total_healing":   totalHealing,
 			"expired_effects": len(expiredEffects),
 		}).Debug("Processed participant effects")
 	}
@@ -341,7 +349,7 @@ func (s *EffectService) CleanupExpiredEffects(combatID uuid.UUID) error {
 
 	if expiredCount > 0 {
 		logrus.WithFields(logrus.Fields{
-			"combat_id":      combatID,
+			"combat_id":       combatID,
 			"expired_effects": expiredCount,
 		}).Debug("Cleaned up expired effects")
 	}
@@ -395,7 +403,7 @@ func (s *EffectService) CalculateEffectModifiers(participant *models.CombatParti
 		}
 
 		stat, value, modType := effect.GetStatModifier()
-		
+
 		switch modType {
 		case models.ModifierTypeFlat:
 			// Modificateur fixe
@@ -449,7 +457,7 @@ func (s *EffectService) DispelEffects(targetID uuid.UUID, effectType *models.Eff
 
 	if dispelledCount > 0 {
 		logrus.WithFields(logrus.Fields{
-			"target_id":        targetID,
+			"target_id":         targetID,
 			"dispelled_effects": dispelledCount,
 		}).Info("Effects dispelled")
 	}
@@ -460,27 +468,27 @@ func (s *EffectService) DispelEffects(targetID uuid.UUID, effectType *models.Eff
 // ApplyTemporaryEffect applique un effet temporaire (pour une action)
 func (s *EffectService) ApplyTemporaryEffect(targetID, casterID uuid.UUID, effectType models.EffectType, duration int, value int) (*models.CombatEffect, error) {
 	template := &models.EffectTemplate{
-		ID:           fmt.Sprintf("temp_%s", effectType),
-		Name:         string(effectType),
-		Description:  fmt.Sprintf("Temporary %s effect", effectType),
-		EffectType:   effectType,
+		ID:            fmt.Sprintf("temp_%s", effectType),
+		Name:          string(effectType),
+		Description:   fmt.Sprintf("Temporary %s effect", effectType),
+		EffectType:    effectType,
 		ModifierValue: value,
-		ModifierType: models.ModifierTypeFlat,
-		BaseDuration: duration,
-		MaxStacks:    1,
+		ModifierType:  models.ModifierTypeFlat,
+		BaseDuration:  duration,
+		MaxStacks:     1,
 		IsDispellable: true,
-		IsBeneficial: effectType == models.EffectTypeBuff || effectType == models.EffectTypeHot,
+		IsBeneficial:  effectType == models.EffectTypeBuff || effectType == models.EffectTypeHot,
 	}
 
 	application := &models.EffectApplication{
 		EffectTemplate: template,
 		TargetID:       targetID,
 		CasterID:       &casterID,
-		Duration:       &duration,
+		Duration:       duration,
 	}
 
 	effect := models.CreateEffectFromTemplate(template, application)
-	
+
 	if err := s.effectRepo.Create(effect); err != nil {
 		return nil, fmt.Errorf("failed to create temporary effect: %w", err)
 	}
@@ -496,9 +504,9 @@ func (s *EffectService) GetEffectImpact(participant *models.CombatParticipant) (
 	}
 
 	impact := &EffectImpact{
-		StatModifiers:   make(map[string]int),
+		StatModifiers:    make(map[string]int),
 		PercentModifiers: make(map[string]float64),
-		SpecialEffects:  []string{},
+		SpecialEffects:   []string{},
 	}
 
 	for _, effect := range effects {
@@ -509,7 +517,7 @@ func (s *EffectService) GetEffectImpact(participant *models.CombatParticipant) (
 		// Modificateurs de stats
 		if effect.StatAffected != nil {
 			stat, value, modType := effect.GetStatModifier()
-			
+
 			switch modType {
 			case models.ModifierTypeFlat:
 				impact.StatModifiers[stat] += value
@@ -536,12 +544,12 @@ func (s *EffectService) GetEffectImpact(participant *models.CombatParticipant) (
 
 // EffectImpact représente l'impact total des effets sur un participant
 type EffectImpact struct {
-	StatModifiers     map[string]int     `json:"stat_modifiers"`
-	PercentModifiers  map[string]float64 `json:"percent_modifiers"`
-	SpecialEffects    []string           `json:"special_effects"`
-	CanAct            bool               `json:"can_act"`
-	CanUseSkills      bool               `json:"can_use_skills"`
-	ShieldAmount      int                `json:"shield_amount"`
+	StatModifiers    map[string]int     `json:"stat_modifiers"`
+	PercentModifiers map[string]float64 `json:"percent_modifiers"`
+	SpecialEffects   []string           `json:"special_effects"`
+	CanAct           bool               `json:"can_act"`
+	CanUseSkills     bool               `json:"can_use_skills"`
+	ShieldAmount     int                `json:"shield_amount"`
 }
 
 // ApplyDamageReduction applique la réduction de dégâts des effets
@@ -568,7 +576,7 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 				// Le bouclier absorbe tous les dégâts
 				shieldAbsorption = int(finalDamage)
 				finalDamage = 0
-				
+
 				// Réduire la valeur du bouclier
 				effect.ModifierValue -= int(finalDamage) / effect.CurrentStacks
 				if effect.ModifierValue <= 0 {
@@ -582,7 +590,7 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 				// Le bouclier absorbe partiellement
 				finalDamage -= float64(absorption)
 				shieldAbsorption = absorption
-				
+
 				// Bouclier détruit
 				s.effectRepo.Delete(effect.ID)
 			}
@@ -598,10 +606,10 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 
 	if shieldAbsorption > 0 {
 		logrus.WithFields(logrus.Fields{
-			"participant_id":   participant.CharacterID,
-			"original_damage":  incomingDamage,
-			"shield_absorbed":  shieldAbsorption,
-			"final_damage":     int(finalDamage),
+			"participant_id":  participant.CharacterID,
+			"original_damage": incomingDamage,
+			"shield_absorbed": shieldAbsorption,
+			"final_damage":    int(finalDamage),
 		}).Debug("Shield absorbed damage")
 	}
 
@@ -652,7 +660,7 @@ func (s *EffectService) GetEffectDuration(effectID uuid.UUID) (time.Duration, er
 // BulkApplyEffects applique plusieurs effets en une fois
 func (s *EffectService) BulkApplyEffects(requests []*models.ApplyEffectRequest) ([]*models.EffectResult, error) {
 	results := make([]*models.EffectResult, len(requests))
-	
+
 	for i, req := range requests {
 		result, err := s.ApplyEffect(req)
 		if err != nil {
