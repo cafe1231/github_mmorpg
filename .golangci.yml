@@ -4,7 +4,7 @@ run:
 
 linters-settings:
   govet:
-    check-shadowing: true
+    shadow: true
   gocyclo:
     min-complexity: 15
   maligned:
@@ -16,7 +16,6 @@ linters-settings:
     min-occurrences: 3
   misspell:
     locale: US
-    ignore-words: "marrage,connexion"
   lll:
     line-length: 140
   goimports:
@@ -43,7 +42,7 @@ linters:
   enable:
     - bodyclose
     - errcheck
-    - exportloopref
+    - copyloopvar      # Remplace exportloopref
     - gochecknoinits
     - goconst
     - gocritic
@@ -52,7 +51,7 @@ linters:
     - gofumpt
     - goheader
     - goimports
-    - gomnd
+    - mnd              # Remplace gomnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -75,12 +74,11 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - gomnd
+        - mnd
         - goconst
         - gocyclo
         - gosec
         - lll
-        - maligned
         - unparam
     - path: services/
       linters:

@@ -59,9 +59,14 @@ func setupDatabase(cfg *config.Config) (*sql.DB, error) {
 	}
 
 	// Configurer la connection
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	const (
+		maxOpenConns    = 25
+		maxIdleConns    = 5
+		connMaxLifetime = 5
+	)
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime * time.Minute)
 
 	// Tester la connection
 	if err := db.Ping(); err != nil {
@@ -94,8 +99,9 @@ func setupRouter(
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
+		const httpStatusNoContent = 204
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+			c.AbortWithStatus(httpStatusNoContent)
 			return
 		}
 
@@ -145,18 +151,19 @@ func setupRouter(
 
 // startServer démarre le serveur HTTP
 func startServer(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Config, logger *logrus.Logger) {
+	const readHeaderTimeoutSeconds = 30
 	server := &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
 		Handler:           router,
-		ReadHeaderTimeout: 30 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeoutSeconds * time.Second,
 	}
 
 	lifecycle.Append(fx.Hook{
 		OnStart: func(context.Context) error {
-			logger.Infof("Démarrage du service Analytics sur %s:%s", cfg.Server.Host, cfg.Server.Port)
+			logger.Infof("Startup du service Analytics sur %s:%s", cfg.Server.Host, cfg.Server.Port)
 			go func() {
 				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					logger.Fatalf("Erreur lors du démarrage du serveur: %v", err)
+					logger.Fatalf("Erreur lors du startup du serveur: %v", err)
 				}
 			}()
 			return nil
@@ -205,7 +212,7 @@ func main() {
 
 	// Démarrer l'application
 	if err := app.Start(context.Background()); err != nil {
-		log.Fatalf("Erreur lors du démarrage de l'application: %v", err)
+		log.Fatalf("Erreur lors du startup de l'application: %v", err)
 	}
 
 	// Attendre l'interruption

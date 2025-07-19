@@ -27,10 +27,11 @@ func (s *metricsService) RecordMetric(ctx context.Context, name string, value fl
 		}
 	}
 
+	const hoursInDay = 24
 	metric := &models.Metric{
 		Name:  name,
 		Value: value,
-		Date:  time.Now().Truncate(24 * time.Hour), // Agrégation par jour
+		Date:  time.Now().Truncate(hoursInDay * time.Hour), // Agrégation par jour
 		Tags:  tagsJSON,
 	}
 
