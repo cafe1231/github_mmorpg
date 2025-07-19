@@ -1,16 +1,15 @@
 package service
 
 import (
+	"combat/internal/config"
+	"combat/internal/models"
+	"combat/internal/repository"
 	"fmt"
 	"math"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
-	"combat/internal/models"
-	"combat/internal/repository"
 )
 
 // AntiCheatServiceInterface définit les méthodes du service anti-cheat

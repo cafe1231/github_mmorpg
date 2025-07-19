@@ -1,11 +1,10 @@
 package service
 
 import (
-	"fmt"
-
 	"combat/internal/config"
 	"combat/internal/models"
 	"combat/internal/utils"
+	"fmt"
 )
 
 // Constantes pour les types de dégâts
@@ -35,14 +34,14 @@ type DamageCalculatorInterface interface {
 	CalculateBlockChance(defender *models.CombatParticipant, modifiers map[string]float64) float64
 
 	// Modificateurs et résistances
-	ApplyArmorReduction(damage int, armor int, damageType string) int
+	ApplyArmorReduction(damage, armor int, damageType string) int
 	ApplyResistances(damage int, resistances map[string]float64, damageType string) int
 	ApplyVulnerabilities(damage int, vulnerabilities map[string]float64, damageType string) int
 
 	// calculations avancés
 	CalculateElementalDamage(attacker *models.CombatParticipant, element string, baseDamage int) int
 	CalculateDamageOverTime(effect *models.CombatEffect, target *models.CombatParticipant) int
-	CalculateStatusEffectChance(caster *models.CombatParticipant, target *models.CombatParticipant, effect *models.SkillEffect) float64
+	CalculateStatusEffectChance(caster, target *models.CombatParticipant, effect *models.SkillEffect) float64
 }
 
 // DamageCalculator implémente l'interface DamageCalculatorInterface
@@ -403,7 +402,7 @@ func (dc *DamageCalculator) CalculateBlockChance(defender *models.CombatParticip
 }
 
 // ApplyArmorReduction applique la réduction d'armure
-func (dc *DamageCalculator) ApplyArmorReduction(damage int, armor int, damageType string) int {
+func (dc *DamageCalculator) ApplyArmorReduction(damage, armor int, damageType string) int {
 	if damage <= 0 {
 		return 0
 	}

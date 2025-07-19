@@ -1,13 +1,12 @@
 package middleware
 
 import (
+	"combat/internal/config"
+	"combat/internal/constants"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-
-	"combat/internal/config"
-	"combat/internal/constants"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

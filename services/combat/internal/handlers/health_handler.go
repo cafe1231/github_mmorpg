@@ -1,14 +1,13 @@
 package handlers
 
 import (
+	"combat/internal/config"
+	"combat/internal/database"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
-	"combat/internal/database"
 )
 
 // Constantes pour les status de santé

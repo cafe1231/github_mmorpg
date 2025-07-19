@@ -1,9 +1,8 @@
 package models
 
 import (
-	"time"
-
 	"combat/internal/config"
+	"time"
 
 	"github.com/google/uuid"
 )

@@ -1,14 +1,13 @@
 package database
 
 import (
+	"combat/internal/config"
 	"context"
 	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
 )
 
 // DB encapsule la connection à la base de données

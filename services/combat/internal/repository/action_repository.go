@@ -1,15 +1,14 @@
 package repository
 
 import (
+	"combat/internal/config"
+	"combat/internal/database"
+	"combat/internal/models"
 	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-
-	"combat/internal/config"
-	"combat/internal/database"
-	"combat/internal/models"
 )
 
 // ActionRepositoryInterface définit les méthodes du repository action

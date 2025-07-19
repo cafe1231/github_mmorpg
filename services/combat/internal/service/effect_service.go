@@ -1,15 +1,14 @@
 package service
 
 import (
+	"combat/internal/config"
+	"combat/internal/models"
+	"combat/internal/repository"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
-	"combat/internal/models"
-	"combat/internal/repository"
 )
 
 // EffectServiceInterface définit les méthodes du service d'effets
@@ -28,7 +27,7 @@ type EffectServiceInterface interface {
 	CleanupExpiredEffects(combatID uuid.UUID) error
 
 	// Utilitaires
-	StackEffect(existingEffect *models.CombatEffect, newEffect *models.CombatEffect) (*models.CombatEffect, error)
+	StackEffect(existingEffect, newEffect *models.CombatEffect) (*models.CombatEffect, error)
 	CalculateEffectModifiers(participant *models.CombatParticipant) (map[string]float64, error)
 	DispelEffects(targetID uuid.UUID, effectType *models.EffectType, onlyDebuffs bool) error
 }
@@ -76,10 +75,10 @@ func (s *EffectService) validateEffectRequest(req *models.ApplyEffectRequest) (*
 	return template, nil
 }
 
-// handleExistingEffect gère un effet existant (stack ou refresh)
+// handleExistingEffect gère un effet existent (stack ou refresh)
 func (s *EffectService) handleExistingEffect(existingEffect *models.CombatEffect, template *models.EffectTemplate,
-	application *models.EffectApplication) (*models.EffectResult, error) {
-
+	application *models.EffectApplication,
+) (*models.EffectResult, error) {
 	if existingEffect.CanStack() {
 		// Empiler l'effet
 		stackedEffect, err := s.StackEffect(existingEffect, models.CreateEffectFromTemplate(template, application))
@@ -130,7 +129,9 @@ func (s *EffectService) handleExistingEffect(existingEffect *models.CombatEffect
 }
 
 // createNewEffect crée un nouvel effet
-func (s *EffectService) createNewEffect(template *models.EffectTemplate, application *models.EffectApplication) (*models.EffectResult, error) {
+func (s *EffectService) createNewEffect(template *models.EffectTemplate,
+	application *models.EffectApplication,
+) (*models.EffectResult, error) {
 	// Créer un nouvel effet
 	newEffect := models.CreateEffectFromTemplate(template, application)
 
@@ -157,7 +158,7 @@ func (s *EffectService) createNewEffect(template *models.EffectTemplate, applica
 	}, nil
 }
 
-// findExistingEffect trouve un effet existant du même type sur la cible
+// findExistingEffect trouve un effet existent du même type sur la cible
 func (s *EffectService) findExistingEffect(targetID uuid.UUID, template *models.EffectTemplate) (*models.CombatEffect, error) {
 	existingEffects, err := s.effectRepo.GetActiveByTarget(targetID)
 	if err != nil {
@@ -260,9 +261,11 @@ func (s *EffectService) GetActiveEffects(targetID uuid.UUID) ([]*models.CombatEf
 }
 
 // applyEffectToParticipant applique les résultats d'un effet à un participant
-func (s *EffectService) applyEffectToParticipant(participant *models.CombatParticipant, result *models.EffectProcessResult) (int, int) {
-	damage := 0
-	healing := 0
+func (s *EffectService) applyEffectToParticipant(participant *models.CombatParticipant,
+	result *models.EffectProcessResult,
+) (damage, healing int) {
+	damage = 0
+	healing = 0
 
 	if result.DamageDealt > 0 {
 		damage = result.DamageDealt
@@ -285,29 +288,54 @@ func (s *EffectService) applyEffectToParticipant(participant *models.CombatParti
 }
 
 // processEffectResults traite les résultats des effets pour un participant
-func (s *EffectService) processEffectResults(effects []*models.CombatEffect, participant *models.CombatParticipant) (int, int, []uuid.UUID, error) {
-	var totalDamage, totalHealing int
-	var expiredEffects []uuid.UUID
+func (s *EffectService) processEffectResults(effects []*models.CombatEffect,
+	participant *models.CombatParticipant,
+) (totalDamage, totalHealing int, expiredEffects []uuid.UUID, err error) {
+	// Validation des paramètres
+	if participant == nil {
+		return 0, 0, nil, fmt.Errorf("participant cannot be nil")
+	}
 
 	for _, effect := range effects {
+		if effect == nil {
+			return 0, 0, nil, fmt.Errorf("effect cannot be nil")
+		}
+
 		if !effect.IsActive {
 			continue
 		}
 
 		result := effect.ProcessTurn()
+		if result == nil {
+			return 0, 0, nil, fmt.Errorf("effect ProcessTurn returned nil result")
+		}
+
+		// Validation des limites de dégâts/soins
+		if result.DamageDealt < 0 || result.DamageDealt > 50000 {
+			return 0, 0, nil, fmt.Errorf("invalid damage value from effect: %d", result.DamageDealt)
+		}
+		if result.HealingDone < 0 || result.HealingDone > 50000 {
+			return 0, 0, nil, fmt.Errorf("invalid healing value from effect: %d", result.HealingDone)
+		}
 
 		// Appliquer les résultats au participant
-		damage, healing := s.applyEffectToParticipant(participant, result)
-		totalDamage += damage
-		totalHealing += healing
+		dmg, heal := s.applyEffectToParticipant(participant, result)
+		totalDamage += dmg
+		totalHealing += heal
+
+		// Vérifier les limites totales
+		if totalDamage > 100000 || totalHealing > 100000 {
+			return 0, 0, nil, fmt.Errorf("total effect values exceed safe limits")
+		}
 
 		// Marquer les effets expirés pour suppression
 		if result.Expired {
 			expiredEffects = append(expiredEffects, effect.ID)
 		} else {
 			// Mettre à jour l'effet
-			if err := s.effectRepo.Update(effect); err != nil {
-				logrus.WithError(err).WithField("effect_id", effect.ID).Error("Failed to update effect")
+			if updateErr := s.effectRepo.Update(effect); updateErr != nil {
+				logrus.WithError(updateErr).WithField("effect_id", effect.ID).Error("Failed to update effect")
+				return 0, 0, nil, fmt.Errorf("failed to update effect %s: %w", effect.ID, updateErr)
 			}
 		}
 
@@ -336,7 +364,9 @@ func (s *EffectService) cleanupExpiredEffects(expiredEffects []uuid.UUID) {
 }
 
 // updateParticipantAfterEffects met à jour le participant après application des effets
-func (s *EffectService) updateParticipantAfterEffects(participant *models.CombatParticipant, totalDamage, totalHealing int, expiredCount int) error {
+func (s *EffectService) updateParticipantAfterEffects(participant *models.CombatParticipant,
+	totalDamage, totalHealing, expiredCount int,
+) error {
 	if totalDamage > 0 || totalHealing > 0 {
 		if err := s.combatRepo.UpdateParticipant(participant); err != nil {
 			return fmt.Errorf("failed to update participant: %w", err)
@@ -419,7 +449,7 @@ func (s *EffectService) CleanupExpiredEffects(combatID uuid.UUID) error {
 }
 
 // StackEffect empile un effet existing avec un nouveau
-func (s *EffectService) StackEffect(existingEffect *models.CombatEffect, newEffect *models.CombatEffect) (*models.CombatEffect, error) {
+func (s *EffectService) StackEffect(existingEffect, newEffect *models.CombatEffect) (*models.CombatEffect, error) {
 	if !existingEffect.CanStack() {
 		return nil, fmt.Errorf("effect cannot be stacked")
 	}

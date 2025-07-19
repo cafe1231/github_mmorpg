@@ -1,16 +1,15 @@
 package service
 
 import (
+	"combat/internal/config"
+	"combat/internal/models"
+	"combat/internal/repository"
+	"combat/internal/utils"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
-	"combat/internal/models"
-	"combat/internal/repository"
-	"combat/internal/utils"
 )
 
 // Constantes pour les actions anti-cheat
@@ -236,8 +235,8 @@ func (s *ActionService) validateSkillUsage(actor *models.CombatParticipant, skil
 
 // determineSkillTarget détermine et valide la cible d'une compétence
 func (s *ActionService) determineSkillTarget(combat *models.CombatInstance, actor *models.CombatParticipant,
-	action *models.CombatAction, skill *models.SkillInfo) (*models.CombatParticipant, error) {
-
+	action *models.CombatAction, skill *models.SkillInfo,
+) (*models.CombatParticipant, error) {
 	// Auto-ciblage pour les compétences sur soi ou sans cible spécifique
 	if skill.TargetType == "self" || action.TargetID == nil {
 		return actor, nil
@@ -259,10 +258,24 @@ func (s *ActionService) determineSkillTarget(combat *models.CombatInstance, acto
 
 // processSkillHitAndCrit calcule les chances de toucher et de critique
 func (s *ActionService) processSkillHitAndCrit(actor, target *models.CombatParticipant,
-	skill *models.SkillInfo, action *models.CombatAction) (bool, error) {
+	skill *models.SkillInfo, action *models.CombatAction,
+) (bool, error) {
+	// Validation des paramètres
+	if actor == nil || target == nil || skill == nil || action == nil {
+		return false, fmt.Errorf("invalid parameters for hit calculation")
+	}
+
+	// Vérifier les valeurs limites pour éviter les calculus invalides
+	if skill.ManaCost < 0 || skill.ManaCost > 10000 {
+		return false, fmt.Errorf("invalid mana cost: %d", skill.ManaCost)
+	}
 
 	// Calculer la chance de toucher
 	hitChance := models.CalculateHitChance(actor, target, skill)
+	if hitChance < 0 || hitChance > 1 {
+		return false, fmt.Errorf("invalid hit chance calculated: %f", hitChance)
+	}
+
 	hit := utils.SecureRandFloat64() < hitChance
 
 	if !hit {
@@ -273,16 +286,19 @@ func (s *ActionService) processSkillHitAndCrit(actor, target *models.CombatParti
 
 	// Calculer la chance de critique
 	critChance := models.CalculateCriticalChance(actor, skill)
-	action.IsCritical = utils.SecureRandFloat64() < critChance
+	if critChance < 0 || critChance > 1 {
+		return false, fmt.Errorf("invalid critical chance calculated: %f", critChance)
+	}
 
+	action.IsCritical = utils.SecureRandFloat64() < critChance
 	action.ManaUsed = skill.ManaCost
 	return true, nil
 }
 
 // applySkillEffectsAndDamage applique les effets de la compétence
 func (s *ActionService) applySkillEffectsAndDamage(actor, target *models.CombatParticipant,
-	skill *models.SkillInfo, action *models.CombatAction, result *models.ActionResult) {
-
+	skill *models.SkillInfo, action *models.CombatAction, result *models.ActionResult,
+) {
 	// Appliquer les dégâts
 	if skill.BaseDamage > 0 {
 		damage := action.CalculateDamage(actor, target, skill)
@@ -306,10 +322,10 @@ func (s *ActionService) applySkillEffectsAndDamage(actor, target *models.CombatP
 	}
 }
 
-// finishSkillExecution finalise l'exécution de la compétence (cooldown et mana)
+// finishSkillExecution finalize l'exécution de la compétence (cooldown et mana)
 func (s *ActionService) finishSkillExecution(actor *models.CombatParticipant, skill *models.SkillInfo,
-	action *models.CombatAction, result *models.ActionResult, skillID string) error {
-
+	action *models.CombatAction, result *models.ActionResult, skillID string,
+) error {
 	// Définir le cooldown
 	if skill.Cooldown > 0 {
 		if err := s.SetActionCooldown(actor.CharacterID, models.ActionTypeSkill, skillID,
@@ -330,7 +346,9 @@ func (s *ActionService) finishSkillExecution(actor *models.CombatParticipant, sk
 }
 
 // executeSkill exécute une compétence
-func (s *ActionService) executeSkill(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
+func (s *ActionService) executeSkill(action *models.CombatAction, combat *models.CombatInstance,
+	actor *models.CombatParticipant, result *models.ActionResult,
+) error {
 	if action.SkillID == nil {
 		return fmt.Errorf("skill ID required")
 	}
@@ -645,11 +663,27 @@ func (s *ActionService) validateSkillRequirements(_ *models.CombatParticipant, s
 }
 
 func (s *ActionService) applyParticipantChanges(participantID uuid.UUID, change *models.ParticipantChange) error {
-	// Récupérer le participant actuel - nécessite le combat ID
-	// Cette fonction est appelée dans un contexte où nous n'avons pas le combat ID disponible
-	// Pour l'instant, nous retournons une erreur non implémentée
+	// Validation des paramètres
+	if participantID == uuid.Nil {
+		return fmt.Errorf("invalid participant ID")
+	}
+
+	if change == nil {
+		return fmt.Errorf("change cannot be nil")
+	}
+
+	// Aucun changement à appliquer
 	if change.HealthChange == 0 && change.ManaChange == 0 {
-		return nil // Aucun changement à appliquer
+		return nil
+	}
+
+	// Validation des limites de changement
+	if change.HealthChange < -10000 || change.HealthChange > 10000 {
+		return fmt.Errorf("health change out of bounds: %d", change.HealthChange)
+	}
+
+	if change.ManaChange < -10000 || change.ManaChange > 10000 {
+		return fmt.Errorf("mana change out of bounds: %d", change.ManaChange)
 	}
 
 	// TODO: Implémenter la mise à jour réelle du participant

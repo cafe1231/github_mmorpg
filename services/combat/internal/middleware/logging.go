@@ -2,14 +2,13 @@ package middleware
 
 import (
 	"bytes"
+	"combat/internal/constants"
 	"io"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/constants"
 )
 
 // Constantes pour les méthodes HTTP

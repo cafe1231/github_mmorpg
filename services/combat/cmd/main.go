@@ -1,6 +1,12 @@
 package main
 
 import (
+	"combat/internal/config"
+	"combat/internal/database"
+	"combat/internal/handlers"
+	"combat/internal/middleware"
+	"combat/internal/repository"
+	"combat/internal/service"
 	"context"
 	"fmt"
 	"net/http"
@@ -11,13 +17,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
-	"combat/internal/database"
-	"combat/internal/handlers"
-	"combat/internal/middleware"
-	"combat/internal/repository"
-	"combat/internal/service"
 )
 
 // Version du service (à définir lors du build)

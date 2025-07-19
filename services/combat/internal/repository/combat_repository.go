@@ -1,18 +1,16 @@
 package repository
 
 import (
+	"combat/internal/config"
+	"combat/internal/database"
+	"combat/internal/models"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/google/uuid"
-
-	"combat/internal/config"
-	"combat/internal/database"
-	"combat/internal/models"
+	"github.com/sirupsen/logrus"
 )
 
 // CombatRepositoryInterface définit les méthodes du repository combat

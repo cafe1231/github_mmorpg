@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"combat/internal/config"
 	"fmt"
 	"net/http"
 	"sync"
@@ -9,8 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
-
-	"combat/internal/config"
 )
 
 // RateLimiter interface pour différents types de limiteurs
@@ -38,7 +37,7 @@ type MemoryRateLimiter struct {
 }
 
 // NewMemoryRateLimiter crée un nouveau rate limiter en mémoire
-func NewMemoryRateLimiter(requestsPerMinute int, burst int) *MemoryRateLimiter {
+func NewMemoryRateLimiter(requestsPerMinute, burst int) *MemoryRateLimiter {
 	rl := &MemoryRateLimiter{
 		limiters: make(map[string]*rate.Limiter),
 		rate:     rate.Limit(requestsPerMinute) / config.DefaultMinuteSeconds, // Convertir en requêtes par seconde
@@ -289,7 +288,7 @@ type AdaptiveRateLimit struct {
 }
 
 // NewAdaptiveRateLimit crée un rate limiter adaptatif
-func NewAdaptiveRateLimit(baseRate int, burst int, maxLoad float64) *AdaptiveRateLimit {
+func NewAdaptiveRateLimit(baseRate, burst int, maxLoad float64) *AdaptiveRateLimit {
 	return &AdaptiveRateLimit{
 		baseLimiter: NewMemoryRateLimiter(baseRate, burst),
 		maxLoad:     maxLoad,

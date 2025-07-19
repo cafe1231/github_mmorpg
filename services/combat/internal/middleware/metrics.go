@@ -1,11 +1,10 @@
 package middleware
 
 import (
-	"strconv"
-	"time"
-
 	"combat/internal/config"
 	"combat/internal/constants"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -277,7 +276,7 @@ func RecordDatabaseQuery(operation string, duration time.Duration) {
 }
 
 // RecordCombatEvent enregistre un événement de combat
-func RecordCombatEvent(eventType string, combatType string) {
+func RecordCombatEvent(eventType, combatType string) {
 	switch eventType {
 	case "combat_created":
 		combatInstancesTotal.WithLabelValues(combatType).Inc()
@@ -290,7 +289,7 @@ func RecordCombatEvent(eventType string, combatType string) {
 }
 
 // RecordAntiCheatDetection enregistre une détection anti-cheat
-func RecordAntiCheatDetection(detectionType string, severity string) {
+func RecordAntiCheatDetection(detectionType, severity string) {
 	antiCheatDetections.WithLabelValues(detectionType, severity).Inc()
 }
 

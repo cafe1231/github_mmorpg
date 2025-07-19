@@ -1,11 +1,10 @@
 package models
 
 import (
+	"combat/internal/config"
 	"fmt"
 	"math"
 	"time"
-
-	"combat/internal/config"
 
 	"github.com/google/uuid"
 )

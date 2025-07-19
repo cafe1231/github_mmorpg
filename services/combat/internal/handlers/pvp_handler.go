@@ -1,16 +1,15 @@
 package handlers
 
 import (
+	"combat/internal/config"
+	"combat/internal/models"
+	"combat/internal/service"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
-	"combat/internal/models"
-	"combat/internal/service"
 )
 
 // Constantes pour les erreurs

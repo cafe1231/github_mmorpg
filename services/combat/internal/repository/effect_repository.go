@@ -1,18 +1,16 @@
 package repository
 
 import (
+	"combat/internal/config"
+	"combat/internal/database"
+	"combat/internal/models"
 	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
-	"combat/internal/database"
-	"combat/internal/models"
-
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 )
 
 // EffectRepositoryInterface définit les méthodes du repository effect
