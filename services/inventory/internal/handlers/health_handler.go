@@ -4,8 +4,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"inventory/internal/models"
+
+	"github.com/gin-gonic/gin"
+)
+
+// Health check timeout constants
+const (
+	DatabaseHealthTimeout = 5 * time.Millisecond
+	RedisHealthTimeout    = 2 * time.Millisecond
 )
 
 type HealthHandler struct {
@@ -28,10 +35,10 @@ func (h *HealthHandler) Health(c *gin.Context) {
 	health := models.NewHealthResponse(h.version, uptime)
 
 	// Add database health check (placeholder)
-	health.AddService("database", models.HealthStatusHealthy, "Connected", 5*time.Millisecond)
+	health.AddService("database", models.HealthStatusHealthy, "Connected", DatabaseHealthTimeout)
 
 	// Add Redis health check (placeholder)
-	health.AddService("redis", models.HealthStatusHealthy, "Connected", 2*time.Millisecond)
+	health.AddService("redis", models.HealthStatusHealthy, "Connected", RedisHealthTimeout)
 
 	statusCode := http.StatusOK
 	if health.Status != models.HealthStatusHealthy {

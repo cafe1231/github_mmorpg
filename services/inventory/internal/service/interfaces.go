@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"inventory/internal/models"
+
+	"github.com/google/uuid"
 )
 
 // InventoryService defines business logic for inventory management
@@ -64,8 +65,10 @@ type TradeService interface {
 	CompleteTrade(ctx context.Context, tradeID uuid.UUID) error
 
 	// Trade operations
-	UpdateOffer(ctx context.Context, tradeID uuid.UUID, playerID uuid.UUID, request *models.UpdateTradeOfferRequest) (*models.TradeOfferResponse, error)
-	SetReady(ctx context.Context, tradeID uuid.UUID, playerID uuid.UUID, request *models.SetTradeReadyRequest) (*models.TradeStatusResponse, error)
+	UpdateOffer(ctx context.Context, tradeID uuid.UUID, playerID uuid.UUID,
+		request *models.UpdateTradeOfferRequest) (*models.TradeOfferResponse, error)
+	SetReady(ctx context.Context, tradeID uuid.UUID, playerID uuid.UUID,
+		request *models.SetTradeReadyRequest) (*models.TradeStatusResponse, error)
 
 	// Trade queries
 	GetPlayerTrades(ctx context.Context, playerID uuid.UUID, status []models.TradeStatus) ([]models.Trade, error)

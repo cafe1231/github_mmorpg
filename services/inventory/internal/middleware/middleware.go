@@ -8,6 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Default value constants
+const (
+	DefaultCORSMaxAge = 12 * time.Hour
+	InternalErrorCode = 500
+)
+
 // CORS returns a CORS middleware
 func CORS() gin.HandlerFunc {
 	return cors.New(cors.Config{
@@ -16,7 +22,7 @@ func CORS() gin.HandlerFunc {
 		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"*"},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
+		MaxAge:           DefaultCORSMaxAge,
 	})
 }
 
@@ -24,21 +30,19 @@ func CORS() gin.HandlerFunc {
 func RequestID() gin.HandlerFunc {
 	return gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
 		if err, ok := recovered.(string); ok {
-			c.String(500, "Internal Server Error: %s", err)
+			c.String(InternalErrorCode, "Internal Server Error: %s", err)
 		}
-		c.AbortWithStatus(500)
+		c.AbortWithStatus(InternalErrorCode)
 	})
 }
 
 // Logger returns a gin logger middleware
 func Logger() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
+		return fmt.Sprintf("%s - [%s] %q %d %s %q %q\n",
 			param.ClientIP,
 			param.TimeStamp.Format(time.RFC1123),
-			param.Method,
-			param.Path,
-			param.Request.Proto,
+			param.Method+" "+param.Path+" "+param.Request.Proto,
 			param.StatusCode,
 			param.Latency,
 			param.Request.UserAgent(),

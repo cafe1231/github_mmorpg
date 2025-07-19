@@ -7,7 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// Inventory représente l'inventaire d'un personnage
+// Constants for calculations
+const (
+	PercentageMultiplier = 100
+)
+
+// Inventory represents a character's inventory
 type Inventory struct {
 	ID          uuid.UUID       `json:"id" db:"id"`
 	CharacterID uuid.UUID       `json:"character_id" db:"character_id"`
@@ -18,7 +23,7 @@ type Inventory struct {
 	UpdatedAt   time.Time       `json:"updated_at" db:"updated_at"`
 }
 
-// InventorySlot représente un slot d'inventaire avec métadonnées
+// InventorySlot represents a single inventory slot
 type InventorySlot struct {
 	Index    int   `json:"index"`
 	Item     *Item `json:"item,omitempty"`
@@ -26,7 +31,7 @@ type InventorySlot struct {
 	IsLocked bool  `json:"is_locked"`
 }
 
-// InventoryStats représente les statistiques d'un inventaire
+// InventoryStats represents inventory statistics
 type InventoryStats struct {
 	UsedSlots     int              `json:"used_slots"`
 	TotalSlots    int              `json:"total_slots"`
@@ -36,7 +41,7 @@ type InventoryStats struct {
 	TypeBreakdown map[ItemType]int `json:"type_breakdown"`
 }
 
-// Validate vérifie la validité d'un inventaire
+// Validate validates inventory data
 func (inv *Inventory) Validate() error {
 	if inv.CharacterID == uuid.Nil {
 		return fmt.Errorf("character ID is required")
@@ -53,10 +58,10 @@ func (inv *Inventory) Validate() error {
 	return nil
 }
 
-// HasSpace vérifie s'il y a de l'espace pour ajouter un objet
+// HasSpace checks if there's space to add an item
 func (inv *Inventory) HasSpace(item *Item, quantity int) bool {
 	if item.Stackable {
-		// Vérifier s'il y a des stacks existants avec de l'espace
+		// Check if there are existing stacks with space
 		for _, slot := range inv.Slots {
 			if slot.Item != nil && slot.Item.ID == item.ID {
 				remainingSpace := item.MaxStack - slot.Quantity
@@ -68,14 +73,14 @@ func (inv *Inventory) HasSpace(item *Item, quantity int) bool {
 		}
 	}
 
-	// Compter les slots vides disponibles
+	// Count available empty slots
 	emptySlots := inv.GetEmptySlotCount()
-	requiredSlots := (quantity + item.MaxStack - 1) / item.MaxStack // Division avec arrondi au supérieur
+	requiredSlots := (quantity + item.MaxStack - 1) / item.MaxStack // Division with ceiling
 
 	return emptySlots >= requiredSlots
 }
 
-// GetEmptySlotCount retourne le nombre de slots vides
+// GetEmptySlotCount returns the number of empty slots
 func (inv *Inventory) GetEmptySlotCount() int {
 	usedSlots := 0
 	for _, slot := range inv.Slots {
@@ -86,7 +91,7 @@ func (inv *Inventory) GetEmptySlotCount() int {
 	return inv.MaxSlots - usedSlots
 }
 
-// FindItem cherche un objet dans l'inventaire
+// FindItem searches for an item in inventory
 func (inv *Inventory) FindItem(itemID uuid.UUID) (int, *InventoryItem) {
 	for i, slot := range inv.Slots {
 		if slot.Item != nil && slot.Item.ID == itemID {
@@ -96,7 +101,7 @@ func (inv *Inventory) FindItem(itemID uuid.UUID) (int, *InventoryItem) {
 	return -1, nil
 }
 
-// GetItemQuantity retourne la quantité totale d'un objet
+// GetItemQuantity returns the total quantity of an item
 func (inv *Inventory) GetItemQuantity(itemID uuid.UUID) int {
 	total := 0
 	for _, slot := range inv.Slots {
@@ -107,7 +112,7 @@ func (inv *Inventory) GetItemQuantity(itemID uuid.UUID) int {
 	return total
 }
 
-// AddItem ajoute un objet à l'inventaire
+// AddItem adds an item to inventory
 func (inv *Inventory) AddItem(item *Item, quantity int) error {
 	if !inv.HasSpace(item, quantity) {
 		return fmt.Errorf("not enough space in inventory")
@@ -115,14 +120,14 @@ func (inv *Inventory) AddItem(item *Item, quantity int) error {
 
 	remaining := quantity
 
-	// Si l'objet est stackable, essayer de remplir les stacks existants
+	// If item is stackable, try to fill existing stacks
 	if item.Stackable {
 		for i := range inv.Slots {
 			slot := &inv.Slots[i]
 			if slot.Item != nil && slot.Item.ID == item.ID {
 				canAdd := item.MaxStack - slot.Quantity
 				if canAdd > 0 {
-					addAmount := min(canAdd, remaining)
+					addAmount := minValue(canAdd, remaining)
 					slot.Quantity += addAmount
 					remaining -= addAmount
 					if remaining <= 0 {
@@ -133,9 +138,9 @@ func (inv *Inventory) AddItem(item *Item, quantity int) error {
 		}
 	}
 
-	// Créer de nouveaux slots pour le restant
+	// Create new slots for remaining items
 	for remaining > 0 {
-		// Trouver le premier slot vide
+		// Find first empty slot
 		emptyIndex := -1
 		for i := range inv.Slots {
 			if inv.Slots[i].Item == nil || inv.Slots[i].Quantity == 0 {
@@ -144,7 +149,7 @@ func (inv *Inventory) AddItem(item *Item, quantity int) error {
 			}
 		}
 
-		// Si aucun slot vide, en créer un nouveau
+		// If no empty slot, create a new one
 		if emptyIndex == -1 {
 			if len(inv.Slots) >= inv.MaxSlots {
 				return fmt.Errorf("inventory full")
@@ -153,8 +158,8 @@ func (inv *Inventory) AddItem(item *Item, quantity int) error {
 			emptyIndex = len(inv.Slots) - 1
 		}
 
-		// Ajouter l'objet au slot
-		addAmount := min(remaining, item.MaxStack)
+		// Add item to slot
+		addAmount := minValue(remaining, item.MaxStack)
 		inv.Slots[emptyIndex] = InventoryItem{
 			ItemID:   item.ID,
 			Quantity: addAmount,
@@ -167,7 +172,7 @@ func (inv *Inventory) AddItem(item *Item, quantity int) error {
 	return nil
 }
 
-// RemoveItem retire un objet de l'inventaire
+// RemoveItem removes an item from inventory
 func (inv *Inventory) RemoveItem(itemID uuid.UUID, quantity int) error {
 	totalAvailable := inv.GetItemQuantity(itemID)
 	if totalAvailable < quantity {
@@ -178,11 +183,11 @@ func (inv *Inventory) RemoveItem(itemID uuid.UUID, quantity int) error {
 	for i := range inv.Slots {
 		slot := &inv.Slots[i]
 		if slot.Item != nil && slot.Item.ID == itemID && remaining > 0 {
-			removeAmount := min(slot.Quantity, remaining)
+			removeAmount := minValue(slot.Quantity, remaining)
 			slot.Quantity -= removeAmount
 			remaining -= removeAmount
 
-			// Si le slot est vide, le nettoyer
+			// If slot is empty, clean it
 			if slot.Quantity <= 0 {
 				inv.Slots[i] = InventoryItem{}
 			}
@@ -192,7 +197,7 @@ func (inv *Inventory) RemoveItem(itemID uuid.UUID, quantity int) error {
 	return nil
 }
 
-// GetStats retourne les statistiques de l'inventaire
+// GetStats returns inventory statistics
 func (inv *Inventory) GetStats() *InventoryStats {
 	stats := &InventoryStats{
 		TotalSlots:    inv.MaxSlots,
@@ -217,20 +222,20 @@ func (inv *Inventory) GetStats() *InventoryStats {
 	stats.ItemCount = itemCount
 
 	if inv.MaxSlots > 0 {
-		stats.UsagePercent = float64(usedSlots) / float64(inv.MaxSlots) * 100
+		stats.UsagePercent = float64(usedSlots) / float64(inv.MaxSlots) * PercentageMultiplier
 	}
 
 	return stats
 }
 
-// SortInventory trie l'inventaire par type et rareté
+// SortInventory sorts inventory by type and rarity
 func (inv *Inventory) SortInventory() {
-	// TODO: Implémenter le tri de l'inventaire
-	// Logique de tri par type d'objet, puis par rareté, puis par nom
+	// TODO: Implement inventory sorting
+	// Sort logic by item type, then by rarity, then by name
 }
 
-// Helper function pour min
-func min(a, b int) int {
+// Helper function for min
+func minValue(a, b int) int {
 	if a < b {
 		return a
 	}

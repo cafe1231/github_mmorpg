@@ -364,7 +364,8 @@ func (r *inventoryRepository) SplitStack(ctx context.Context, characterID uuid.U
 	// Create new item in destination slot
 	newItemID := uuid.New()
 	_, err = tx.ExecContext(ctx,
-		"INSERT INTO inventory_items (id, character_id, item_id, quantity, slot, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
+		"INSERT INTO inventory_items (id, character_id, item_id, quantity, slot, created_at, updated_at) "+
+			"VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
 		newItemID, characterID, itemID, quantity, toSlot)
 	if err != nil {
 		return fmt.Errorf("failed to create new stack: %w", err)
@@ -379,7 +380,9 @@ func (r *inventoryRepository) SplitStack(ctx context.Context, characterID uuid.U
 }
 
 // ListItems lists items in inventory with filtering
-func (r *inventoryRepository) ListItems(ctx context.Context, characterID uuid.UUID, filter *models.InventoryFilterRequest) ([]models.InventoryItem, error) {
+func (r *inventoryRepository) ListItems(ctx context.Context, characterID uuid.UUID,
+	filter *models.InventoryFilterRequest,
+) ([]models.InventoryItem, error) {
 	baseQuery := `
 		SELECT ii.id, ii.character_id, ii.item_id, ii.quantity, ii.slot, ii.created_at, ii.updated_at,
 			i.name, i.description, i.type, i.rarity, i.level, i.stats, i.requirements,

@@ -12,25 +12,30 @@ import (
 	"inventory/internal/config"
 )
 
-// DB encapsule la connection à la base de données
+// Timeout constants
+const (
+	HealthCheckTimeout = 5 * time.Second
+)
+
+// DB encapsulates the database connection
 type DB struct {
 	*sqlx.DB
 }
 
-// NewConnection crée une nouvelle connection à la base de données
-func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
-	// connection à PostgreSQL
+// NewConnection creates a new database connection
+func NewConnection(cfg *config.DatabaseConfig) (*DB, error) {
+	// Connect to PostgreSQL
 	db, err := sqlx.Connect("postgres", cfg.GetDSN())
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Configuration de la pool de connections
+	// Configure connection pool
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 
-	// Test de la connection
+	// Test connection
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -48,21 +53,21 @@ func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
 	return &DB{db}, nil
 }
 
-// Close ferme la connection à la base de données
+// Close closes the database connection
 func (db *DB) Close() error {
 	logrus.Info("Closing database connection")
 	return db.DB.Close()
 }
 
-// Health vérifie l'état de la base de données
+// Health checks the database status
 func (db *DB) Health() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), HealthCheckTimeout)
 	defer cancel()
 
 	return db.PingContext(ctx)
 }
 
-// GetStats retourne les statistiques de la base de données
+// GetStats returns database statistics
 func (db *DB) GetStats() map[string]interface{} {
 	stats := db.DB.Stats()
 	return map[string]interface{}{

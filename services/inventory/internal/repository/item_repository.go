@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"inventory/internal/models"
+
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
-	"inventory/internal/models"
 )
 
 type itemRepository struct {
@@ -304,7 +305,8 @@ func (r *itemRepository) CreateBatch(ctx context.Context, items []models.Item) e
 			:image_url, :created_at, :updated_at)
 	`
 
-	for _, item := range items {
+	for i := range items {
+		item := &items[i]
 		_, err := tx.NamedExecContext(ctx, query, item)
 		if err != nil {
 			return fmt.Errorf("failed to create item %s: %w", item.ID, err)
@@ -356,7 +358,8 @@ func (r *itemRepository) UpdateBatch(ctx context.Context, items []models.Item) e
 		WHERE id = :id
 	`
 
-	for _, item := range items {
+	for i := range items {
+		item := &items[i]
 		_, err := tx.NamedExecContext(ctx, query, item)
 		if err != nil {
 			return fmt.Errorf("failed to update item %s: %w", item.ID, err)

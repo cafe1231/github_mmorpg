@@ -50,7 +50,8 @@ func (r *equipmentRepository) GetByCharacterID(ctx context.Context, characterID 
 		SetBonuses:  []models.SetBonus{},
 	}
 
-	for _, eq := range equipmentItems {
+	for i := range equipmentItems {
+		eq := &equipmentItems[i]
 		eq.Equipment.Item = eq.Item
 		equipmentSet.Equipment[eq.Equipment.Slot] = &eq.Equipment
 	}
@@ -63,7 +64,9 @@ func (r *equipmentRepository) GetByCharacterID(ctx context.Context, characterID 
 }
 
 // EquipItem equips an item to a specific slot
-func (r *equipmentRepository) EquipItem(ctx context.Context, characterID uuid.UUID, itemID uuid.UUID, slot models.EquipmentSlot) (*models.Equipment, error) {
+func (r *equipmentRepository) EquipItem(ctx context.Context, characterID uuid.UUID,
+	itemID uuid.UUID, slot models.EquipmentSlot,
+) (*models.Equipment, error) {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -88,12 +91,14 @@ func (r *equipmentRepository) EquipItem(ctx context.Context, characterID uuid.UU
 	if err == sql.ErrNoRows {
 		// Insert new equipment
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO equipment (id, character_id, slot, item_id, equipped_at, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW(), NOW())",
+			"INSERT INTO equipment (id, character_id, slot, item_id, equipped_at, created_at, updated_at) "+
+				"VALUES ($1, $2, $3, $4, NOW(), NOW(), NOW())",
 			equipmentID, characterID, slot, itemID)
 	} else {
 		// Update existing equipment
 		_, err = tx.ExecContext(ctx,
-			"UPDATE equipment SET item_id = $4, equipped_at = NOW(), updated_at = NOW() WHERE character_id = $1 AND slot = $2",
+			"UPDATE equipment SET item_id = $4, equipped_at = NOW(), updated_at = NOW() "+
+				"WHERE character_id = $1 AND slot = $2",
 			characterID, slot, itemID)
 		equipmentID = existingID
 	}
@@ -105,7 +110,8 @@ func (r *equipmentRepository) EquipItem(ctx context.Context, characterID uuid.UU
 	// Get the equipped item details
 	var equipment models.Equipment
 	err = tx.GetContext(ctx, &equipment,
-		"SELECT id, character_id, slot, item_id, equipped_at, created_at, updated_at FROM equipment WHERE id = $1",
+		"SELECT id, character_id, slot, item_id, equipped_at, created_at, updated_at "+
+			"FROM equipment WHERE id = $1",
 		equipmentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get equipped item: %w", err)
@@ -120,22 +126,27 @@ func (r *equipmentRepository) EquipItem(ctx context.Context, characterID uuid.UU
 }
 
 // UnequipItem removes an item from a specific slot
-func (r *equipmentRepository) UnequipItem(ctx context.Context, characterID uuid.UUID, slot models.EquipmentSlot) (*models.Equipment, error) {
+func (r *equipmentRepository) UnequipItem(ctx context.Context, characterID uuid.UUID,
+	slot models.EquipmentSlot,
+) (*models.Equipment, error) {
 	// Get current equipment
 	var equipment models.Equipment
 	err := r.db.GetContext(ctx, &equipment,
-		"SELECT id, character_id, slot, item_id, equipped_at, created_at, updated_at FROM equipment WHERE character_id = $1 AND slot = $2",
+		"SELECT id, character_id, slot, item_id, equipped_at, created_at, updated_at "+
+			"FROM equipment WHERE character_id = $1 AND slot = $2",
 		characterID, slot)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, models.NewNotFoundError("equipment", fmt.Sprintf("character %s slot %s", characterID, slot))
+			return nil, models.NewNotFoundError("equipment",
+				fmt.Sprintf("character %s slot %s", characterID, slot))
 		}
 		return nil, fmt.Errorf("failed to get equipment: %w", err)
 	}
 
 	// Remove item from slot
 	_, err = r.db.ExecContext(ctx,
-		"UPDATE equipment SET item_id = NULL, updated_at = NOW() WHERE character_id = $1 AND slot = $2",
+		"UPDATE equipment SET item_id = NULL, updated_at = NOW() "+
+			"WHERE character_id = $1 AND slot = $2",
 		characterID, slot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unequip item: %w", err)
@@ -145,7 +156,9 @@ func (r *equipmentRepository) UnequipItem(ctx context.Context, characterID uuid.
 }
 
 // GetEquippedItem retrieves the item equipped in a specific slot
-func (r *equipmentRepository) GetEquippedItem(ctx context.Context, characterID uuid.UUID, slot models.EquipmentSlot) (*models.Equipment, error) {
+func (r *equipmentRepository) GetEquippedItem(ctx context.Context, characterID uuid.UUID,
+	slot models.EquipmentSlot,
+) (*models.Equipment, error) {
 	query := `
 		SELECT e.id, e.character_id, e.slot, e.item_id, e.equipped_at, e.created_at, e.updated_at,
 			i.name, i.description, i.type, i.rarity, i.level, i.stats, i.requirements,
@@ -160,7 +173,8 @@ func (r *equipmentRepository) GetEquippedItem(ctx context.Context, characterID u
 	err := r.db.GetContext(ctx, &equipment, query, characterID, slot)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, models.NewNotFoundError("equipment", fmt.Sprintf("character %s slot %s", characterID, slot))
+			return nil, models.NewNotFoundError("equipment",
+				fmt.Sprintf("character %s slot %s", characterID, slot))
 		}
 		return nil, fmt.Errorf("failed to get equipped item: %w", err)
 	}

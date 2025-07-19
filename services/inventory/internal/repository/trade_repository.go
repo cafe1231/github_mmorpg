@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"inventory/internal/models"
+
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
-	"inventory/internal/models"
 )
 
 type tradeRepository struct {
@@ -302,7 +303,8 @@ func (r *tradeRepository) UpdateOffer(ctx context.Context, tradeID, playerID uui
 		}
 
 		_, err = tx.NamedExecContext(ctx,
-			"INSERT INTO trade_items (id, trade_id, item_id, quantity, owner_id, created_at) VALUES (:id, :trade_id, :item_id, :quantity, :owner_id, :created_at)",
+			"INSERT INTO trade_items (id, trade_id, item_id, quantity, owner_id, created_at) "+
+				"VALUES (:id, :trade_id, :item_id, :quantity, :owner_id, :created_at)",
 			tradeItem)
 		if err != nil {
 			return fmt.Errorf("failed to add trade item: %w", err)

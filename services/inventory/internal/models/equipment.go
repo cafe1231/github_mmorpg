@@ -6,6 +6,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// Set bonus constants
+const (
+	MinSetPiecesForBonus = 2
+	MaxSetPiecesForBonus = 4
+	WarriorSetStrength   = 10
+	WarriorSetDefense    = 5
+	MageSetIntelligence  = 10
+	MageSetMana          = 50
+)
+
 type EquipmentSlot string
 
 const (
@@ -72,49 +82,55 @@ func (es *EquipmentSet) CalculateSetBonuses() {
 
 	// Count items per set
 	for _, equipment := range es.Equipment {
-		if equipment.Item != nil {
-			setName, exists := equipment.Item.Metadata["set"]
-			if exists {
-				if setNameStr, ok := setName.(string); ok {
-					setBonuses[setNameStr]++
-				}
-			}
+		if equipment.Item == nil {
+			continue
+		}
+
+		setName, exists := equipment.Item.Metadata["set"]
+		if !exists {
+			continue
+		}
+
+		if setNameStr, ok := setName.(string); ok {
+			setBonuses[setNameStr]++
 		}
 	}
 
 	// Apply set bonuses based on piece count
 	es.SetBonuses = []SetBonus{}
 	for setName, count := range setBonuses {
-		if count >= 2 {
-			bonus := SetBonus{
-				Name:        setName + " Set",
-				RequiredSet: setName,
-				PiecesCount: count,
-				Active:      true,
-			}
-
-			// Define set bonuses (simplified example)
-			switch setName {
-			case "warrior":
-				if count >= 2 {
-					bonus.Stats = map[string]int{"strength": 10, "defense": 5}
-				}
-				if count >= 4 {
-					bonus.Stats["strength"] += 15
-					bonus.Stats["defense"] += 10
-				}
-			case "mage":
-				if count >= 2 {
-					bonus.Stats = map[string]int{"intelligence": 10, "mana": 50}
-				}
-				if count >= 4 {
-					bonus.Stats["intelligence"] += 15
-					bonus.Stats["mana"] += 100
-				}
-			}
-
-			es.SetBonuses = append(es.SetBonuses, bonus)
+		if count < MinSetPiecesForBonus {
+			continue
 		}
+
+		bonus := SetBonus{
+			Name:        setName + " Set",
+			RequiredSet: setName,
+			PiecesCount: count,
+			Active:      true,
+		}
+
+		// Define set bonuses (simplified example)
+		switch setName {
+		case "warrior":
+			if count >= MinSetPiecesForBonus {
+				bonus.Stats = map[string]int{"strength": WarriorSetStrength, "defense": WarriorSetDefense}
+			}
+			if count >= MaxSetPiecesForBonus {
+				bonus.Stats["strength"] += 15
+				bonus.Stats["defense"] += 10
+			}
+		case "mage":
+			if count >= MinSetPiecesForBonus {
+				bonus.Stats = map[string]int{"intelligence": MageSetIntelligence, "mana": MageSetMana}
+			}
+			if count >= MaxSetPiecesForBonus {
+				bonus.Stats["intelligence"] += 15
+				bonus.Stats["mana"] += 100
+			}
+		}
+
+		es.SetBonuses = append(es.SetBonuses, bonus)
 	}
 }
 
@@ -124,16 +140,18 @@ func (es *EquipmentSet) CalculateTotalStats() {
 
 	// Add stats from individual items
 	for _, equipment := range es.Equipment {
-		if equipment.Item != nil && equipment.Item.Stats != nil {
-			stats := equipment.Item.Stats
-			es.TotalStats["attack"] += stats.Attack
-			es.TotalStats["defense"] += stats.Defense
-			es.TotalStats["magic_attack"] += stats.MagicAttack
-			es.TotalStats["magic_defense"] += stats.MagicDefense
-			es.TotalStats["health"] += stats.Health
-			es.TotalStats["mana"] += stats.Mana
-			es.TotalStats["speed"] += stats.Speed
+		if equipment.Item == nil || equipment.Item.Stats == nil {
+			continue
 		}
+
+		stats := equipment.Item.Stats
+		es.TotalStats["attack"] += stats.Attack
+		es.TotalStats["defense"] += stats.Defense
+		es.TotalStats["magic_attack"] += stats.MagicAttack
+		es.TotalStats["magic_defense"] += stats.MagicDefense
+		es.TotalStats["health"] += stats.Health
+		es.TotalStats["mana"] += stats.Mana
+		es.TotalStats["speed"] += stats.Speed
 	}
 
 	// Add set bonus stats

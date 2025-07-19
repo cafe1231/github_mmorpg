@@ -11,6 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
+// Cost constants
+const (
+	SlotExpansionCost = 1000 // Cost in gold per expansion slot
+)
+
 type inventoryService struct {
 	inventoryRepo repository.InventoryRepository
 	itemRepo      repository.ItemRepository
@@ -24,13 +29,14 @@ func NewInventoryService(inventoryRepo repository.InventoryRepository, itemRepo 
 }
 
 // CreateInventory creates a new inventory for a character
-func (s *inventoryService) CreateInventory(ctx context.Context, characterID uuid.UUID, slots int, maxWeight float64) (*models.Inventory, error) {
+func (s *inventoryService) CreateInventory(ctx context.Context, characterID uuid.UUID,
+	slots int, maxWeight float64) (*models.Inventory, error) {
 	now := time.Now()
 	inventory := &models.Inventory{
 		ID:          uuid.New(),
 		CharacterID: characterID,
+		Slots:       make([]models.InventoryItem, 0, slots),
 		MaxSlots:    slots,
-		Slots:       []models.InventoryItem{},
 		Gold:        0,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -44,7 +50,7 @@ func (s *inventoryService) CreateInventory(ctx context.Context, characterID uuid
 	return inventory, nil
 }
 
-// GetInventory retrieves inventory by character ID
+// GetInventory retrieves a character's inventory
 func (s *inventoryService) GetInventory(ctx context.Context, characterID uuid.UUID) (*models.Inventory, error) {
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
@@ -55,7 +61,8 @@ func (s *inventoryService) GetInventory(ctx context.Context, characterID uuid.UU
 }
 
 // AddItem adds an item to inventory
-func (s *inventoryService) AddItem(ctx context.Context, characterID uuid.UUID, itemID uuid.UUID, quantity int) (*models.InventoryItem, error) {
+func (s *inventoryService) AddItem(ctx context.Context, characterID uuid.UUID,
+	itemID uuid.UUID, quantity int) (*models.InventoryItem, error) {
 	// Get inventory
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
@@ -70,10 +77,10 @@ func (s *inventoryService) AddItem(ctx context.Context, characterID uuid.UUID, i
 
 	// Check if inventory has space
 	if !inventory.HasSpace(item, quantity) {
-		return nil, models.NewValidationError("not enough space in inventory")
+		return nil, models.NewInsufficientResourcesError("inventory space", quantity, inventory.GetEmptySlotCount())
 	}
 
-	// Add item to inventory using the model's method
+	// Add item to inventory
 	err = inventory.AddItem(item, quantity)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add item to inventory: %w", err)
@@ -85,27 +92,32 @@ func (s *inventoryService) AddItem(ctx context.Context, characterID uuid.UUID, i
 		return nil, fmt.Errorf("failed to update inventory: %w", err)
 	}
 
-	// Find the added item to return
-	_, addedItem := inventory.FindItem(itemID)
-	if addedItem == nil {
-		return nil, fmt.Errorf("item was not added correctly")
+	// Return the added item
+	slotIndex, inventoryItem := inventory.FindItem(itemID)
+	if slotIndex == -1 {
+		return nil, fmt.Errorf("failed to find added item")
 	}
 
-	return addedItem, nil
+	return inventoryItem, nil
 }
 
 // RemoveItem removes an item from inventory
 func (s *inventoryService) RemoveItem(ctx context.Context, characterID uuid.UUID, itemID uuid.UUID, quantity int) error {
-	// Get inventory
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
 
-	// Remove item using model method
+	// Check if item exists and has sufficient quantity
+	totalQuantity := inventory.GetItemQuantity(itemID)
+	if totalQuantity < quantity {
+		return models.NewInsufficientResourcesError("item quantity", quantity, totalQuantity)
+	}
+
+	// Remove item from inventory
 	err = inventory.RemoveItem(itemID, quantity)
 	if err != nil {
-		return fmt.Errorf("failed to remove item: %w", err)
+		return fmt.Errorf("failed to remove item from inventory: %w", err)
 	}
 
 	// Update inventory in database
@@ -117,37 +129,52 @@ func (s *inventoryService) RemoveItem(ctx context.Context, characterID uuid.UUID
 	return nil
 }
 
-// MoveItem moves an item to a different slot
+// MoveItem moves an item between slots
 func (s *inventoryService) MoveItem(ctx context.Context, characterID uuid.UUID, request *models.MoveItemRequest) error {
-	fromSlot := request.FromSlot
-	toSlot := request.ToSlot
-	// Get inventory
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
 
-	// Validate slots
-	if fromSlot < 0 || fromSlot >= len(inventory.Slots) || toSlot < 0 || toSlot >= inventory.MaxSlots {
-		return models.NewValidationError("invalid slot index")
+	// Validate slot indices
+	if request.FromSlot < 0 || request.FromSlot >= len(inventory.Slots) {
+		return models.NewValidationError("invalid from slot")
+	}
+	if request.ToSlot < 0 || request.ToSlot >= len(inventory.Slots) {
+		return models.NewValidationError("invalid to slot")
 	}
 
-	// Check if from slot has an item
-	if fromSlot >= len(inventory.Slots) || inventory.Slots[fromSlot].Item == nil {
-		return models.NewValidationError("no item in source slot")
+	// Check if source slot has an item
+	if inventory.Slots[request.FromSlot].Item == nil {
+		return models.NewValidationError("source slot is empty")
 	}
 
-	// Simple swap logic
-	if toSlot < len(inventory.Slots) {
-		// Swap items
-		inventory.Slots[fromSlot], inventory.Slots[toSlot] = inventory.Slots[toSlot], inventory.Slots[fromSlot]
-	} else {
-		// Extend slots if needed and move item
-		for len(inventory.Slots) <= toSlot {
-			inventory.Slots = append(inventory.Slots, models.InventoryItem{})
+	// Check if destination slot is empty or can stack
+	fromItem := &inventory.Slots[request.FromSlot]
+	toItem := &inventory.Slots[request.ToSlot]
+
+	if toItem.Item == nil {
+		// Empty destination slot - move item
+		*toItem = *fromItem
+		toItem.Slot = request.ToSlot
+		*fromItem = models.InventoryItem{}
+	} else if toItem.Item.ID == fromItem.Item.ID && toItem.Item.Stackable {
+		// Same item and stackable - try to stack
+		maxStack := toItem.Item.MaxStack
+		canAdd := maxStack - toItem.Quantity
+		if canAdd > 0 {
+			moveAmount := minValue(fromItem.Quantity, canAdd)
+			toItem.Quantity += moveAmount
+			fromItem.Quantity -= moveAmount
+
+			if fromItem.Quantity <= 0 {
+				*fromItem = models.InventoryItem{}
+			}
+		} else {
+			return models.NewValidationError("destination slot is full")
 		}
-		inventory.Slots[toSlot] = inventory.Slots[fromSlot]
-		inventory.Slots[fromSlot] = models.InventoryItem{}
+	} else {
+		return models.NewValidationError("destination slot is occupied by different item")
 	}
 
 	// Update inventory in database
@@ -159,42 +186,53 @@ func (s *inventoryService) MoveItem(ctx context.Context, characterID uuid.UUID, 
 	return nil
 }
 
-// StackItems stacks items together
+// StackItems stacks items from one slot to another
 func (s *inventoryService) StackItems(ctx context.Context, characterID uuid.UUID, fromSlot, toSlot int) error {
-	// Get inventory
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
 
-	// Validate slots
-	if fromSlot < 0 || fromSlot >= len(inventory.Slots) || toSlot < 0 || toSlot >= len(inventory.Slots) {
-		return models.NewValidationError("invalid slot index")
+	// Validate slot indices
+	if fromSlot < 0 || fromSlot >= len(inventory.Slots) {
+		return models.NewValidationError("invalid from slot")
+	}
+	if toSlot < 0 || toSlot >= len(inventory.Slots) {
+		return models.NewValidationError("invalid to slot")
 	}
 
 	fromItem := &inventory.Slots[fromSlot]
 	toItem := &inventory.Slots[toSlot]
 
 	// Check if both slots have items
-	if fromItem.Item == nil || toItem.Item == nil {
-		return models.NewValidationError("both slots must have items")
+	if fromItem.Item == nil {
+		return models.NewValidationError("source slot is empty")
+	}
+	if toItem.Item == nil {
+		return models.NewValidationError("destination slot is empty")
 	}
 
-	// Check if items can be stacked
-	if !fromItem.Item.CanStackWith(toItem.Item) {
-		return models.NewValidationError("items cannot be stacked together")
+	// Check if items are the same and stackable
+	if fromItem.Item.ID != toItem.Item.ID {
+		return models.NewValidationError("items are different")
+	}
+	if !fromItem.Item.Stackable {
+		return models.NewValidationError("items are not stackable")
 	}
 
-	// Calculate new quantities
-	totalQuantity := fromItem.Quantity + toItem.Quantity
-	if totalQuantity <= toItem.Item.MaxStack {
-		// All items fit in target stack
-		toItem.Quantity = totalQuantity
-		inventory.Slots[fromSlot] = models.InventoryItem{}
+	// Stack items
+	maxStack := toItem.Item.MaxStack
+	canAdd := maxStack - toItem.Quantity
+	if canAdd > 0 {
+		moveAmount := minValue(fromItem.Quantity, canAdd)
+		toItem.Quantity += moveAmount
+		fromItem.Quantity -= moveAmount
+
+		if fromItem.Quantity <= 0 {
+			*fromItem = models.InventoryItem{}
+		}
 	} else {
-		// Some items remain in source stack
-		toItem.Quantity = toItem.Item.MaxStack
-		fromItem.Quantity = totalQuantity - toItem.Item.MaxStack
+		return models.NewValidationError("destination slot is full")
 	}
 
 	// Update inventory in database
@@ -207,44 +245,49 @@ func (s *inventoryService) StackItems(ctx context.Context, characterID uuid.UUID
 }
 
 // SplitStack splits a stack of items
-func (s *inventoryService) SplitStack(ctx context.Context, characterID uuid.UUID, request *models.SplitStackRequest) (*models.SplitStackResponse, error) {
+func (s *inventoryService) SplitStack(ctx context.Context, characterID uuid.UUID,
+	request *models.SplitStackRequest) (*models.SplitStackResponse, error) {
 	sourceSlot := request.FromSlot
 	targetSlot := request.ToSlot
 	quantity := request.Quantity
-	// Get inventory
+
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
 
-	// Validate slots and quantity
-	if sourceSlot < 0 || sourceSlot >= len(inventory.Slots) || targetSlot < 0 || targetSlot >= inventory.MaxSlots {
-		return nil, models.NewValidationError("invalid slot index")
+	// Validate slot indices
+	if sourceSlot < 0 || sourceSlot >= len(inventory.Slots) {
+		return nil, models.NewValidationError("invalid source slot")
+	}
+	if targetSlot < 0 || targetSlot >= len(inventory.Slots) {
+		return nil, models.NewValidationError("invalid target slot")
 	}
 
 	sourceItem := &inventory.Slots[sourceSlot]
-	if sourceItem.Item == nil || sourceItem.Quantity <= quantity {
-		return nil, models.NewValidationError("invalid split operation")
+	targetItem := &inventory.Slots[targetSlot]
+
+	// Check if source slot has an item
+	if sourceItem.Item == nil {
+		return nil, models.NewValidationError("source slot is empty")
 	}
 
 	// Check if target slot is empty
-	if targetSlot < len(inventory.Slots) && inventory.Slots[targetSlot].Item != nil {
+	if targetItem.Item != nil {
 		return nil, models.NewValidationError("target slot is not empty")
 	}
 
-	// Extend slots if needed
-	for len(inventory.Slots) <= targetSlot {
-		inventory.Slots = append(inventory.Slots, models.InventoryItem{})
+	// Check if quantity is valid
+	if quantity <= 0 || quantity >= sourceItem.Quantity {
+		return nil, models.NewValidationError("invalid split quantity")
 	}
 
-	// Split the stack
-	newItem := models.InventoryItem{
-		ItemID:   sourceItem.ItemID,
-		Quantity: quantity,
-		Slot:     targetSlot,
-		Item:     sourceItem.Item,
-	}
-	inventory.Slots[targetSlot] = newItem
+	// Perform split
+	targetItem.ItemID = sourceItem.ItemID
+	targetItem.Item = sourceItem.Item
+	targetItem.Quantity = quantity
+	targetItem.Slot = targetSlot
+
 	sourceItem.Quantity -= quantity
 
 	// Update inventory in database
@@ -256,7 +299,7 @@ func (s *inventoryService) SplitStack(ctx context.Context, characterID uuid.UUID
 	return &models.SplitStackResponse{
 		Success:      true,
 		OriginalItem: sourceItem,
-		NewItem:      &newItem,
+		NewItem:      targetItem,
 		Message:      "Stack split successfully",
 	}, nil
 }
@@ -271,15 +314,17 @@ func (s *inventoryService) GetStats(ctx context.Context, characterID uuid.UUID) 
 	return inventory.GetStats(), nil
 }
 
-// SortInventory sorts the inventory
+// SortInventory sorts inventory items
 func (s *inventoryService) SortInventory(ctx context.Context, characterID uuid.UUID) error {
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
 
+	// TODO: Implement sorting logic
 	inventory.SortInventory()
 
+	// Update inventory in database
 	err = s.inventoryRepo.Update(ctx, inventory)
 	if err != nil {
 		return fmt.Errorf("failed to update inventory: %w", err)
@@ -288,16 +333,17 @@ func (s *inventoryService) SortInventory(ctx context.Context, characterID uuid.U
 	return nil
 }
 
-// ExpandInventory expands inventory slots
+// ExpandInventory expands inventory capacity
 func (s *inventoryService) ExpandInventory(ctx context.Context, characterID uuid.UUID, additionalSlots int) (*models.Inventory, error) {
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
 
+	// Expand inventory
 	inventory.MaxSlots += additionalSlots
-	inventory.UpdatedAt = time.Now()
 
+	// Update inventory in database
 	err = s.inventoryRepo.Update(ctx, inventory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update inventory: %w", err)
@@ -306,21 +352,19 @@ func (s *inventoryService) ExpandInventory(ctx context.Context, characterID uuid
 	return inventory, nil
 }
 
-// UpdateGold updates character's gold
+// UpdateGold updates character's gold amount
 func (s *inventoryService) UpdateGold(ctx context.Context, characterID uuid.UUID, amount int) error {
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return fmt.Errorf("failed to get inventory: %w", err)
 	}
 
-	newGold := inventory.Gold + amount
-	if newGold < 0 {
-		return models.NewValidationError("insufficient gold")
+	inventory.Gold += amount
+	if inventory.Gold < 0 {
+		return models.NewInsufficientResourcesError("gold", -amount, inventory.Gold+amount)
 	}
 
-	inventory.Gold = newGold
-	inventory.UpdatedAt = time.Now()
-
+	// Update inventory in database
 	err = s.inventoryRepo.Update(ctx, inventory)
 	if err != nil {
 		return fmt.Errorf("failed to update inventory: %w", err)
@@ -350,7 +394,8 @@ func (s *inventoryService) DeleteInventory(ctx context.Context, characterID uuid
 }
 
 // UpdateItem updates an inventory item (simplified implementation)
-func (s *inventoryService) UpdateItem(ctx context.Context, characterID uuid.UUID, itemID uuid.UUID, updates *models.UpdateItemRequest) (*models.InventoryItem, error) {
+func (s *inventoryService) UpdateItem(ctx context.Context, characterID uuid.UUID,
+	itemID uuid.UUID, updates *models.UpdateItemRequest) (*models.InventoryItem, error) {
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
@@ -400,7 +445,8 @@ func (s *inventoryService) GetItem(ctx context.Context, characterID uuid.UUID, i
 }
 
 // AddItems adds multiple items to inventory (bulk operation)
-func (s *inventoryService) AddItems(ctx context.Context, characterID uuid.UUID, request *models.BulkAddItemsRequest) (*models.BulkOperationResponse, error) {
+func (s *inventoryService) AddItems(ctx context.Context, characterID uuid.UUID,
+	request *models.BulkAddItemsRequest) (*models.BulkOperationResponse, error) {
 	response := &models.BulkOperationResponse{
 		Success:    true,
 		Results:    []models.BulkOperationResult{},
@@ -435,7 +481,8 @@ func (s *inventoryService) AddItems(ctx context.Context, characterID uuid.UUID, 
 }
 
 // RemoveItems removes multiple items from inventory (bulk operation)
-func (s *inventoryService) RemoveItems(ctx context.Context, characterID uuid.UUID, request *models.BulkRemoveItemsRequest) (*models.BulkOperationResponse, error) {
+func (s *inventoryService) RemoveItems(ctx context.Context, characterID uuid.UUID,
+	request *models.BulkRemoveItemsRequest) (*models.BulkOperationResponse, error) {
 	response := &models.BulkOperationResponse{
 		Success:    true,
 		Results:    []models.BulkOperationResult{},
@@ -470,14 +517,15 @@ func (s *inventoryService) RemoveItems(ctx context.Context, characterID uuid.UUI
 }
 
 // ListItems lists items in inventory with filtering
-func (s *inventoryService) ListItems(ctx context.Context, characterID uuid.UUID, filter *models.InventoryFilterRequest) (*models.InventoryListResponse, error) {
+func (s *inventoryService) ListItems(ctx context.Context, characterID uuid.UUID,
+	filter *models.InventoryFilterRequest) (*models.InventoryListResponse, error) {
 	inventory, err := s.inventoryRepo.GetByCharacterID(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
 	}
 
 	// Simple filtering implementation
-	var filteredItems []models.InventoryItem
+	filteredItems := make([]models.InventoryItem, 0, len(inventory.Slots))
 	for _, item := range inventory.Slots {
 		if item.Item == nil {
 			continue
@@ -508,7 +556,8 @@ func (s *inventoryService) ListItems(ctx context.Context, characterID uuid.UUID,
 }
 
 // ExpandStorage expands inventory storage capacity
-func (s *inventoryService) ExpandStorage(ctx context.Context, characterID uuid.UUID, request *models.ExpandStorageRequest) (*models.StorageExpansionResponse, error) {
+func (s *inventoryService) ExpandStorage(ctx context.Context, characterID uuid.UUID,
+	request *models.ExpandStorageRequest) (*models.StorageExpansionResponse, error) {
 	inventory, err := s.ExpandInventory(ctx, characterID, request.AdditionalSlots)
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand inventory: %w", err)
@@ -518,7 +567,15 @@ func (s *inventoryService) ExpandStorage(ctx context.Context, characterID uuid.U
 		Success:    true,
 		NewSlots:   request.AdditionalSlots,
 		TotalSlots: inventory.MaxSlots,
-		Cost:       int64(request.AdditionalSlots * 1000), // 1000 gold per slot
+		Cost:       int64(request.AdditionalSlots * SlotExpansionCost), // 1000 gold per slot
 		Message:    fmt.Sprintf("Successfully expanded inventory by %d slots", request.AdditionalSlots),
 	}, nil
+}
+
+// Helper function for min
+func minValue(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

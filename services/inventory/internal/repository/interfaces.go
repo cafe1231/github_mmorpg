@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"inventory/internal/models"
+
+	"github.com/google/uuid"
 )
 
 // ItemRepository defines methods for item data access
@@ -103,8 +104,10 @@ type CraftingRepository interface {
 	GetRecipesByMaterial(ctx context.Context, materialID uuid.UUID) ([]models.CraftingRecipe, error)
 
 	// Crafting operations
-	CraftItem(ctx context.Context, characterID uuid.UUID, recipe *models.CraftingRecipe, materials []models.CraftingMaterialInput) (*models.InventoryItem, error)
-	ValidateMaterials(ctx context.Context, characterID uuid.UUID, recipe *models.CraftingRecipe, materials []models.CraftingMaterialInput) error
+	CraftItem(ctx context.Context, characterID uuid.UUID, recipe *models.CraftingRecipe,
+		materials []models.CraftingMaterialInput) (*models.InventoryItem, error)
+	ValidateMaterials(ctx context.Context, characterID uuid.UUID, recipe *models.CraftingRecipe,
+		materials []models.CraftingMaterialInput) error
 	ConsumeMaterials(ctx context.Context, characterID uuid.UUID, materials []models.CraftingMaterialInput) error
 }
 

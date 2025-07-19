@@ -2,6 +2,11 @@ package models
 
 import "github.com/google/uuid"
 
+// Limit constants
+const (
+	MaxInventoryFilterLimit = 100
+)
+
 // Inventory requests
 type AddItemRequest struct {
 	ItemID   uuid.UUID `json:"item_id" binding:"required"`
@@ -112,8 +117,8 @@ func (r *InventoryFilterRequest) SetDefaults() {
 	if r.Limit <= 0 {
 		r.Limit = 50
 	}
-	if r.Limit > 100 {
-		r.Limit = 100
+	if r.Limit > MaxInventoryFilterLimit {
+		r.Limit = MaxInventoryFilterLimit
 	}
 	if r.SortBy == "" {
 		r.SortBy = "created_at"

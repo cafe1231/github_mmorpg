@@ -19,50 +19,59 @@ import (
 	"inventory/internal/service"
 )
 
+// Constantes pour les timeouts du serveur
+const (
+	ReadHeaderTimeout = 10 * time.Second
+	ReadTimeout       = 30 * time.Second
+	WriteTimeout      = 30 * time.Second
+	IdleTimeout       = 60 * time.Second
+	ShutdownTimeout   = 30 * time.Second
+)
+
 func main() {
-	// Initialisation du logging
+	// Initialize logging
 	initLogger()
 
-	// Chargement de la configuration
+	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
 		logrus.Fatal("Failed to load configuration: ", err)
 	}
 
-	// connection à la base de données
-	db, err := database.NewConnection(cfg.Database)
+	// Database connection
+	db, err := database.NewConnection(&cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
 	}
 	defer db.Close()
 
-	// Exécution des migrations
+	// Run migrations
 	if err := database.RunMigrations(db); err != nil {
 		logrus.Fatal("Failed to run migrations: ", err)
 	}
 
-	// Initialisation des repositories
+	// Initialize repositories
 	itemRepo := repository.NewItemRepository(db.DB)
 	inventoryRepo := repository.NewInventoryRepository(db.DB)
 
-	// Initialisation des services
+	// Initialize services
 	inventoryService := service.NewInventoryService(inventoryRepo, itemRepo)
 
-	// Initialisation des handlers
+	// Initialize handlers
 	inventoryHandler := handlers.NewInventoryHandler(inventoryService)
 	healthHandler := handlers.NewHealthHandler("development")
 
-	// Configuration du mode Gin
+	// Configure Gin mode
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Création du routeur
+	// Create router
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	// Configuration CORS pour le développement
+	// CORS configuration for development
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -76,39 +85,43 @@ func main() {
 		c.Next()
 	})
 
-	// Routes de santé
+	// Health routes
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/ready", healthHandler.Readiness)
 	router.GET("/health/live", healthHandler.Liveness)
 
-	// Routes d'API
+	// API routes
 	apiV1 := router.Group("/api/v1")
 	{
-		// Routes d'inventaire
+		// Inventory routes
 		inventory := apiV1.Group("/inventory")
 		{
 			inventory.GET("/:characterId", inventoryHandler.GetInventory)
 
-			// Gestion des objets
+			// Item management
 			inventory.POST("/:characterId/items", inventoryHandler.AddItem)
 			inventory.DELETE("/:characterId/items/:itemId", inventoryHandler.RemoveItem)
 			inventory.PUT("/:characterId/items/:itemId", inventoryHandler.UpdateItem)
 			inventory.GET("/:characterId/items", inventoryHandler.ListItems)
 
-			// Opérations sur les slots
+			// Slot operations
 			inventory.POST("/:characterId/move", inventoryHandler.MoveItem)
 			inventory.POST("/:characterId/split", inventoryHandler.SplitStack)
 
-			// Opérations en lot
+			// Bulk operations
 			inventory.POST("/:characterId/items/bulk/add", inventoryHandler.AddBulkItems)
 			inventory.POST("/:characterId/items/bulk/remove", inventoryHandler.RemoveBulkItems)
 		}
 	}
 
-	// Démarrage du serveur
+	// Server startup
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler: router,
+		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:           router,
+		ReadHeaderTimeout: ReadHeaderTimeout,
+		ReadTimeout:       ReadTimeout,
+		WriteTimeout:      WriteTimeout,
+		IdleTimeout:       IdleTimeout,
 	}
 
 	go func() {
@@ -122,15 +135,15 @@ func main() {
 		}
 	}()
 
-	// Attendre le signal d'arrêt
+	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	logrus.Info("Shutting down server...")
 
-	// Arrêt gracieux avec timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), ShutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
