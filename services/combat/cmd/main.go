@@ -49,7 +49,7 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Exécution des migrations
 	if err := database.RunMigrations(db); err != nil {
@@ -269,9 +269,9 @@ func initLogger() {
 func gracefulShutdown(
 	server *http.Server,
 	combatService service.CombatServiceInterface,
-	effectService service.EffectServiceInterface,
-	actionService service.ActionServiceInterface,
-	antiCheat service.AntiCheatServiceInterface,
+	_ service.EffectServiceInterface,
+	_ service.ActionServiceInterface,
+	_ service.AntiCheatServiceInterface,
 ) {
 	// Canal pour recevoir les signaux d'interruption
 	quit := make(chan os.Signal, 1)
@@ -307,68 +307,3 @@ func gracefulShutdown(
 }
 
 // Fonctions utilitaires pour les handlers
-
-// TODO: Implémenter si nécessaire pour l'extraction d'ID utilisateur
-// extractUserID récupère l'ID utilisateur depuis le contexte Gin
-func extractUserID(c *gin.Context) (string, bool) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		return "", false
-	}
-
-	id, ok := userID.(string)
-	return id, ok
-}
-
-// TODO: Implémenter si nécessaire pour l'extraction d'ID personnage
-// extractCharacterID récupère l'ID du personnage depuis les paramètres ou headers
-func extractCharacterID(c *gin.Context) (string, bool) {
-	// D'abord essayer depuis les paramètres d'URL
-	if characterID := c.Param("characterId"); characterID != "" {
-		return characterID, true
-	}
-
-	// Ensuite essayer depuis les headers
-	if characterID := c.GetHeader("X-Character-ID"); characterID != "" {
-		return characterID, true
-	}
-
-	// Finalement essayer depuis le query
-	if characterID := c.Query("character_id"); characterID != "" {
-		return characterID, true
-	}
-
-	return "", false
-}
-
-// respondWithError envoie une réponse d'erreur standardisée
-// TODO: Implémenter si nécessaire pour les réponses d'erreur
-func respondWithError(c *gin.Context, code int, message string, details ...interface{}) {
-	response := gin.H{
-		"error":      message,
-		"timestamp":  time.Now().Unix(),
-		"request_id": c.GetHeader("X-Request-ID"),
-	}
-
-	if len(details) > 0 {
-		response["details"] = details[0]
-	}
-
-	c.JSON(code, response)
-}
-
-// respondWithSuccess envoie une réponse de succès standardisée
-// TODO: Implémenter si nécessaire pour les réponses de succès
-func respondWithSuccess(c *gin.Context, data interface{}, message ...string) {
-	response := gin.H{
-		"success":   true,
-		"data":      data,
-		"timestamp": time.Now().Unix(),
-	}
-
-	if len(message) > 0 {
-		response["message"] = message[0]
-	}
-
-	c.JSON(http.StatusOK, response)
-}

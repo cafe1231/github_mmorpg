@@ -719,7 +719,7 @@ func (s *CombatService) calculateCombatResult(
 }
 
 func (s *CombatService) calculateRewards(
-	combat *models.CombatInstance,
+	_ *models.CombatInstance,
 	participants []*models.CombatParticipant,
 	winningTeam *int,
 ) map[uuid.UUID]*models.CombatReward {

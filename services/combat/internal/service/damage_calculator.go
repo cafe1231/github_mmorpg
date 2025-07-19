@@ -2,16 +2,20 @@ package service
 
 import (
 	"fmt"
-	"math/rand"
 
 	"combat/internal/config"
 	"combat/internal/models"
+	"combat/internal/utils"
 )
 
 // Constantes pour les types de dégâts
 const (
 	DamageTypePhysical = "physical"
 	DamageTypeMagical  = "magical"
+
+	// Constantes pour la variance des dégâts
+	varianceMin = 0.9
+	varianceMax = 0.2
 )
 
 // DamageCalculatorInterface définit les méthodes du calculateur de dégâts
@@ -115,7 +119,7 @@ func (dc *DamageCalculator) CalculateDamage(
 
 	// Vérifier si l'attaque touche
 	hitChance := dc.CalculateHitChance(attacker, defender, skill, modifiers)
-	if rand.Float64() > hitChance {
+	if utils.SecureRandFloat64() > hitChance {
 		result.IsMiss = true
 		result.FinalDamage = 0
 		return result
@@ -123,7 +127,7 @@ func (dc *DamageCalculator) CalculateDamage(
 
 	// Vérifier si l'attaque est bloquée
 	blockChance := dc.CalculateBlockChance(defender, modifiers)
-	if rand.Float64() < blockChance {
+	if utils.SecureRandFloat64() < blockChance {
 		result.IsBlocked = true
 		result.FinalDamage = int(float64(baseDamage) * config.DefaultDamageReduction)
 		return result
@@ -150,7 +154,7 @@ func (dc *DamageCalculator) CalculateDamage(
 
 	// Vérifier les critiques
 	critChance := dc.CalculateCriticalChance(attacker, skill, modifiers)
-	if rand.Float64() < critChance {
+	if utils.SecureRandFloat64() < critChance {
 		result.IsCritical = true
 		critMultiplier := 1.5 // Multiplicateur de base
 
@@ -182,7 +186,7 @@ func (dc *DamageCalculator) CalculateDamage(
 	}
 
 	// Appliquer la variance (±10%)
-	variance := 0.9 + (rand.Float64() * 0.2)
+	variance := varianceMin + (utils.SecureRandFloat64() * varianceMax)
 	rawDamage = int(float64(rawDamage) * variance)
 
 	result.FinalDamage = rawDamage
@@ -224,7 +228,7 @@ func (dc *DamageCalculator) CalculateHealing(
 	// Vérifier les critiques pour les soins
 	if skill.Type == "magical" {
 		critChance := dc.CalculateCriticalChance(caster, skill, modifiers)
-		if rand.Float64() < critChance {
+		if utils.SecureRandFloat64() < critChance {
 			result.IsCritical = true
 			healing *= 1.3 // Les soins critiques sont moins puissants que les dégâts critiques
 		}
@@ -236,7 +240,7 @@ func (dc *DamageCalculator) CalculateHealing(
 	}
 
 	// Appliquer la variance (±10%)
-	variance := 0.9 + (rand.Float64() * 0.2)
+	variance := varianceMin + (utils.SecureRandFloat64() * varianceMax)
 	healing *= variance
 
 	result.FinalHealing = int(healing)
@@ -352,7 +356,9 @@ func (dc *DamageCalculator) CalculateHitChance(
 	}
 
 	// Facteur d'agilité/précision
-	agilityDiff := float64(attacker.PhysicalDamage-defender.PhysicalDefense) / float64(config.DefaultRatingRange*config.DefaultMaxParticipantsPvP)
+	attackerDamage := float64(attacker.PhysicalDamage - defender.PhysicalDefense)
+	ratingRange := float64(config.DefaultRatingRange * config.DefaultMaxParticipantsPvP)
+	agilityDiff := attackerDamage / ratingRange
 	hitChance := baseHitChance + agilityDiff
 
 	// Modificateurs d'effets
@@ -490,7 +496,7 @@ func (dc *DamageCalculator) CalculateStatusEffectChance(
 
 // Helper methods
 
-func (dc *DamageCalculator) getElementalPower(participant *models.CombatParticipant, element string) float64 {
+func (dc *DamageCalculator) getElementalPower(_ *models.CombatParticipant, element string) float64 {
 	// Pour l'instant, retourner une valeur par défaut
 	// Dans un vrai jeu, cela serait basé sur l'équipement et les stats du personnage
 	elementalPowers := map[string]float64{
@@ -567,7 +573,10 @@ func (dc *DamageCalculator) CalculateComboMultiplier(comboCount int) float64 {
 	}
 
 	// Formule: 1 + (combo * 0.1) / (1 + combo * 0.05)
-	multiplier := 1.0 + (float64(comboCount)*config.DefaultAverageDamageMultiplier2)/(1.0+float64(comboCount)*config.DefaultAverageDamageMultiplier2/config.DefaultMaxParticipantsPvP)
+	comboFloat := float64(comboCount)
+	numerator := comboFloat * config.DefaultAverageDamageMultiplier2
+	denominator := 1.0 + comboFloat*config.DefaultAverageDamageMultiplier2/config.DefaultMaxParticipantsPvP
+	multiplier := 1.0 + numerator/denominator
 
 	// Limiter le multiplicateur
 	if multiplier > config.DefaultMaxMultiplier {
@@ -659,7 +668,6 @@ func (dc *DamageCalculator) CalculateAdvancedDamage(
 
 	// Effets avancés seulement si l'attaque touche
 	if !result.IsMiss && !result.IsBlocked && result.FinalDamage > 0 {
-
 		// Multiplicateur de combo
 		if comboCount > 0 {
 			result.ComboMultiplier = dc.CalculateComboMultiplier(comboCount)

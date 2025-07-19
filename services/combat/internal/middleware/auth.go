@@ -1,11 +1,13 @@
 package middleware
 
 import (
-	"combat/internal/config"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+
+	"combat/internal/config"
+	"combat/internal/constants"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -38,8 +40,8 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 		}
 
 		// Vérifier le format "Bearer <token>"
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		parts := strings.SplitN(authHeader, " ", constants.AuthHeaderSplitParts)
+		if len(parts) != constants.AuthHeaderSplitParts || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":      "Invalid authorization header format",
 				"request_id": c.GetHeader("X-Request-ID"),
@@ -113,8 +115,8 @@ func OptionalAuthMiddleware(config *config.Config) gin.HandlerFunc {
 		}
 
 		// Tenter l'authentification
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) == 2 && parts[0] == "Bearer" {
+		parts := strings.SplitN(authHeader, " ", constants.AuthHeaderSplitParts)
+		if len(parts) == constants.AuthHeaderSplitParts && parts[0] == "Bearer" {
 			tokenString := parts[1]
 			if claims, err := validateJWT(tokenString, config.JWT.Secret); err == nil {
 				// Authentification réussie

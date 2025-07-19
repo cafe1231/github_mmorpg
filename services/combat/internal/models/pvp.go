@@ -150,7 +150,7 @@ type SeasonInfo struct {
 	Rewards     []SeasonReward `json:"rewards,omitempty"`
 }
 
-// SeasonReward représente une récompense de saison
+// SeasonReward représente une reward de saison
 type SeasonReward struct {
 	RankRequired string       `json:"rank_required"`
 	Title        string       `json:"title,omitempty"`

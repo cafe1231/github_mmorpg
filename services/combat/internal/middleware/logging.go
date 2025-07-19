@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+
+	"combat/internal/constants"
 )
 
 // Constantes pour les méthodes HTTP
@@ -134,11 +136,11 @@ func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 		logEntry := logrus.WithFields(fields)
 
 		switch {
-		case statusCode >= 500:
+		case statusCode >= constants.StatusInternalServerError:
 			logEntry.Error("Server error")
-		case statusCode >= 400:
+		case statusCode >= constants.StatusBadRequest:
 			logEntry.Warn("Client error")
-		case statusCode >= 300:
+		case statusCode >= constants.StatusRedirection:
 			logEntry.Info("Redirection")
 		default:
 			if duration > 1*time.Second {

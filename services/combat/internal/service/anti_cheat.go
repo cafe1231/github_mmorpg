@@ -42,7 +42,7 @@ type AntiCheatService struct {
 	playerStats    map[uuid.UUID]*PlayerStats
 }
 
-// SuspiciousActivity représente une activité suspecte
+// SuspiciousActivity représente une action suspecte
 type SuspiciousActivity struct {
 	Type      string                 `json:"type"`
 	Timestamp time.Time              `json:"timestamp"`
@@ -335,7 +335,7 @@ func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (score flo
 	stats := s.getOrCreatePlayerStats(actorID)
 	score = 0.0
 
-	// Facteur 1: Activités suspicious récentes
+	// Facteur 1: Actions suspicious récentes
 	suspiciousActivities := s.suspiciousLogs[actorID]
 	recentActivities := 0
 	for _, activity := range suspiciousActivities {
@@ -381,7 +381,7 @@ func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (score flo
 	return score, flags, nil
 }
 
-// RecordSuspiciousActivity enregistre une activité suspecte
+// RecordSuspiciousActivity enregistre une action suspecte
 func (s *AntiCheatService) RecordSuspiciousActivity(actorID uuid.UUID, activityType string, details map[string]interface{}) {
 	activity := SuspiciousActivity{
 		Type:      activityType,
@@ -396,7 +396,7 @@ func (s *AntiCheatService) RecordSuspiciousActivity(actorID uuid.UUID, activityT
 
 	s.suspiciousLogs[actorID] = append(s.suspiciousLogs[actorID], activity)
 
-	// Garder seulement les 50 dernières activités
+	// Garder seulement les 50 dernières actions
 	if len(s.suspiciousLogs[actorID]) > config.DefaultSuspiciousLogsLimit {
 		s.suspiciousLogs[actorID] = s.suspiciousLogs[actorID][1:]
 	}
@@ -481,45 +481,6 @@ func (s *AntiCheatService) getOrCreatePlayerStats(actorID uuid.UUID) *PlayerStat
 
 	s.playerStats[actorID] = stats
 	return stats
-}
-
-// TODO: Implémenter si nécessaire pour l'analyse des intervalles
-func (s *AntiCheatService) calculateActionIntervals(actions []*models.CombatAction) []float64 {
-	if len(actions) < config.DefaultMinActions {
-		return []float64{}
-	}
-
-	intervals := make([]float64, len(actions)-1)
-	for i := 1; i < len(actions); i++ {
-		interval := actions[i].ServerTimestamp.Sub(actions[i-1].ServerTimestamp).Seconds()
-		intervals[i-1] = interval
-	}
-
-	return intervals
-}
-
-// TODO: Implémenter si nécessaire pour la détection de patterns
-func (s *AntiCheatService) isPatternTooRegular(intervals []float64) bool {
-	if len(intervals) < config.DefaultMinIntervals {
-		return false
-	}
-
-	// Calculer l'écart-type des intervals
-	mean := 0.0
-	for _, interval := range intervals {
-		mean += interval
-	}
-	mean /= float64(len(intervals))
-
-	variance := 0.0
-	for _, interval := range intervals {
-		variance += math.Pow(interval-mean, config.DefaultRatingPower)
-	}
-	variance /= float64(len(intervals))
-	stdDev := math.Sqrt(variance)
-
-	// Si l'écart-type est très faible, le pattern est trop régulier
-	return stdDev < 0.1 && mean > 0.5 && mean < 2.0
 }
 
 func (s *AntiCheatService) calculateAverageProcessingTime(actions []*models.CombatAction) float64 {
@@ -649,7 +610,7 @@ func (s *AntiCheatService) GetPlayerSuspicionReport(actorID uuid.UUID) *Suspicio
 		Summary:        "",
 	}
 
-	// Analyser les activités récentes
+	// Analyser les actions récentes
 	recentActivities := 0
 	flagCounts := make(map[string]int)
 

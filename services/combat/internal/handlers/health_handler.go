@@ -11,7 +11,7 @@ import (
 	"combat/internal/database"
 )
 
-// Constantes pour les statuts de santé
+// Constantes pour les status de santé
 const (
 	HealthStatusHealthy   = "healthy"
 	HealthStatusUnhealthy = "unhealthy"

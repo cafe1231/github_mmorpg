@@ -276,7 +276,7 @@ func (r *CombatRepository) List(filters *models.SearchCombatsRequest) ([]*models
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query combats: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var combat models.CombatInstance
@@ -330,7 +330,7 @@ func (r *CombatRepository) GetByParticipant(participantID uuid.UUID) ([]*models.
 	if err != nil {
 		return nil, fmt.Errorf("failed to query combats by participant: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var combats []*models.CombatInstance
 	for rows.Next() {
@@ -683,7 +683,7 @@ func (r *CombatRepository) GetCombatHistory(req *models.GetCombatHistoryRequest)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query combat history: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var history []*models.CombatHistoryEntry
 	for rows.Next() {

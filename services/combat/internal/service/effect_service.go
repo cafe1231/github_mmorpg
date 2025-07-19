@@ -568,6 +568,7 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 	finalDamage := float64(incomingDamage)
 	var shieldAbsorption int
 
+effectLoop:
 	for _, effect := range effects {
 		if !effect.IsActive {
 			continue
@@ -594,7 +595,7 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 						logrus.WithError(err).Error("Failed to update shield effect")
 					}
 				}
-				break
+				break effectLoop
 			} else {
 				// Le bouclier absorbe partiellement
 				finalDamage -= float64(absorption)

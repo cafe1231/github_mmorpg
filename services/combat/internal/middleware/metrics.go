@@ -1,9 +1,11 @@
 package middleware
 
 import (
-	"combat/internal/config"
 	"strconv"
 	"time"
+
+	"combat/internal/config"
+	"combat/internal/constants"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -178,7 +180,7 @@ func PrometheusMetrics() gin.HandlerFunc {
 		httpResponseSize.WithLabelValues(method, endpoint).Observe(float64(c.Writer.Size()))
 
 		// Métriques d'erreurs
-		if c.Writer.Status() >= 400 {
+		if c.Writer.Status() >= constants.StatusBadRequest {
 			errorType := getErrorType(c.Writer.Status())
 			errorCount.WithLabelValues(errorType, endpoint).Inc()
 		}
@@ -186,7 +188,7 @@ func PrometheusMetrics() gin.HandlerFunc {
 		// Métriques d'authentification
 		if endpoint == "/api/v1/auth/login" || endpoint == "/api/v1/auth/register" {
 			result := "success"
-			if c.Writer.Status() >= 400 {
+			if c.Writer.Status() >= constants.StatusBadRequest {
 				result = "failure"
 			}
 			authAttempts.WithLabelValues(result).Inc()
@@ -209,7 +211,7 @@ func CombatMetrics() gin.HandlerFunc {
 			actionType := ActionTypeUnknown
 			result := "success"
 
-			if c.Writer.Status() >= 400 {
+			if c.Writer.Status() >= constants.StatusBadRequest {
 				result = "failure"
 			}
 
@@ -311,17 +313,17 @@ func normalizeEndpoint(path string) string {
 // getErrorType retourne le type d'erreur basé sur le code de statut
 func getErrorType(statusCode int) string {
 	switch {
-	case statusCode >= 500:
+	case statusCode >= constants.StatusInternalServerError:
 		return "server_error"
-	case statusCode == 429:
+	case statusCode == constants.StatusTooManyRequests:
 		return "rate_limit"
-	case statusCode == 401:
+	case statusCode == constants.StatusUnauthorized:
 		return "auth_error"
-	case statusCode == 403:
+	case statusCode == constants.StatusForbidden:
 		return "permission_error"
-	case statusCode == 404:
+	case statusCode == constants.StatusNotFound:
 		return "not_found"
-	case statusCode >= 400:
+	case statusCode >= constants.StatusBadRequest:
 		return "client_error"
 	default:
 		return "unknown"

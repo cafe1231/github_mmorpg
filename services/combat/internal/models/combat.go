@@ -167,7 +167,7 @@ type CombatReward struct {
 	PvPRating  int            `json:"pvp_rating,omitempty"`
 }
 
-// RewardItem représente un objet récompense
+// RewardItem représente un objet reward
 type RewardItem struct {
 	ItemID   string `json:"item_id"`
 	Quantity int    `json:"quantity"`

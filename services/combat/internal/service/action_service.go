@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +10,7 @@ import (
 	"combat/internal/config"
 	"combat/internal/models"
 	"combat/internal/repository"
+	"combat/internal/utils"
 )
 
 // Constantes pour les actions anti-cheat
@@ -178,7 +178,7 @@ func (s *ActionService) executeAttack(action *models.CombatAction, combat *model
 
 	// Calculer la chance de toucher
 	hitChance := models.CalculateHitChance(actor, target, nil)
-	hit := rand.Float64() < hitChance
+	hit := utils.SecureRandFloat64() < hitChance
 
 	if !hit {
 		action.IsMiss = true
@@ -190,7 +190,7 @@ func (s *ActionService) executeAttack(action *models.CombatAction, combat *model
 
 	// Calculer la chance de critique
 	critChance := models.CalculateCriticalChance(actor, nil)
-	action.IsCritical = rand.Float64() < critChance
+	action.IsCritical = utils.SecureRandFloat64() < critChance
 
 	// Calculer les dégâts
 	damage := action.CalculateDamage(actor, target, nil)
@@ -260,7 +260,7 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 
 	// Calculer la chance de toucher
 	hitChance := models.CalculateHitChance(actor, target, skill)
-	hit := rand.Float64() < hitChance
+	hit := utils.SecureRandFloat64() < hitChance
 
 	if !hit {
 		action.IsMiss = true
@@ -270,7 +270,7 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 
 	// Calculer la chance de critique
 	critChance := models.CalculateCriticalChance(actor, skill)
-	action.IsCritical = rand.Float64() < critChance
+	action.IsCritical = utils.SecureRandFloat64() < critChance
 
 	// Consommer la mana
 	action.ManaUsed = skill.ManaCost
@@ -289,9 +289,10 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 	}
 
 	// Appliquer les effets de la compétence
-	for _, effect := range skill.Effects {
-		if rand.Float64() < effect.Probability {
-			s.applySkillEffect(actor, target, &effect, result)
+	for i := range skill.Effects {
+		effect := &skill.Effects[i]
+		if utils.SecureRandFloat64() < effect.Probability {
+			s.applySkillEffect(actor, target, effect, result)
 		}
 	}
 
@@ -315,7 +316,7 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 }
 
 // executeItem utilize un objet
-func (s *ActionService) executeItem(action *models.CombatAction, combat *models.CombatInstance,
+func (s *ActionService) executeItem(action *models.CombatAction, _ *models.CombatInstance,
 	actor *models.CombatParticipant, result *models.ActionResult,
 ) error {
 	if action.ItemID == nil {
@@ -341,7 +342,7 @@ func (s *ActionService) executeItem(action *models.CombatAction, combat *models.
 }
 
 // executeDefend exécute une action de défense
-func (s *ActionService) executeDefend(action *models.CombatAction, combat *models.CombatInstance,
+func (s *ActionService) executeDefend(_ *models.CombatAction, _ *models.CombatInstance,
 	actor *models.CombatParticipant, result *models.ActionResult,
 ) error {
 	// Appliquer un effet de défense temporaire
@@ -374,7 +375,7 @@ func (s *ActionService) executeDefend(action *models.CombatAction, combat *model
 }
 
 // executeFlee tente de fuir le combat
-func (s *ActionService) executeFlee(action *models.CombatAction, combat *models.CombatInstance,
+func (s *ActionService) executeFlee(_ *models.CombatAction, combat *models.CombatInstance,
 	actor *models.CombatParticipant, result *models.ActionResult,
 ) error {
 	if !combat.Settings.AllowFlee {
@@ -388,7 +389,7 @@ func (s *ActionService) executeFlee(action *models.CombatAction, combat *models.
 		fleeChance = config.DefaultMaxFleeChance
 	}
 
-	success := rand.Float64() < fleeChance
+	success := utils.SecureRandFloat64() < fleeChance
 
 	if success {
 		// Retirer le participant du combat
@@ -411,7 +412,7 @@ func (s *ActionService) executeFlee(action *models.CombatAction, combat *models.
 }
 
 // executeWait attend et récupère de la mana
-func (s *ActionService) executeWait(action *models.CombatAction, combat *models.CombatInstance,
+func (s *ActionService) executeWait(action *models.CombatAction, _ *models.CombatInstance,
 	actor *models.CombatParticipant, result *models.ActionResult,
 ) error {
 	// Récupérer un pourcentage de mana
@@ -443,7 +444,7 @@ func (s *ActionService) calculateActionOrder(actor *models.CombatParticipant) in
 	baseOrder := 100
 	// Bonus de vitesse d'attaque
 	speedBonus := int(actor.AttackSpeed * config.DefaultSpeedBonusMultiplier)
-	return baseOrder + speedBonus + rand.Intn(config.DefaultRandomFactor) // Ajout d'un facteur aléatoire
+	return baseOrder + speedBonus + utils.SecureRandIntn(config.DefaultRandomFactor) // Ajout d'un facteur aléatoire
 }
 
 func (s *ActionService) applyDamage(target *models.CombatParticipant, damage int, result *models.ActionResult) {
@@ -576,7 +577,7 @@ func (s *ActionService) isEffectBeneficial(effectType string) bool {
 	return false
 }
 
-func (s *ActionService) validateSkillRequirements(actor *models.CombatParticipant, skill *models.SkillInfo) error {
+func (s *ActionService) validateSkillRequirements(_ *models.CombatParticipant, skill *models.SkillInfo) error {
 	for requirement, value := range skill.Requirements {
 		switch requirement {
 		case "shield_equipped":

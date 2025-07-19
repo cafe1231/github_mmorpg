@@ -199,7 +199,7 @@ const (
 	// Constantes de pourcentage
 	DefaultPercentageMultiplier = 100
 
-	// Constantes pour les calculs de variance
+	// Constantes pour les calculus de variance
 	DefaultVarianceDivisor            = 100
 	DefaultVarianceBase               = 0.85
 	DefaultAuthParts                  = 2

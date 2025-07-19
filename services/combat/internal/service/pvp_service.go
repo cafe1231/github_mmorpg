@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -147,9 +146,8 @@ func (s *PvPService) GetChallenges(req *models.GetChallengesRequest) ([]*models.
 		}
 
 		// Combiner et dédupliquer
-		var allChallenges []*models.PvPChallenge
-		allChallenges = append(sent, received...)
-		return s.deduplicateChallenges(allChallenges), nil
+		sent = append(sent, received...)
+		return s.deduplicateChallenges(sent), nil
 	}
 }
 
@@ -569,7 +567,7 @@ func (s *PvPService) StartMatchmakingRoutine() {
 
 // Méthodes utilitaires privées
 
-func (s *PvPService) createPvPCombat(challenge *models.PvPChallenge) (*models.CombatInstance, error) {
+func (s *PvPService) createPvPCombat(_ *models.PvPChallenge) (*models.CombatInstance, error) {
 	combat := &models.CombatInstance{
 		ID:              uuid.New(),
 		CombatType:      models.CombatTypePvP,
@@ -601,24 +599,6 @@ func (s *PvPService) deduplicateChallenges(challenges []*models.PvPChallenge) []
 	}
 
 	return result
-}
-
-// TODO: Implémenter si nécessaire pour le calcul de changement de rating
-func (s *PvPService) calculateRatingChange(playerRating, opponentRating int, won bool) int {
-	// Système ELO simplifié
-	k := 32.0 // Facteur K
-
-	expectedScore := 1.0 / (1.0 + math.Pow(config.DefaultEloBase, float64(opponentRating-playerRating)/config.DefaultEloDivisor))
-
-	var actualScore float64
-	if won {
-		actualScore = 1.0
-	} else {
-		actualScore = 0.0
-	}
-
-	change := k * (actualScore - expectedScore)
-	return int(change)
 }
 
 func (s *PvPService) getQueueCount(queueType models.ChallengeType) (int, error) {

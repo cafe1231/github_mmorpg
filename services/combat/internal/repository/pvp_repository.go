@@ -195,7 +195,7 @@ func (r *PvPRepository) GetChallengesByPlayer(playerID uuid.UUID) ([]*models.PvP
 	if err != nil {
 		return nil, fmt.Errorf("failed to get challenges by player: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var challenge models.PvPChallenge
@@ -238,7 +238,7 @@ func (r *PvPRepository) GetPendingChallenges(playerID uuid.UUID) ([]*models.PvPC
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pending challenges: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var challenge models.PvPChallenge
@@ -281,7 +281,7 @@ func (r *PvPRepository) GetChallengesByStatus(status models.ChallengeStatus) ([]
 	if err != nil {
 		return nil, fmt.Errorf("failed to get challenges by status: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var challenge models.PvPChallenge
@@ -323,7 +323,7 @@ func (r *PvPRepository) GetExpiredChallenges() ([]*models.PvPChallenge, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get expired challenges: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var challenge models.PvPChallenge
@@ -464,7 +464,7 @@ func (r *PvPRepository) GetTopPlayers(limit int) ([]*models.PvPRanking, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get top players: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var ranking models.PvPRanking
@@ -529,7 +529,7 @@ func (r *PvPRepository) GetPlayersInRatingRange(minRating, maxRating int) ([]*mo
 	if err != nil {
 		return nil, fmt.Errorf("failed to get players in rating range: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var ranking models.PvPRanking
@@ -650,7 +650,7 @@ func (r *PvPRepository) GetQueueByType(queueType models.ChallengeType) ([]*model
 	if err != nil {
 		return nil, fmt.Errorf("failed to get queue by type: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var entry models.PvPQueueEntry
@@ -706,7 +706,7 @@ func (r *PvPRepository) FindMatchmakingCandidates(entry *models.PvPQueueEntry) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to find matchmaking candidates: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var candidate models.PvPQueueEntry
