@@ -20,7 +20,7 @@ func NewMetricsService(metricRepo repository.MetricRepository) MetricsService {
 }
 
 func (s *metricsService) RecordMetric(ctx context.Context, name string, value float64, tags map[string]string) error {
-	tagsJSON := "{}"
+	tagsJSON := EmptyContextJSON
 	if tags != nil {
 		if tagsBytes, err := json.Marshal(tags); err == nil {
 			tagsJSON = string(tagsBytes)
@@ -38,7 +38,7 @@ func (s *metricsService) RecordMetric(ctx context.Context, name string, value fl
 }
 
 func (s *metricsService) GetMetrics(ctx context.Context, req *models.GetMetricsRequest) ([]*models.Metric, error) {
-	tagsJSON := "{}"
+	tagsJSON := EmptyContextJSON
 	if req.Tags != nil {
 		if tagsBytes, err := json.Marshal(req.Tags); err == nil {
 			tagsJSON = string(tagsBytes)
@@ -49,7 +49,7 @@ func (s *metricsService) GetMetrics(ctx context.Context, req *models.GetMetricsR
 }
 
 func (s *metricsService) GetMetric(ctx context.Context, name string, date time.Time, tags map[string]string) (*models.Metric, error) {
-	tagsJSON := "{}"
+	tagsJSON := EmptyContextJSON
 	if tags != nil {
 		if tagsBytes, err := json.Marshal(tags); err == nil {
 			tagsJSON = string(tagsBytes)

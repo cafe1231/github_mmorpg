@@ -48,7 +48,6 @@ func (r *eventRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Ev
 		&event.ID, &event.Type, &event.PlayerID, &event.GuildID,
 		&event.Timestamp, &event.Payload,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("événement non trouvé")

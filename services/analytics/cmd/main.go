@@ -40,7 +40,8 @@ var (
 	)
 )
 
-func init() {
+// registerMetrics enregistre les métriques Prometheus
+func registerMetrics() {
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDuration)
 }
@@ -167,6 +168,9 @@ func startServer(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Config,
 }
 
 func main() {
+	// Enregistrer les métriques Prometheus
+	registerMetrics()
+
 	// Charger la configuration
 	cfg := config.Load()
 

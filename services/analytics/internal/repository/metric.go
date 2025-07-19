@@ -45,7 +45,6 @@ func (r *metricRepository) GetByNameAndDate(ctx context.Context, name string, da
 	err := r.db.QueryRowContext(ctx, query, name, date, tags).Scan(
 		&metric.ID, &metric.Name, &metric.Value, &metric.Date, &metric.Tags,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("métrique non trouvée")
