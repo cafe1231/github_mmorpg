@@ -1,0 +1,94 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 15
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  misspell:
+    locale: US
+    ignore-words: "marrage,connexion"
+  lll:
+    line-length: 140
+  goimports:
+    local-prefixes: github.com/dan-2/github_mmorpg
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+      - unlambda
+      - unnecessaryBlock
+      - paramTypeCombine
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - errcheck
+    - exportloopref
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - gofumpt
+    - goheader
+    - goimports
+    - gomnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - prealloc
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gomnd
+        - goconst
+        - gocyclo
+        - gosec
+        - lll
+        - maligned
+        - unparam
+    - path: services/
+      linters:
+        - depguard
+        - dupl
+        - gosec
+        - lll
+        - misspell
+
+  max-issues-per-linter: 0
+  max-same-issues: 0 

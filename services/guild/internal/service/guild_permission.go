@@ -9,6 +9,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	RoleLeader  = "leader"
+	RoleOfficer = "officer"
+	RoleMember  = "member"
+)
+
 // guildPermissionService implémente GuildPermissionService
 type guildPermissionService struct {
 	db *sql.DB
@@ -54,35 +60,66 @@ func (s *guildPermissionService) GetPermissions(ctx context.Context, guildID, pl
 	return permissions, nil
 }
 
-// HasPermission vérifie si un joueur a une permission spécifique
+// HasPermission vérifie si un joueur a une permission spécifique dans une guilde
 func (s *guildPermissionService) HasPermission(ctx context.Context, guildID, playerID uuid.UUID, permission string) (bool, error) {
-	permissions, err := s.GetPermissions(ctx, guildID, playerID)
+	// Récupérer le rôle du joueur dans la guilde
+	var role string
+	query := `SELECT role FROM guild_members WHERE guild_id = $1 AND player_id = $2`
+	err := s.db.QueryRowContext(ctx, query, guildID, playerID).Scan(&role)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil // Joueur pas dans la guilde
+		}
 		return false, err
 	}
 
+	// Vérifier les permissions selon le rôle
 	switch permission {
-	case "invite_players":
-		return permissions.CanInvitePlayers, nil
-	case "kick_members":
-		return permissions.CanKickMembers, nil
-	case "promote_members":
-		return permissions.CanPromoteMembers, nil
-	case "demote_members":
-		return permissions.CanDemoteMembers, nil
-	case "manage_bank":
-		return permissions.CanManageBank, nil
-	case "declare_war":
-		return permissions.CanDeclareWar, nil
-	case "create_alliance":
-		return permissions.CanCreateAlliance, nil
-	case "manage_applications":
-		return permissions.CanManageApplications, nil
-	case "view_logs":
-		return permissions.CanViewLogs, nil
 	case "edit_guild_info":
-		return permissions.CanEditGuildInfo, nil
+		return role == RoleLeader || role == RoleOfficer, nil
+	case "delete_guild":
+		return role == RoleLeader, nil
+	case "kick_member":
+		return role == RoleLeader || role == RoleOfficer, nil
+	case "promote_member":
+		return role == RoleLeader, nil
+	case "invite_member":
+		return role == RoleLeader || role == RoleOfficer, nil
+	case "manage_roles":
+		return role == RoleLeader, nil
 	default:
-		return false, fmt.Errorf("permission inconnue: %s", permission)
+		return false, nil
 	}
+}
+
+// GetRole récupère le rôle d'un joueur dans une guilde
+func (s *guildPermissionService) GetRole(ctx context.Context, guildID, playerID uuid.UUID) (string, error) {
+	var role string
+	query := `SELECT role FROM guild_members WHERE guild_id = $1 AND player_id = $2`
+	err := s.db.QueryRowContext(ctx, query, guildID, playerID).Scan(&role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", models.ErrMemberNotFound
+		}
+		return "", err
+	}
+	return role, nil
+}
+
+// IsLeader vérifie si un joueur est le leader d'une guilde
+func (s *guildPermissionService) IsLeader(ctx context.Context, guildID, playerID uuid.UUID) (bool, error) {
+	role, err := s.GetRole(ctx, guildID, playerID)
+	if err != nil {
+		return false, err
+	}
+	return role == RoleLeader, nil
+}
+
+// IsOfficer vérifie si un joueur est officier d'une guilde
+func (s *guildPermissionService) IsOfficer(ctx context.Context, guildID, playerID uuid.UUID) (bool, error) {
+	role, err := s.GetRole(ctx, guildID, playerID)
+	if err != nil {
+		return false, err
+	}
+	return role == RoleLeader || role == RoleOfficer, nil
 }

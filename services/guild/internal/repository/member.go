@@ -210,7 +210,7 @@ func (r *guildMemberRepository) GetMemberCount(ctx context.Context, guildID uuid
 	return count, err
 }
 
-// UpdateLastSeen met à jour la dernière connexion
+// UpdateLastSeen met à jour la dernière connection
 func (r *guildMemberRepository) UpdateLastSeen(ctx context.Context, memberID uuid.UUID) error {
 	query := `UPDATE guild_members SET last_seen = $2 WHERE id = $1`
 

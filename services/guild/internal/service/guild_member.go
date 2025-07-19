@@ -226,7 +226,7 @@ func (s *guildMemberService) GetMember(ctx context.Context, guildID, playerID uu
 	return member, nil
 }
 
-// UpdateLastSeen met à jour la dernière connexion d'un joueur
+// UpdateLastSeen met à jour la dernière connection d'un joueur
 func (s *guildMemberService) UpdateLastSeen(ctx context.Context, playerID uuid.UUID) error {
 	_, err := s.db.ExecContext(ctx, "UPDATE guild_members SET last_seen = NOW() WHERE player_id = $1", playerID)
 	if err != nil {
@@ -245,7 +245,7 @@ func (s *guildMemberService) hasKickPermission(ctx context.Context, guildID, pla
 		}
 		return false, err
 	}
-	return role == "leader" || role == "officer", nil
+	return role == RoleLeader || role == RoleOfficer, nil
 }
 
 func (s *guildMemberService) hasPromotePermission(ctx context.Context, guildID, playerID uuid.UUID) (bool, error) {

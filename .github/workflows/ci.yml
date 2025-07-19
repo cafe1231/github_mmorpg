@@ -29,9 +29,16 @@ jobs:
       - name: Install golangci-lint
         run: |
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
-      - name: Lint
+      - name: Lint services
         run: |
-          golangci-lint run ./...
+          for service in services/*/; do
+            if [ -f "$service/go.mod" ]; then
+              echo "Linting $service"
+              cd "$service"
+              golangci-lint run --timeout=5m || exit 1
+              cd ../..
+            fi
+          done
       - name: Build all services
         run: |
           make build

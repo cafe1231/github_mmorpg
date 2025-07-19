@@ -7,6 +7,7 @@ import (
 	"github.com/dan-2/github_mmorpg/services/guild/internal/models"
 	"github.com/dan-2/github_mmorpg/services/guild/internal/repository"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 // guildService implémente GuildService
@@ -80,13 +81,16 @@ func (s *guildService) CreateGuild(ctx context.Context, req *models.CreateGuildR
 	}
 
 	// Ajouter un log
-	s.logRepo.Create(ctx, &models.GuildLog{
+	if err := s.logRepo.Create(ctx, &models.GuildLog{
 		GuildID:   guild.ID,
 		PlayerID:  creatorID,
 		Action:    "guild_created",
 		Details:   "Guilde créée",
 		CreatedAt: time.Now(),
-	})
+	}); err != nil {
+		// Log l'erreur mais ne pas échouer la création de guilde
+		logrus.WithError(err).Warn("Erreur lors de la création du log de guilde")
+	}
 
 	// Retourner la réponse
 	return &models.GuildResponse{
@@ -176,13 +180,16 @@ func (s *guildService) UpdateGuild(ctx context.Context, guildID uuid.UUID, req *
 	}
 
 	// Ajouter un log
-	s.logRepo.Create(ctx, &models.GuildLog{
+	if err := s.logRepo.Create(ctx, &models.GuildLog{
 		GuildID:   guildID,
 		PlayerID:  playerID,
 		Action:    "guild_updated",
 		Details:   "Informations de guilde mises à jour",
 		CreatedAt: time.Now(),
-	})
+	}); err != nil {
+		// Log l'erreur mais ne pas échouer la mise à jour
+		logrus.WithError(err).Warn("Erreur lors de la création du log de mise à jour")
+	}
 
 	return s.GetGuild(ctx, guildID)
 }
@@ -196,13 +203,16 @@ func (s *guildService) DeleteGuild(ctx context.Context, guildID uuid.UUID, playe
 	}
 
 	// Ajouter un log avant suppression
-	s.logRepo.Create(ctx, &models.GuildLog{
+	if err := s.logRepo.Create(ctx, &models.GuildLog{
 		GuildID:   guildID,
 		PlayerID:  playerID,
 		Action:    "guild_deleted",
 		Details:   "Guilde supprimée",
 		CreatedAt: time.Now(),
-	})
+	}); err != nil {
+		// Log l'erreur mais ne pas échouer la suppression
+		logrus.WithError(err).Warn("Erreur lors de la création du log de suppression")
+	}
 
 	return s.guildRepo.Delete(ctx, guildID)
 }
