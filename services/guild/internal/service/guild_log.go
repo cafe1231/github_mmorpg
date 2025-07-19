@@ -39,7 +39,8 @@ func (s *guildLogService) AddLog(ctx context.Context, guildID, playerID uuid.UUI
 }
 
 // GetLogs récupère les logs d'une guilde avec filtres
-func (s *guildLogService) GetLogs(ctx context.Context, guildID uuid.UUID, action *string, page, limit int) ([]*models.GuildLogResponse, int, error) {
+func (s *guildLogService) GetLogs(ctx context.Context, guildID uuid.UUID, action *string,
+	page, limit int) ([]*models.GuildLogResponse, int, error) {
 	// Construire la requête avec filtres
 	baseQuery := `
 		SELECT id, guild_id, player_id, action, details, created_at
@@ -57,8 +58,8 @@ func (s *guildLogService) GetLogs(ctx context.Context, guildID uuid.UUID, action
 		argIndex++
 	}
 
-	// Compter le total
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) as count_query", baseQuery)
+	// Compter le total avec requête préparée
+	countQuery := "SELECT COUNT(*) FROM (" + baseQuery + ") as count_query"
 	var total int
 	err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
@@ -66,7 +67,7 @@ func (s *guildLogService) GetLogs(ctx context.Context, guildID uuid.UUID, action
 	}
 
 	// Récupérer les logs avec pagination
-	baseQuery += " ORDER BY created_at DESC LIMIT $%d OFFSET $%d"
+	baseQuery += " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d", argIndex) + " OFFSET $" + fmt.Sprintf("%d", argIndex+1)
 	args = append(args, limit, (page-1)*limit)
 
 	rows, err := s.db.QueryContext(ctx, baseQuery, args...)

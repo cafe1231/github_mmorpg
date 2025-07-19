@@ -10,6 +10,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// DefaultMaxMembers est le nombre maximum de membres par défaut
+	DefaultMaxMembers = 50
+	// RoleLeader est le rôle de leader de guilde
+	RoleLeader = "leader"
+	// RoleOfficer est le rôle d'officier de guilde
+	RoleOfficer = "officer"
+	// RoleMember est le rôle de membre de guilde
+	RoleMember = "member"
+)
+
 // guildService implémente GuildService
 type guildService struct {
 	guildRepo   repository.GuildRepository
@@ -34,7 +45,8 @@ func NewGuildService(
 }
 
 // CreateGuild crée une nouvelle guilde
-func (s *guildService) CreateGuild(ctx context.Context, req *models.CreateGuildRequest, creatorID uuid.UUID) (*models.GuildResponse, error) {
+func (s *guildService) CreateGuild(ctx context.Context, req *models.CreateGuildRequest,
+	creatorID uuid.UUID) (*models.GuildResponse, error) {
 	// Vérifier si le nom existe déjà
 	existingGuild, _ := s.guildRepo.GetByName(ctx, req.Name)
 	if existingGuild != nil {
@@ -55,12 +67,13 @@ func (s *guildService) CreateGuild(ctx context.Context, req *models.CreateGuildR
 
 	// Créer la guilde
 	guild := &models.Guild{
+		ID:          uuid.New(),
 		Name:        req.Name,
 		Description: req.Description,
 		Tag:         req.Tag,
 		Level:       1,
 		Experience:  0,
-		MaxMembers:  50, // Valeur par défaut
+		MaxMembers:  DefaultMaxMembers, // Valeur par défaut
 	}
 
 	err := s.guildRepo.Create(ctx, guild)
@@ -72,7 +85,7 @@ func (s *guildService) CreateGuild(ctx context.Context, req *models.CreateGuildR
 	member := &models.GuildMember{
 		GuildID:  guild.ID,
 		PlayerID: creatorID,
-		Role:     "leader",
+		Role:     RoleLeader,
 	}
 
 	err = s.memberRepo.Create(ctx, member)
@@ -135,7 +148,8 @@ func (s *guildService) GetGuild(ctx context.Context, guildID uuid.UUID) (*models
 }
 
 // UpdateGuild met à jour une guilde
-func (s *guildService) UpdateGuild(ctx context.Context, guildID uuid.UUID, req *models.UpdateGuildRequest, playerID uuid.UUID) (*models.GuildResponse, error) {
+func (s *guildService) UpdateGuild(ctx context.Context, guildID uuid.UUID, req *models.UpdateGuildRequest,
+	playerID uuid.UUID) (*models.GuildResponse, error) {
 	// Vérifier les permissions
 	canEdit, err := s.permService.HasPermission(ctx, guildID, playerID, "edit_guild_info")
 	if err != nil || !canEdit {
@@ -224,7 +238,7 @@ func (s *guildService) SearchGuilds(ctx context.Context, req *models.GuildSearch
 		return nil, err
 	}
 
-	var responses []models.GuildResponse
+	responses := make([]models.GuildResponse, 0, len(guilds))
 	for _, guild := range guilds {
 		memberCount, _ := s.memberRepo.GetMemberCount(ctx, guild.ID)
 		responses = append(responses, models.GuildResponse{
@@ -256,7 +270,7 @@ func (s *guildService) ListGuilds(ctx context.Context, page, limit int) (*models
 		return nil, err
 	}
 
-	var responses []models.GuildResponse
+	responses := make([]models.GuildResponse, 0, len(guilds))
 	for _, guild := range guilds {
 		memberCount, _ := s.memberRepo.GetMemberCount(ctx, guild.ID)
 		responses = append(responses, models.GuildResponse{

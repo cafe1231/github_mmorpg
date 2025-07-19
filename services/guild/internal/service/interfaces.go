@@ -23,7 +23,8 @@ type GuildMemberService interface {
 	JoinGuild(ctx context.Context, guildID, playerID uuid.UUID) error
 	LeaveGuild(ctx context.Context, guildID, playerID uuid.UUID) error
 	KickMember(ctx context.Context, guildID, targetPlayerID, playerID uuid.UUID) error
-	UpdateMemberRole(ctx context.Context, guildID uuid.UUID, req *models.UpdateMemberRoleRequest, playerID uuid.UUID) error
+	UpdateMemberRole(ctx context.Context, guildID uuid.UUID, req *models.UpdateMemberRoleRequest,
+		playerID uuid.UUID) error
 	GetMembers(ctx context.Context, guildID uuid.UUID, page, limit int) ([]*models.GuildMemberResponse, int, error)
 	GetMember(ctx context.Context, guildID, playerID uuid.UUID) (*models.GuildMemberResponse, error)
 	UpdateLastSeen(ctx context.Context, playerID uuid.UUID) error
@@ -35,7 +36,8 @@ type GuildInvitationService interface {
 	AcceptInvitation(ctx context.Context, invitationID, playerID uuid.UUID) error
 	DeclineInvitation(ctx context.Context, invitationID, playerID uuid.UUID) error
 	GetInvitations(ctx context.Context, guildID uuid.UUID, status *string, page, limit int) ([]*models.GuildInvitationResponse, int, error)
-	GetPlayerInvitations(ctx context.Context, playerID uuid.UUID, status *string, page, limit int) ([]*models.GuildInvitationResponse, int, error)
+	GetPlayerInvitations(ctx context.Context, playerID uuid.UUID, status *string, page, limit int) (
+		[]*models.GuildInvitationResponse, int, error)
 	CancelInvitation(ctx context.Context, invitationID, playerID uuid.UUID) error
 }
 
@@ -45,7 +47,8 @@ type GuildApplicationService interface {
 	AcceptApplication(ctx context.Context, applicationID, playerID uuid.UUID) error
 	DeclineApplication(ctx context.Context, applicationID, playerID uuid.UUID) error
 	GetApplications(ctx context.Context, guildID uuid.UUID, status *string, page, limit int) ([]*models.GuildApplicationResponse, int, error)
-	GetPlayerApplications(ctx context.Context, playerID uuid.UUID, status *string, page, limit int) ([]*models.GuildApplicationResponse, int, error)
+	GetPlayerApplications(ctx context.Context, playerID uuid.UUID, status *string, page, limit int) (
+		[]*models.GuildApplicationResponse, int, error)
 	CancelApplication(ctx context.Context, applicationID, playerID uuid.UUID) error
 }
 

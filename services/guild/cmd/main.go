@@ -14,11 +14,23 @@ import (
 	"github.com/dan-2/github_mmorpg/services/guild/internal/repository"
 	"github.com/dan-2/github_mmorpg/services/guild/internal/service"
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
+)
+
+const (
+	// DefaultMaxOpenConns est le nombre maximum de connections ouvertes par défaut
+	DefaultMaxOpenConns = 25
+	// DefaultMaxIdleConns est le nombre maximum de connections inactives par défaut
+	DefaultMaxIdleConns = 5
+	// DefaultConnMaxLifetimeMinutes est la durée de vie maximale des connections en minutes
+	DefaultConnMaxLifetimeMinutes = 5
+	// DefaultReadHeaderTimeoutSeconds est le timeout de lecture des headers en secondes
+	DefaultReadHeaderTimeoutSeconds = 30
+	// DefaultServerShutdownTimeoutSeconds est le timeout d'arrêt du serveur en secondes
+	DefaultServerShutdownTimeoutSeconds = 30
 )
 
 // Metrics
@@ -40,7 +52,8 @@ var (
 	)
 )
 
-func init() {
+// setupMetrics enregistre les métriques Prometheus
+func setupMetrics() {
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDuration)
 }
@@ -57,9 +70,9 @@ func setupDatabase(cfg *config.Config) (*sql.DB, error) {
 	}
 
 	// Configurer la connection
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetMaxOpenConns(DefaultMaxOpenConns)
+	db.SetMaxIdleConns(DefaultMaxIdleConns)
+	db.SetConnMaxLifetime(DefaultConnMaxLifetimeMinutes * time.Minute)
 
 	// Tester la connection
 	if err := db.Ping(); err != nil {
@@ -94,7 +107,7 @@ func setupRouter(
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
@@ -146,28 +159,34 @@ func setupRouter(
 // startServer démarre le serveur HTTP
 func startServer(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Config, logger *logrus.Logger) {
 	server := &http.Server{
-		Addr:    fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
-		Handler: router,
+		Addr:              fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
+		Handler:           router,
+		ReadHeaderTimeout: DefaultReadHeaderTimeoutSeconds * time.Second,
 	}
 
 	lifecycle.Append(fx.Hook{
 		OnStart: func(context.Context) error {
-			logger.Infof("Démarrage du service Guild sur %s:%s", cfg.Server.Host, cfg.Server.Port)
+			logger.Infof("Starting Guild service on %s:%s", cfg.Server.Host, cfg.Server.Port)
 			go func() {
 				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					logger.Fatalf("Erreur lors du démarrage du serveur: %v", err)
+					logger.Fatalf("Error starting server: %v", err)
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Arrêt du service Guild...")
-			return server.Shutdown(ctx)
+			logger.Info("Stopping Guild service...")
+			shutdownCtx, cancel := context.WithTimeout(ctx, DefaultServerShutdownTimeoutSeconds*time.Second)
+			defer cancel()
+			return server.Shutdown(shutdownCtx)
 		},
 	})
 }
 
 func main() {
+	// Configurer les métriques
+	setupMetrics()
+
 	// Charger la configuration
 	cfg := config.Load()
 
@@ -210,7 +229,7 @@ func main() {
 
 	// Démarrer l'application
 	if err := app.Start(context.Background()); err != nil {
-		log.Fatalf("Erreur lors du démarrage de l'application: %v", err)
+		log.Fatalf("Error starting application: %v", err)
 	}
 
 	// Attendre l'interruption

@@ -35,7 +35,8 @@ func (r *guildLogRepository) Create(ctx context.Context, log *models.GuildLog) e
 }
 
 // GetByGuild récupère les logs d'une guilde avec pagination et filtres
-func (r *guildLogRepository) GetByGuild(ctx context.Context, guildID uuid.UUID, action *string, page, limit int) ([]*models.GuildLog, int, error) {
+func (r *guildLogRepository) GetByGuild(ctx context.Context, guildID uuid.UUID, action *string,
+	page, limit int) ([]*models.GuildLog, int, error) {
 	// Construire la requête avec filtres
 	baseQuery := `
 		SELECT id, guild_id, player_id, action, details, created_at
@@ -50,11 +51,10 @@ func (r *guildLogRepository) GetByGuild(ctx context.Context, guildID uuid.UUID, 
 	if action != nil && *action != "" {
 		baseQuery += fmt.Sprintf(" AND action = $%d", argIndex)
 		args = append(args, *action)
-		argIndex++
 	}
 
-	// Compter le total
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) as count_query", baseQuery)
+	// Compter le total avec requête préparée
+	countQuery := "SELECT COUNT(*) FROM (" + baseQuery + ") as count_query"
 	var total int
 	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
 	if err != nil {

@@ -9,12 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	RoleLeader  = "leader"
-	RoleOfficer = "officer"
-	RoleMember  = "member"
-)
-
 // guildPermissionService implémente GuildPermissionService
 type guildPermissionService struct {
 	db *sql.DB
@@ -45,16 +39,16 @@ func (s *guildPermissionService) GetPermissions(ctx context.Context, guildID, pl
 
 	// Déterminer les permissions basées sur le rôle
 	permissions := &models.GuildPermissionResponse{
-		CanInvitePlayers:      role == "leader" || role == "officer",
-		CanKickMembers:        role == "leader" || role == "officer",
-		CanPromoteMembers:     role == "leader",
-		CanDemoteMembers:      role == "leader",
-		CanManageBank:         role == "leader" || role == "officer",
-		CanDeclareWar:         role == "leader",
-		CanCreateAlliance:     role == "leader",
-		CanManageApplications: role == "leader" || role == "officer",
-		CanViewLogs:           role == "leader" || role == "officer",
-		CanEditGuildInfo:      role == "leader",
+		CanInvitePlayers:      role == RoleLeader || role == RoleOfficer,
+		CanKickMembers:        role == RoleLeader || role == RoleOfficer,
+		CanPromoteMembers:     role == RoleLeader,
+		CanDemoteMembers:      role == RoleLeader,
+		CanManageBank:         role == RoleLeader || role == RoleOfficer,
+		CanDeclareWar:         role == RoleLeader,
+		CanCreateAlliance:     role == RoleLeader,
+		CanManageApplications: role == RoleLeader || role == RoleOfficer,
+		CanViewLogs:           role == RoleLeader || role == RoleOfficer,
+		CanEditGuildInfo:      role == RoleLeader,
 	}
 
 	return permissions, nil

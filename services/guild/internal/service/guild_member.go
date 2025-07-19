@@ -10,6 +10,13 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// OnlineThresholdMinutes est le seuil en minutes pour considérer un joueur en ligne
+	OnlineThresholdMinutes = 5
+	// CheckMemberQuery est la requête pour vérifier si un joueur est membre d'une guilde
+	CheckMemberQuery = "SELECT EXISTS(SELECT 1 FROM guild_members WHERE guild_id = $1 AND player_id = $2)"
+)
+
 // guildMemberService implémente GuildMemberService
 type guildMemberService struct {
 	db *sql.DB
@@ -77,7 +84,7 @@ func (s *guildMemberService) JoinGuild(ctx context.Context, guildID, playerID uu
 func (s *guildMemberService) LeaveGuild(ctx context.Context, guildID, playerID uuid.UUID) error {
 	// Vérifier que le joueur est dans la guilde
 	var isMember bool
-	err := s.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM guild_members WHERE guild_id = $1 AND player_id = $2)", guildID, playerID).Scan(&isMember)
+	err := s.db.QueryRowContext(ctx, CheckMemberQuery, guildID, playerID).Scan(&isMember)
 	if err != nil {
 		return fmt.Errorf("erreur lors de la vérification de l'appartenance: %w", err)
 	}
@@ -107,7 +114,7 @@ func (s *guildMemberService) KickMember(ctx context.Context, guildID, targetPlay
 
 	// Vérifier que le joueur cible est dans la guilde
 	var isMember bool
-	err = s.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM guild_members WHERE guild_id = $1 AND player_id = $2)", guildID, targetPlayerID).Scan(&isMember)
+	err = s.db.QueryRowContext(ctx, CheckMemberQuery, guildID, targetPlayerID).Scan(&isMember)
 	if err != nil {
 		return fmt.Errorf("erreur lors de la vérification de l'appartenance: %w", err)
 	}
@@ -125,7 +132,8 @@ func (s *guildMemberService) KickMember(ctx context.Context, guildID, targetPlay
 }
 
 // UpdateMemberRole met à jour le rôle d'un membre
-func (s *guildMemberService) UpdateMemberRole(ctx context.Context, guildID uuid.UUID, req *models.UpdateMemberRoleRequest, playerID uuid.UUID) error {
+func (s *guildMemberService) UpdateMemberRole(ctx context.Context, guildID uuid.UUID, req *models.UpdateMemberRoleRequest,
+	playerID uuid.UUID) error {
 	// Vérifier les permissions du joueur qui modifie
 	hasPermission, err := s.hasPromotePermission(ctx, guildID, playerID)
 	if err != nil {
@@ -137,7 +145,7 @@ func (s *guildMemberService) UpdateMemberRole(ctx context.Context, guildID uuid.
 
 	// Vérifier que le joueur cible est dans la guilde
 	var isMember bool
-	err = s.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM guild_members WHERE guild_id = $1 AND player_id = $2)", guildID, req.PlayerID).Scan(&isMember)
+	err = s.db.QueryRowContext(ctx, CheckMemberQuery, guildID, req.PlayerID).Scan(&isMember)
 	if err != nil {
 		return fmt.Errorf("erreur lors de la vérification de l'appartenance: %w", err)
 	}
@@ -146,7 +154,8 @@ func (s *guildMemberService) UpdateMemberRole(ctx context.Context, guildID uuid.
 	}
 
 	// Mettre à jour le rôle
-	_, err = s.db.ExecContext(ctx, "UPDATE guild_members SET role = $1 WHERE guild_id = $2 AND player_id = $3", req.Role, guildID, req.PlayerID)
+	updateQuery := "UPDATE guild_members SET role = $1 WHERE guild_id = $2 AND player_id = $3"
+	_, err = s.db.ExecContext(ctx, updateQuery, req.Role, guildID, req.PlayerID)
 	if err != nil {
 		return fmt.Errorf("erreur lors de la mise à jour du rôle: %w", err)
 	}
@@ -155,7 +164,8 @@ func (s *guildMemberService) UpdateMemberRole(ctx context.Context, guildID uuid.
 }
 
 // GetMembers récupère la liste des membres d'une guilde
-func (s *guildMemberService) GetMembers(ctx context.Context, guildID uuid.UUID, page, limit int) ([]*models.GuildMemberResponse, int, error) {
+func (s *guildMemberService) GetMembers(ctx context.Context, guildID uuid.UUID, page, limit int) (
+	[]*models.GuildMemberResponse, int, error) {
 	// Compter le total
 	var total int
 	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM guild_members WHERE guild_id = $1", guildID).Scan(&total)
@@ -191,7 +201,7 @@ func (s *guildMemberService) GetMembers(ctx context.Context, guildID uuid.UUID, 
 		member.PlayerID = playerID.String()
 		// TODO: Récupérer le nom du joueur depuis le service Player
 		member.PlayerName = "Unknown"
-		member.IsOnline = time.Since(member.LastSeen) < 5*time.Minute
+		member.IsOnline = time.Since(member.LastSeen) < OnlineThresholdMinutes*time.Minute
 		members = append(members, member)
 	}
 
@@ -209,7 +219,8 @@ func (s *guildMemberService) GetMember(ctx context.Context, guildID, playerID uu
 	member := &models.GuildMemberResponse{}
 	var memberID uuid.UUID
 	var playerUUID uuid.UUID
-	err := s.db.QueryRowContext(ctx, query, guildID, playerID).Scan(&memberID, &playerUUID, &member.Role, &member.JoinedAt, &member.LastSeen, &member.Contribution)
+	err := s.db.QueryRowContext(ctx, query, guildID, playerID).Scan(&memberID, &playerUUID, &member.Role,
+		&member.JoinedAt, &member.LastSeen, &member.Contribution)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, models.ErrGuildNotFound
@@ -221,7 +232,7 @@ func (s *guildMemberService) GetMember(ctx context.Context, guildID, playerID uu
 	member.PlayerID = playerUUID.String()
 	// TODO: Récupérer le nom du joueur depuis le service Player
 	member.PlayerName = "Unknown"
-	member.IsOnline = time.Since(member.LastSeen) < 5*time.Minute
+	member.IsOnline = time.Since(member.LastSeen) < OnlineThresholdMinutes*time.Minute
 
 	return member, nil
 }
@@ -257,5 +268,5 @@ func (s *guildMemberService) hasPromotePermission(ctx context.Context, guildID, 
 		}
 		return false, err
 	}
-	return role == "leader", nil
+	return role == RoleLeader, nil
 }

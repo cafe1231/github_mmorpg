@@ -3,12 +3,24 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"strings"
+	"math"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/dan-2/github_mmorpg/services/guild/internal/models"
 	"github.com/google/uuid"
+)
+
+const (
+	// DefaultMaxMembers est le nombre maximum de membres par défaut
+	DefaultMaxMembers = 50
+	// DefaultPageSize est la taille de page par défaut
+	DefaultPageSize = 10
+	// MaxPageSize est la taille de page maximale
+	MaxPageSize = 100
+	// Pagination limits
+	MaxLimit  = 1000
+	MaxOffset = 100000
 )
 
 // guildRepository implémente GuildRepository
@@ -166,59 +178,72 @@ func (r *guildRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// Search recherche des guildes avec filtres
-func (r *guildRepository) Search(ctx context.Context, name, tag *string, minLevel, maxLevel *int, page, limit int) ([]*models.Guild, int, error) {
-	var conditions []string
-	var args []interface{}
-	argIndex := 1
+// buildSearchQuery construit la requête de recherche avec les filtres
+func (r *guildRepository) buildSearchQuery(name, tag *string, minLevel, maxLevel *int) (
+	selectBuilder squirrel.SelectBuilder, countBuilder squirrel.SelectBuilder) {
+	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
+
+	selectBuilder = psql.Select(
+		"id", "name", "description", "tag", "level", "experience", "max_members", "created_at", "updated_at",
+	).From("guilds")
+
+	countBuilder = psql.Select("COUNT(*)").From("guilds")
 
 	if name != nil && *name != "" {
-		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argIndex))
-		args = append(args, "%"+*name+"%")
-		argIndex++
+		selectBuilder = selectBuilder.Where("name ILIKE ?", "%"+*name+"%")
+		countBuilder = countBuilder.Where("name ILIKE ?", "%"+*name+"%")
 	}
-
 	if tag != nil && *tag != "" {
-		conditions = append(conditions, fmt.Sprintf("tag ILIKE $%d", argIndex))
-		args = append(args, "%"+*tag+"%")
-		argIndex++
+		selectBuilder = selectBuilder.Where("tag ILIKE ?", "%"+*tag+"%")
+		countBuilder = countBuilder.Where("tag ILIKE ?", "%"+*tag+"%")
 	}
-
 	if minLevel != nil {
-		conditions = append(conditions, fmt.Sprintf("level >= $%d", argIndex))
-		args = append(args, *minLevel)
-		argIndex++
+		selectBuilder = selectBuilder.Where("level >= ?", *minLevel)
+		countBuilder = countBuilder.Where("level >= ?", *minLevel)
 	}
-
 	if maxLevel != nil {
-		conditions = append(conditions, fmt.Sprintf("level <= $%d", argIndex))
-		args = append(args, *maxLevel)
-		argIndex++
+		selectBuilder = selectBuilder.Where("level <= ?", *maxLevel)
+		countBuilder = countBuilder.Where("level <= ?", *maxLevel)
 	}
 
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	return selectBuilder, countBuilder
+}
+
+// Search recherche des guildes avec filtres
+func (r *guildRepository) Search(ctx context.Context, name, tag *string, minLevel, maxLevel *int, page, limit int) (
+	[]*models.Guild, int, error) {
+	selectBuilder, countBuilder := r.buildSearchQuery(name, tag, minLevel, maxLevel)
+
+	// Pagination sécurisée
+	var safeLimit, safeOffset uint64
+	if limit > 0 {
+		safeLimit = uint64(math.Min(float64(limit), float64(MaxLimit)))
 	}
+	if page > 1 && limit > 0 {
+		offset := (page - 1) * limit
+		if offset > 0 {
+			safeOffset = uint64(math.Min(float64(offset), float64(MaxOffset)))
+		}
+	}
+
+	selectBuilder = selectBuilder.OrderBy("level DESC", "experience DESC").Limit(safeLimit).Offset(safeOffset)
 
 	// Compter le total
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM guilds %s", whereClause)
+	countSql, countArgs, err := countBuilder.ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
 	var total int
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	err = r.db.QueryRowContext(ctx, countSql, countArgs...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// Récupérer les résultats
-	offset := (page - 1) * limit
-	query := fmt.Sprintf(`
-		SELECT id, name, description, tag, level, experience, max_members, created_at, updated_at
-		FROM guilds %s
-		ORDER BY level DESC, experience DESC
-		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
-
-	args = append(args, limit, offset)
+	query, args, err := selectBuilder.ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
