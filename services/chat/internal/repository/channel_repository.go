@@ -99,6 +99,7 @@ func (r *channelRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 	}
 
 	if err := json.Unmarshal(settingsJSON, &channel.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 		return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
 	}
 
@@ -527,6 +528,7 @@ func (r *channelRepository) scanChannels(rows *sql.Rows) ([]*models.Channel, err
 		}
 
 		if err := json.Unmarshal(settingsJSON, &channel.Settings); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 			return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
 		}
 

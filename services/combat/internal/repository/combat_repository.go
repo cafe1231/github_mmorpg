@@ -19,26 +19,26 @@ type CombatRepositoryInterface interface {
 	GetByID(id uuid.UUID) (*models.CombatInstance, error)
 	Update(combat *models.CombatInstance) error
 	Delete(id uuid.UUID) error
-	
+
 	// Recherche et filtrage
 	List(filters *models.SearchCombatsRequest) ([]*models.CombatInstance, int, error)
 	GetByStatus(status models.CombatStatus) ([]*models.CombatInstance, error)
 	GetByParticipant(participantID uuid.UUID) ([]*models.CombatInstance, error)
 	GetByZone(zoneID string) ([]*models.CombatInstance, error)
-	
+
 	// Gestion des participants
 	AddParticipant(participant *models.CombatParticipant) error
 	RemoveParticipant(combatID, participantID uuid.UUID) error
 	GetParticipants(combatID uuid.UUID) ([]*models.CombatParticipant, error)
 	GetParticipant(combatID, characterID uuid.UUID) (*models.CombatParticipant, error)
 	UpdateParticipant(participant *models.CombatParticipant) error
-	
+
 	// Statistiques et métriques
 	GetStatistics(characterID uuid.UUID) (*models.CombatStatistics, error)
 	UpdateStatistics(stats *models.CombatStatistics) error
 	GetActiveCombatCount() (int, error)
 	GetCombatHistory(req *models.GetCombatHistoryRequest) ([]*models.CombatHistoryEntry, int, error)
-	
+
 	// Nettoyage et maintenance
 	CleanupExpiredCombats() error
 	GetExpiredCombats() ([]*models.CombatInstance, error)
@@ -114,7 +114,7 @@ func (r *CombatRepository) GetByID(id uuid.UUID) (*models.CombatInstance, error)
 		&combat.MaxDuration, &settingsJSON, &combat.CreatedAt,
 		&combat.StartedAt, &combat.EndedAt, &combat.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("combat not found")
@@ -123,7 +123,9 @@ func (r *CombatRepository) GetByID(id uuid.UUID) (*models.CombatInstance, error)
 	}
 
 	// Désérialiser les paramètres
-	if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
+	if err := if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
 	}
 
@@ -180,7 +182,7 @@ func (r *CombatRepository) Update(combat *models.CombatInstance) error {
 // Delete supprime un combat
 func (r *CombatRepository) Delete(id uuid.UUID) error {
 	query := `DELETE FROM combat_instances WHERE id = $1`
-	
+
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete combat: %w", err)
@@ -290,7 +292,9 @@ func (r *CombatRepository) List(filters *models.SearchCombatsRequest) ([]*models
 		}
 
 		// Désérialiser les paramètres
-		if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
+		if err := if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			return nil, 0, fmt.Errorf("failed to unmarshal settings: %w", err)
 		}
 
@@ -307,7 +311,7 @@ func (r *CombatRepository) GetByStatus(status models.CombatStatus) ([]*models.Co
 		Limit:           100,
 		IncludeFinished: true,
 	}
-	
+
 	combats, _, err := r.List(filters)
 	return combats, err
 }
@@ -345,7 +349,9 @@ func (r *CombatRepository) GetByParticipant(participantID uuid.UUID) ([]*models.
 		}
 
 		// Désérialiser les paramètres
-		if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
+		if err := if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
 		}
 
@@ -362,7 +368,7 @@ func (r *CombatRepository) GetByZone(zoneID string) ([]*models.CombatInstance, e
 		Limit:           50,
 		IncludeFinished: false,
 	}
-	
+
 	combats, _, err := r.List(filters)
 	return combats, err
 }
@@ -397,7 +403,7 @@ func (r *CombatRepository) AddParticipant(participant *models.CombatParticipant)
 // RemoveParticipant supprime un participant d'un combat
 func (r *CombatRepository) RemoveParticipant(combatID, participantID uuid.UUID) error {
 	query := `DELETE FROM combat_participants WHERE combat_id = $1 AND character_id = $2`
-	
+
 	result, err := r.db.Exec(query, combatID, participantID)
 	if err != nil {
 		return fmt.Errorf("failed to remove participant: %w", err)
@@ -594,7 +600,7 @@ func (r *CombatRepository) GetActiveCombatCount() (int, error) {
 		SELECT COUNT(*) 
 		FROM combat_instances 
 		WHERE status IN ($1, $2)`
-	
+
 	err := r.db.Get(&count, query, models.CombatStatusWaiting, models.CombatStatusActive)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get active combat count: %w", err)
@@ -640,7 +646,7 @@ func (r *CombatRepository) GetCombatHistory(req *models.GetCombatHistoryRequest)
 		args = append(args, *req.DateTo)
 	}
 
-	// Filtre sur les victoires/défaites
+	// Filtre sur les victories/défaites
 	if req.WinsOnly || req.LossesOnly {
 		// Cette logique nécessiterait une table de résultats ou une logique plus complexe
 		// Pour l'instant, on l'ignore
@@ -719,11 +725,11 @@ func (r *CombatRepository) CleanupExpiredCombats() error {
 	expiredTime := time.Now().Add(-24 * time.Hour) // Expire après 24h
 	now := time.Now()
 
-	_, err := r.db.Exec(query, 
+	_, err := r.db.Exec(query,
 		models.CombatStatusCancelled, now,
 		models.CombatStatusWaiting, models.CombatStatusActive,
 		expiredTime)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to cleanup expired combats: %w", err)
 	}
@@ -734,13 +740,14 @@ func (r *CombatRepository) CleanupExpiredCombats() error {
 // GetExpiredCombats récupère les combats expirés
 func (r *CombatRepository) GetExpiredCombats() ([]*models.CombatInstance, error) {
 	expiredTime := time.Now().Add(-24 * time.Hour)
-	
+
 	filters := &models.SearchCombatsRequest{
 		CreatedBefore:   &expiredTime,
 		Limit:           100,
 		IncludeFinished: false,
 	}
-	
+
 	combats, _, err := r.List(filters)
 	return combats, err
 }
+

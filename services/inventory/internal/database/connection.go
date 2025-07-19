@@ -12,25 +12,25 @@ import (
 	"inventory/internal/config"
 )
 
-// DB encapsule la connexion à la base de données
+// DB encapsule la connection à la base de données
 type DB struct {
 	*sqlx.DB
 }
 
-// NewConnection crée une nouvelle connexion à la base de données
+// NewConnection crée une nouvelle connection à la base de données
 func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
-	// Connexion à PostgreSQL
+	// connection à PostgreSQL
 	db, err := sqlx.Connect("postgres", cfg.GetDSN())
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Configuration de la pool de connexions
+	// Configuration de la pool de connections
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 
-	// Test de la connexion
+	// Test de la connection
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -48,7 +48,7 @@ func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
 	return &DB{db}, nil
 }
 
-// Close ferme la connexion à la base de données
+// Close ferme la connection à la base de données
 func (db *DB) Close() error {
 	logrus.Info("Closing database connection")
 	return db.DB.Close()
@@ -77,3 +77,4 @@ func (db *DB) GetStats() map[string]interface{} {
 		"max_lifetime_closed":  stats.MaxLifetimeClosed,
 	}
 }
+

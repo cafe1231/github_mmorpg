@@ -84,7 +84,7 @@ type MonitoringConfig struct {
 	HealthPath     string `mapstructure:"health_path"`
 }
 
-// GetDatabaseURL construit l'URL de connexion PostgreSQL
+// GetDatabaseURL construit l'URL de connection PostgreSQL
 func (d DatabaseConfig) GetDatabaseURL() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -251,3 +251,4 @@ func validateConfig(config *Config) error {
 
 	return nil
 }
+

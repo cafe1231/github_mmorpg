@@ -94,9 +94,15 @@ func (r *messageRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 	}
 
 	// Unmarshal JSON fields
-	json.Unmarshal(mentionsJSON, &message.Mentions)
-	json.Unmarshal(attachmentsJSON, &message.Attachments)
-	json.Unmarshal(reactionsJSON, &message.Reactions)
+	if err := json.Unmarshal(mentionsJSON, &message.Mentions); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}
+	if err := json.Unmarshal(attachmentsJSON, &message.Attachments); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}
+	if err := json.Unmarshal(reactionsJSON, &message.Reactions); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}
 
 	return &message, nil
 }
@@ -421,9 +427,15 @@ func (r *messageRepository) scanMessages(rows *sql.Rows) ([]*models.Message, err
 		}
 
 		// Unmarshal JSON fields
-		json.Unmarshal(mentionsJSON, &message.Mentions)
-		json.Unmarshal(attachmentsJSON, &message.Attachments)
-		json.Unmarshal(reactionsJSON, &message.Reactions)
+		if err := json.Unmarshal(mentionsJSON, &message.Mentions); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}
+		if err := json.Unmarshal(attachmentsJSON, &message.Attachments); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}
+		if err := json.Unmarshal(reactionsJSON, &message.Reactions); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}
 
 		messages = append(messages, &message)
 	}
@@ -434,3 +446,4 @@ func (r *messageRepository) scanMessages(rows *sql.Rows) ([]*models.Message, err
 
 	return messages, nil
 }
+

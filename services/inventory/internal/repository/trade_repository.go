@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"inventory/internal/models"
 	"github.com/jmoiron/sqlx"
+	"inventory/internal/models"
 )
 
 type tradeRepository struct {
@@ -100,7 +100,11 @@ func (r *tradeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Delete trade items first
 	_, err = tx.ExecContext(ctx, "DELETE FROM trade_items WHERE trade_id = $1", id)
@@ -254,7 +258,11 @@ func (r *tradeRepository) UpdateOffer(ctx context.Context, tradeID, playerID uui
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Get trade to determine player role
 	var trade models.Trade
@@ -385,7 +393,7 @@ func (r *tradeRepository) CompleteTrade(ctx context.Context, tradeID uuid.UUID) 
 	return nil
 }
 
-// CancelTrade marks a trade as cancelled
+// CancelTrade marks a trade as canceled
 func (r *tradeRepository) CancelTrade(ctx context.Context, tradeID uuid.UUID, reason string) error {
 	query := `
 		UPDATE trades SET 
@@ -444,3 +452,4 @@ func (r *tradeRepository) loadTradeItems(ctx context.Context, trade *models.Trad
 
 	return nil
 }
+

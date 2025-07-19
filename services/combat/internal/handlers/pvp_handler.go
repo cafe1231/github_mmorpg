@@ -266,7 +266,7 @@ func (h *PvPHandler) CancelChallenge(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Challenge cancelled successfully",
+		"message":    "Challenge canceled successfully",
 		"request_id": c.GetHeader("X-Request-ID"),
 	})
 }
@@ -488,3 +488,4 @@ func (h *PvPHandler) GetQueueStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, status)
 }
+

@@ -50,7 +50,7 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
-		
+
 		// Valider et parser le JWT
 		claims, err := validateJWT(tokenString, config.JWT.Secret)
 		if err != nil {
@@ -90,13 +90,13 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 
 		// Log de l'authentification réussie
 		logrus.WithFields(logrus.Fields{
-			"user_id":     claims.UserID,
+			"user_id":      claims.UserID,
 			"character_id": claims.CharacterID,
-			"username":    claims.Username,
-			"role":        claims.Role,
-			"path":        c.Request.URL.Path,
-			"method":      c.Request.Method,
-			"request_id":  c.GetHeader("X-Request-ID"),
+			"username":     claims.Username,
+			"role":         claims.Role,
+			"path":         c.Request.URL.Path,
+			"method":       c.Request.Method,
+			"request_id":   c.GetHeader("X-Request-ID"),
 		}).Debug("User authenticated successfully")
 
 		c.Next()
@@ -261,11 +261,11 @@ func RequireCharacterOwnership() gin.HandlerFunc {
 		// Vérifier que l'utilisateur possède le personnage
 		if requestedCharacterID != "" && requestedCharacterID != userCharacterID {
 			logrus.WithFields(logrus.Fields{
-				"user_id":               c.GetString("user_id"),
-				"user_character_id":     userCharacterID,
+				"user_id":                c.GetString("user_id"),
+				"user_character_id":      userCharacterID,
 				"requested_character_id": requestedCharacterID,
-				"path":                  c.Request.URL.Path,
-				"request_id":            c.GetHeader("X-Request-ID"),
+				"path":                   c.Request.URL.Path,
+				"request_id":             c.GetHeader("X-Request-ID"),
 			}).Warn("Access denied: character ownership mismatch")
 
 			c.JSON(http.StatusForbidden, gin.H{
@@ -292,7 +292,7 @@ func RateLimitByUser(requestsPerMinute int) gin.HandlerFunc {
 		}
 
 		now := time.Now()
-		
+
 		// Nettoyer les anciennes requêtes
 		if requests, exists := userLimits[userID]; exists {
 			validRequests := []time.Time{}
@@ -412,7 +412,7 @@ func ServiceAuthentication(allowedServices []string) gin.HandlerFunc {
 			return
 		}
 
-		// TODO: Valider le token du service (par exemple avec un secret partagé)
+		// TODO: Valider le token du service (par example avec un secret partagé)
 		// Pour l'instant, on fait confiance si le nom du service est correct
 
 		c.Set("service_name", serviceName)
@@ -420,3 +420,4 @@ func ServiceAuthentication(allowedServices []string) gin.HandlerFunc {
 		c.Next()
 	}
 }
+

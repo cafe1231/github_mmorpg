@@ -332,7 +332,7 @@ func (s *WorldEventService) CancelEvent(ctx context.Context, eventID uuid.UUID) 
 		return fmt.Errorf("cannot cancel completed event")
 	}
 
-	event.Status = "cancelled"
+	event.Status = "canceled"
 	event.UpdatedAt = time.Now()
 
 	return s.eventRepo.Update(event)
@@ -596,3 +596,4 @@ func (s *WeatherService) validateWeatherData(ctx context.Context, weather *model
 
 	return nil
 }
+

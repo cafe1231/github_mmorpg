@@ -44,7 +44,7 @@ func main() {
 		logrus.Fatal("Failed to load config: ", err)
 	}
 
-	// Connexion à la base de données
+	// connection à la base de données
 	db, err := database.NewConnection(cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
@@ -249,7 +249,7 @@ func setupRoutes(
 	return router
 }
 
-// initLogger initialise le système de logging
+// initLogger initialize le système de logging
 func initLogger() {
 	// Configuration du format de log selon l'environnement
 	if os.Getenv("SERVER_ENVIRONMENT") == "production" {
@@ -286,7 +286,7 @@ func gracefulShutdown(
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Arrêter les nouvelles connexions
+	// Arrêter les nouvelles connections
 	if err := server.Shutdown(ctx); err != nil {
 		logrus.Fatal("Server forced to shutdown: ", err)
 	}
@@ -369,3 +369,4 @@ func respondWithSuccess(c *gin.Context, data interface{}, message ...string) {
 
 	c.JSON(http.StatusOK, response)
 }
+

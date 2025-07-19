@@ -79,7 +79,9 @@ func (r *logRepository) List(ctx context.Context, level *string, from, to *time.
 	}
 
 	// Récupérer les données
-	query := "SELECT id, level, message, context, timestamp FROM analytics_logs " + whereClause + " ORDER BY timestamp DESC LIMIT $" + fmt.Sprintf("%d", argIndex) + " OFFSET $" + fmt.Sprintf("%d", argIndex+1)
+	limitStr := fmt.Sprintf("%d", argIndex)
+	offsetStr := fmt.Sprintf("%d", argIndex+1)
+	query := "SELECT id, level, message, context, timestamp FROM analytics_logs " + whereClause + " ORDER BY timestamp DESC LIMIT $" + limitStr + " OFFSET $" + offsetStr
 	args = append(args, limit, (page-1)*limit)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)

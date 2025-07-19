@@ -195,7 +195,7 @@ func (s *PlayerPositionService) SetPlayerOnline(characterID uuid.UUID) error {
 // CleanupOfflinePlayers nettoie les joueurs hors ligne
 func (s *PlayerPositionService) CleanupOfflinePlayers() error {
 	timeout := 5 * time.Minute // Timeout par défaut
-	
+
 	if err := s.positionRepo.CleanupOfflinePlayers(timeout); err != nil {
 		return fmt.Errorf("failed to cleanup offline players: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *PlayerPositionService) GetPlayerStatistics() (map[string]interface{}, e
 	stats := map[string]interface{}{
 		"total_online_players": onlineCount,
 		"players_per_zone":     zoneCounts,
-		"timestamp":           time.Now().Unix(),
+		"timestamp":            time.Now().Unix(),
 	}
 
 	return stats, nil
@@ -286,7 +286,7 @@ func (s *PlayerPositionService) CheckCollisions(characterID uuid.UUID, x, y, z, 
 func (s *PlayerPositionService) validateMovement(current *models.PlayerPosition, newReq *models.UpdatePositionRequest) error {
 	// Calculer le temps écoulé depuis la dernière mise à jour
 	timeDelta := time.Since(current.LastUpdate).Seconds()
-	
+
 	// Si trop peu de temps s'est écoulé, accepter le mouvement
 	if timeDelta < 0.01 { // 10ms minimum
 		return nil
@@ -319,7 +319,7 @@ func (s *PlayerPositionService) validateMovement(current *models.PlayerPosition,
 		}).Debug("Zone change detected")
 	}
 
-	// Vérifier les téléportations suspectes (distance > seuil en un seul tick)
+	// Vérifier les téléportations suspicious (distance > seuil en un seul tick)
 	if distance > 50.0 && timeDelta < 1.0 {
 		return fmt.Errorf("suspicious teleportation: %.2f meters in %.2f seconds", distance, timeDelta)
 	}
@@ -337,10 +337,10 @@ func (s *PlayerPositionService) BroadcastPosition(characterID uuid.UUID) error {
 
 	// Récupérer les joueurs proches
 	nearbyPlayers, err := s.positionRepo.GetNearbyPlayers(
-		position.ZoneID, 
-		position.X, 
-		position.Y, 
-		position.Z, 
+		position.ZoneID,
+		position.X,
+		position.Y,
+		position.Z,
 		s.config.Game.MaxRenderDistance,
 	)
 	if err != nil {
@@ -351,8 +351,8 @@ func (s *PlayerPositionService) BroadcastPosition(characterID uuid.UUID) error {
 	// Pour l'instant, juste logger
 	if len(nearbyPlayers) > 0 {
 		logrus.WithFields(logrus.Fields{
-			"character_id":    characterID,
-			"nearby_players":  len(nearbyPlayers),
+			"character_id":   characterID,
+			"nearby_players": len(nearbyPlayers),
 			"zone_id":        position.ZoneID,
 		}).Debug("Position broadcast to nearby players")
 	}
@@ -381,3 +381,4 @@ func (s *PlayerPositionService) GetMovementHistory(characterID uuid.UUID, limit 
 
 	return history, nil
 }
+

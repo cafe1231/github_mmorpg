@@ -129,10 +129,10 @@ func (h *CharacterHandler) GetCharacters(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"characters": characters,
-		"total":      len(characters),
+		"characters":  characters,
+		"total":       len(characters),
 		"max_allowed": h.config.Game.MaxCharactersPerPlayer,
-		"request_id": c.GetHeader("X-Request-ID"),
+		"request_id":  c.GetHeader("X-Request-ID"),
 	})
 }
 
@@ -551,10 +551,10 @@ func (h *CharacterHandler) ShowCharacterDebug(c *gin.Context) {
 		"message":      "Character debug info",
 		"character_id": characterID,
 		"config": gin.H{
-			"max_level":                   h.config.Game.MaxLevel,
-			"max_characters_per_player":   h.config.Game.MaxCharactersPerPlayer,
-			"available_classes":           h.config.Game.AvailableClasses,
-			"available_races":             h.config.Game.AvailableRaces,
+			"max_level":                 h.config.Game.MaxLevel,
+			"max_characters_per_player": h.config.Game.MaxCharactersPerPlayer,
+			"available_classes":         h.config.Game.AvailableClasses,
+			"available_races":           h.config.Game.AvailableRaces,
 		},
 	})
 }

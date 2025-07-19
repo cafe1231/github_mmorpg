@@ -120,7 +120,7 @@ func (s *PlayerService) GetPlayerByID(playerID uuid.UUID) (*models.Player, error
 
 // UpdatePlayer met à jour un profil joueur
 func (s *PlayerService) UpdatePlayer(userID uuid.UUID, req models.UpdatePlayerRequest) (*models.Player, error) {
-	// Récupérer le joueur existant
+	// Récupérer le joueur existing
 	player, err := s.playerRepo.GetByUserID(userID)
 	if err != nil {
 		return nil, fmt.Errorf("player not found: %w", err)
@@ -182,7 +182,7 @@ func (s *PlayerService) UpdatePlayTime(userID uuid.UUID, minutes int) error {
 	return nil
 }
 
-// UpdateLastSeen met à jour la dernière connexion d'un joueur
+// UpdateLastSeen met à jour la dernière connection d'un joueur
 func (s *PlayerService) UpdateLastSeen(userID uuid.UUID) error {
 	player, err := s.playerRepo.GetByUserID(userID)
 	if err != nil {
@@ -368,3 +368,4 @@ func isValidDisplayName(displayName string) bool {
 	// Vérifier qu'il n'y a pas d'espaces consécutifs
 	return !strings.Contains(displayName, "  ")
 }
+

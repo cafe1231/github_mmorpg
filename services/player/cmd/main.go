@@ -30,7 +30,7 @@ func main() {
 		logrus.Fatal("Failed to load config: ", err)
 	}
 
-	// Connexion à la base de données
+	// connection à la base de données
 	db, err := database.NewConnection(cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
@@ -88,8 +88,8 @@ func main() {
 
 // setupRoutes configure toutes les routes du service Player
 func setupRoutes(
-	playerService *service.PlayerService, 
-	characterService *service.CharacterService, 
+	playerService *service.PlayerService,
+	characterService *service.CharacterService,
 	cfg *config.Config,
 	db *database.DB,
 ) *gin.Engine {
@@ -214,7 +214,7 @@ func startPeriodicCleanup(characterService *service.CharacterService) {
 	}
 }
 
-// initLogger initialise le logger global
+// initLogger initialize le logger global
 func initLogger() {
 	logrus.SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339,
@@ -260,3 +260,4 @@ func gracefulShutdown(server *http.Server, playerService *service.PlayerService,
 
 	logrus.Info("✅ Player Service stopped")
 }
+

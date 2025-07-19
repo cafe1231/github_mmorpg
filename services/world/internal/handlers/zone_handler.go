@@ -50,12 +50,12 @@ func (h *ZoneHandler) ListZones(c *gin.Context) {
 	} else if minLevelStr != "" && maxLevelStr != "" {
 		minLevel, err1 := strconv.Atoi(minLevelStr)
 		maxLevel, err2 := strconv.Atoi(maxLevelStr)
-		
+
 		if err1 != nil || err2 != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid level parameters"})
 			return
 		}
-		
+
 		zones, err = h.zoneService.GetZonesByLevel(minLevel, maxLevel)
 	} else {
 		zones, err = h.zoneService.ListZones()

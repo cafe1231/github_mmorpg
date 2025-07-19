@@ -11,7 +11,7 @@ type TradeStatus string
 const (
 	TradeStatusPending   TradeStatus = "pending"
 	TradeStatusAccepted  TradeStatus = "accepted"
-	TradeStatusCancelled TradeStatus = "cancelled"
+	TradeStatusCancelled TradeStatus = "canceled"
 	TradeStatusCompleted TradeStatus = "completed"
 	TradeStatusExpired   TradeStatus = "expired"
 )
@@ -163,3 +163,4 @@ func (t *Trade) GetOtherPlayerID(playerID uuid.UUID) uuid.UUID {
 	}
 	return t.InitiatorID
 }
+

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"combat/internal/database"
 	"combat/internal/models"
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // EffectRepositoryInterface définit les méthodes du repository effect
@@ -18,22 +18,22 @@ type EffectRepositoryInterface interface {
 	GetByID(id uuid.UUID) (*models.CombatEffect, error)
 	Update(effect *models.CombatEffect) error
 	Delete(id uuid.UUID) error
-	
+
 	// Récupération par cible et combat
 	GetActiveByTarget(targetID uuid.UUID) ([]*models.CombatEffect, error)
 	GetActiveByCombat(combatID uuid.UUID) ([]*models.CombatEffect, error)
 	GetByTargetAndType(targetID uuid.UUID, effectType models.EffectType) ([]*models.CombatEffect, error)
-	
+
 	// Gestion des effets actifs
 	GetExpiredEffects() ([]*models.CombatEffect, error)
 	DeactivateEffect(effectID uuid.UUID) error
 	CleanupExpiredEffects(olderThan time.Duration) error
-	
+
 	// Recherche avancée
 	GetEffectsByCaster(casterID uuid.UUID) ([]*models.CombatEffect, error)
 	GetEffectsByName(effectName string) ([]*models.CombatEffect, error)
 	GetStackableEffects(targetID uuid.UUID, effectName string) ([]*models.CombatEffect, error)
-	
+
 	// Statistiques
 	GetEffectCount(combatID uuid.UUID) (int, error)
 	GetEffectDuration(effectID uuid.UUID) (time.Duration, error)
@@ -129,7 +129,7 @@ func (r *EffectRepository) Update(effect *models.CombatEffect) error {
 // Delete supprime un effet
 func (r *EffectRepository) Delete(id uuid.UUID) error {
 	query := `DELETE FROM combat_effects WHERE id = $1`
-	
+
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete effect: %w", err)
@@ -257,7 +257,7 @@ func (r *EffectRepository) DeactivateEffect(effectID uuid.UUID) error {
 // CleanupExpiredEffects nettoie les effets expirés anciens
 func (r *EffectRepository) CleanupExpiredEffects(olderThan time.Duration) error {
 	cutoff := time.Now().Add(-olderThan)
-	
+
 	query := `
 		DELETE FROM combat_effects 
 		WHERE is_active = false AND updated_at < $1`
@@ -346,7 +346,7 @@ func (r *EffectRepository) GetStackableEffects(targetID uuid.UUID, effectName st
 func (r *EffectRepository) GetEffectCount(combatID uuid.UUID) (int, error) {
 	var count int
 	query := `SELECT COUNT(*) FROM combat_effects WHERE combat_id = $1 AND is_active = true`
-	
+
 	err := r.db.Get(&count, query, combatID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get effect count: %w", err)
@@ -358,7 +358,7 @@ func (r *EffectRepository) GetEffectCount(combatID uuid.UUID) (int, error) {
 // GetEffectDuration calcule la durée restante d'un effet
 func (r *EffectRepository) GetEffectDuration(effectID uuid.UUID) (time.Duration, error) {
 	var effect models.CombatEffect
-	
+
 	query := `
 		SELECT remaining_turns, expires_at 
 		FROM combat_effects 
@@ -372,7 +372,7 @@ func (r *EffectRepository) GetEffectDuration(effectID uuid.UUID) (time.Duration,
 		return 0, fmt.Errorf("failed to get effect duration: %w", err)
 	}
 
-	// Si il y a une expiration absolue
+	// Si il y a une expiration absolute
 	if effect.ExpiresAt != nil {
 		return time.Until(*effect.ExpiresAt), nil
 	}
@@ -429,14 +429,14 @@ func (r *EffectRepository) GetEffectStatistics(combatID uuid.UUID) (*EffectStati
 
 // EffectStatistics représente les statistiques d'effets
 type EffectStatistics struct {
-	TotalEffects   int     `json:"total_effects" db:"total_effects"`
-	Buffs          int     `json:"buffs" db:"buffs"`
-	Debuffs        int     `json:"debuffs" db:"debuffs"`
-	DoTs           int     `json:"dots" db:"dots"`
-	HoTs           int     `json:"hots" db:"hots"`
-	ActiveEffects  int     `json:"active_effects" db:"active_effects"`
-	AvgDuration    float64 `json:"avg_duration" db:"avg_duration"`
-	MaxStacksSeen  int     `json:"max_stacks_seen" db:"max_stacks_seen"`
+	TotalEffects  int     `json:"total_effects" db:"total_effects"`
+	Buffs         int     `json:"buffs" db:"buffs"`
+	Debuffs       int     `json:"debuffs" db:"debuffs"`
+	DoTs          int     `json:"dots" db:"dots"`
+	HoTs          int     `json:"hots" db:"hots"`
+	ActiveEffects int     `json:"active_effects" db:"active_effects"`
+	AvgDuration   float64 `json:"avg_duration" db:"avg_duration"`
+	MaxStacksSeen int     `json:"max_stacks_seen" db:"max_stacks_seen"`
 }
 
 // BatchUpdate met à jour plusieurs effets en une seule transaction
@@ -449,7 +449,11 @@ func (r *EffectRepository) BatchUpdate(effects []*models.CombatEffect) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	query := `
 		UPDATE combat_effects SET
@@ -484,7 +488,7 @@ func (r *EffectRepository) BatchDelete(effectIDs []uuid.UUID) error {
 
 	// Construire la requête avec les placeholders
 	query := `DELETE FROM combat_effects WHERE id = ANY($1)`
-	
+
 	// Convertir les UUIDs en string array pour PostgreSQL
 	uuidStrings := make([]string, len(effectIDs))
 	for i, id := range effectIDs {
@@ -507,3 +511,4 @@ func (r *EffectRepository) BatchDelete(effectIDs []uuid.UUID) error {
 
 	return nil
 }
+

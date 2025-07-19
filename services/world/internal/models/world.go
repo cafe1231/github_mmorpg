@@ -1,4 +1,4 @@
-﻿package models
+package models
 
 import (
 	"math"
@@ -9,48 +9,48 @@ import (
 
 // Zone représente une zone/map du monde
 type Zone struct {
-	ID          string    `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	DisplayName string    `json:"display_name" db:"display_name"`
-	Description string    `json:"description" db:"description"`
-	Type        string    `json:"type" db:"type"` // city, dungeon, wilderness, pvp, safe
-	Level       int       `json:"level" db:"level"` // niveau recommandé
-	
+	ID          string `json:"id" db:"id"`
+	Name        string `json:"name" db:"name"`
+	DisplayName string `json:"display_name" db:"display_name"`
+	Description string `json:"description" db:"description"`
+	Type        string `json:"type" db:"type"`   // city, dungeon, wilderness, pvp, safe
+	Level       int    `json:"level" db:"level"` // niveau recommandé
+
 	// Géométrie de la zone
-	MinX        float64   `json:"min_x" db:"min_x"`
-	MinY        float64   `json:"min_y" db:"min_y"`
-	MinZ        float64   `json:"min_z" db:"min_z"`
-	MaxX        float64   `json:"max_x" db:"max_x"`
-	MaxY        float64   `json:"max_y" db:"max_y"`
-	MaxZ        float64   `json:"max_z" db:"max_z"`
-	
+	MinX float64 `json:"min_x" db:"min_x"`
+	MinY float64 `json:"min_y" db:"min_y"`
+	MinZ float64 `json:"min_z" db:"min_z"`
+	MaxX float64 `json:"max_x" db:"max_x"`
+	MaxY float64 `json:"max_y" db:"max_y"`
+	MaxZ float64 `json:"max_z" db:"max_z"`
+
 	// Points de spawn
-	SpawnX      float64   `json:"spawn_x" db:"spawn_x"`
-	SpawnY      float64   `json:"spawn_y" db:"spawn_y"`
-	SpawnZ      float64   `json:"spawn_z" db:"spawn_z"`
-	
+	SpawnX float64 `json:"spawn_x" db:"spawn_x"`
+	SpawnY float64 `json:"spawn_y" db:"spawn_y"`
+	SpawnZ float64 `json:"spawn_z" db:"spawn_z"`
+
 	// Configuration
-	MaxPlayers  int       `json:"max_players" db:"max_players"`
-	IsPvP       bool      `json:"is_pvp" db:"is_pvp"`
-	IsSafeZone  bool      `json:"is_safe_zone" db:"is_safe_zone"`
-	Settings    ZoneSettings `json:"settings" db:"settings"`
-	
+	MaxPlayers int          `json:"max_players" db:"max_players"`
+	IsPvP      bool         `json:"is_pvp" db:"is_pvp"`
+	IsSafeZone bool         `json:"is_safe_zone" db:"is_safe_zone"`
+	Settings   ZoneSettings `json:"settings" db:"settings"`
+
 	// État
-	Status      string    `json:"status" db:"status"` // active, maintenance, disabled
-	PlayerCount int       `json:"player_count" db:"-"` // calculé dynamiquement
-	
+	Status      string `json:"status" db:"status"`  // active, maintenance, disabled
+	PlayerCount int    `json:"player_count" db:"-"` // calculé dynamiquement
+
 	// Timestamps
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // ZoneSettings configuration spécifique de la zone
 type ZoneSettings struct {
 	Weather              string   `json:"weather"`
-	TimeOfDay           string   `json:"time_of_day"`
-	BackgroundMusic     string   `json:"background_music"`
-	AllowedClasses      []string `json:"allowed_classes"`
-	RestrictedItems     []string `json:"restricted_items"`
+	TimeOfDay            string   `json:"time_of_day"`
+	BackgroundMusic      string   `json:"background_music"`
+	AllowedClasses       []string `json:"allowed_classes"`
+	RestrictedItems      []string `json:"restricted_items"`
 	ExperienceMultiplier float64  `json:"experience_multiplier"`
 	LootMultiplier       float64  `json:"loot_multiplier"`
 	DeathPenalty         string   `json:"death_penalty"` // none, durability, item_loss
@@ -58,38 +58,38 @@ type ZoneSettings struct {
 
 // NPC représente un personnage non-joueur
 type NPC struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	ZoneID      string    `json:"zone_id" db:"zone_id"`
-	Name        string    `json:"name" db:"name"`
-	Type        string    `json:"type" db:"type"` // merchant, guard, quest_giver, monster
-	Subtype     string    `json:"subtype" db:"subtype"` // specific type like blacksmith, banker
-	
+	ID      uuid.UUID `json:"id" db:"id"`
+	ZoneID  string    `json:"zone_id" db:"zone_id"`
+	Name    string    `json:"name" db:"name"`
+	Type    string    `json:"type" db:"type"`       // merchant, guard, quest_giver, monster
+	Subtype string    `json:"subtype" db:"subtype"` // specific type like blacksmith, banker
+
 	// Position
-	PositionX   float64   `json:"position_x" db:"position_x"`
-	PositionY   float64   `json:"position_y" db:"position_y"`
-	PositionZ   float64   `json:"position_z" db:"position_z"`
-	Rotation    float64   `json:"rotation" db:"rotation"`
-	
+	PositionX float64 `json:"position_x" db:"position_x"`
+	PositionY float64 `json:"position_y" db:"position_y"`
+	PositionZ float64 `json:"position_z" db:"position_z"`
+	Rotation  float64 `json:"rotation" db:"rotation"`
+
 	// Apparence
-	Model       string    `json:"model" db:"model"`
-	Texture     string    `json:"texture" db:"texture"`
-	Scale       float64   `json:"scale" db:"scale"`
-	
+	Model   string  `json:"model" db:"model"`
+	Texture string  `json:"texture" db:"texture"`
+	Scale   float64 `json:"scale" db:"scale"`
+
 	// Comportement
-	Behavior    NPCBehavior `json:"behavior" db:"behavior"`
-	
+	Behavior NPCBehavior `json:"behavior" db:"behavior"`
+
 	// Combat (pour les monstres)
-	Level       int       `json:"level" db:"level"`
-	Health      int       `json:"health" db:"health"`
-	MaxHealth   int       `json:"max_health" db:"max_health"`
-	
+	Level     int `json:"level" db:"level"`
+	Health    int `json:"health" db:"health"`
+	MaxHealth int `json:"max_health" db:"max_health"`
+
 	// État
-	Status      string    `json:"status" db:"status"` // active, inactive, dead
-	LastSeen    time.Time `json:"last_seen" db:"last_seen"`
-	
+	Status   string    `json:"status" db:"status"` // active, inactive, dead
+	LastSeen time.Time `json:"last_seen" db:"last_seen"`
+
 	// Timestamps
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // NPCBehavior comportement d'un NPC
@@ -109,25 +109,25 @@ type PlayerPosition struct {
 	CharacterID uuid.UUID `json:"character_id" db:"character_id"`
 	UserID      uuid.UUID `json:"user_id" db:"user_id"`
 	ZoneID      string    `json:"zone_id" db:"zone_id"`
-	
+
 	// Position actuelle
-	X           float64   `json:"x" db:"x"`
-	Y           float64   `json:"y" db:"y"`
-	Z           float64   `json:"z" db:"z"`
-	Rotation    float64   `json:"rotation" db:"rotation"`
-	
+	X        float64 `json:"x" db:"x"`
+	Y        float64 `json:"y" db:"y"`
+	Z        float64 `json:"z" db:"z"`
+	Rotation float64 `json:"rotation" db:"rotation"`
+
 	// Mouvement
-	VelocityX   float64   `json:"velocity_x" db:"velocity_x"`
-	VelocityY   float64   `json:"velocity_y" db:"velocity_y"`
-	VelocityZ   float64   `json:"velocity_z" db:"velocity_z"`
-	IsMoving    bool      `json:"is_moving" db:"is_moving"`
-	
+	VelocityX float64 `json:"velocity_x" db:"velocity_x"`
+	VelocityY float64 `json:"velocity_y" db:"velocity_y"`
+	VelocityZ float64 `json:"velocity_z" db:"velocity_z"`
+	IsMoving  bool    `json:"is_moving" db:"is_moving"`
+
 	// État du joueur
-	IsOnline    bool      `json:"is_online" db:"is_online"`
-	LastUpdate  time.Time `json:"last_update" db:"last_update"`
-	
+	IsOnline   bool      `json:"is_online" db:"is_online"`
+	LastUpdate time.Time `json:"last_update" db:"last_update"`
+
 	// Informations additionnelles
-	CharacterName string  `json:"character_name,omitempty" db:"-"`
+	CharacterName  string `json:"character_name,omitempty" db:"-"`
 	CharacterLevel int    `json:"character_level,omitempty" db:"-"`
 }
 
@@ -138,53 +138,53 @@ type WorldEvent struct {
 	Name        string    `json:"name" db:"name"`
 	Description string    `json:"description" db:"description"`
 	Type        string    `json:"type" db:"type"` // boss_spawn, treasure_hunt, pvp_tournament
-	
+
 	// Timing
-	StartTime   time.Time `json:"start_time" db:"start_time"`
-	EndTime     time.Time `json:"end_time" db:"end_time"`
-	Duration    int       `json:"duration" db:"duration"` // en minutes
-	
+	StartTime time.Time `json:"start_time" db:"start_time"`
+	EndTime   time.Time `json:"end_time" db:"end_time"`
+	Duration  int       `json:"duration" db:"duration"` // en minutes
+
 	// Configuration
 	MaxParticipants int           `json:"max_participants" db:"max_participants"`
 	MinLevel        int           `json:"min_level" db:"min_level"`
 	MaxLevel        int           `json:"max_level" db:"max_level"`
 	Rewards         []EventReward `json:"rewards" db:"rewards"`
-	
+
 	// État
-	Status          string        `json:"status" db:"status"` // scheduled, active, completed, cancelled
-	ParticipantCount int          `json:"participant_count" db:"-"`
-	
+	Status           string `json:"status" db:"status"` // scheduled, active, completed, canceled
+	ParticipantCount int    `json:"participant_count" db:"-"`
+
 	// Timestamps
-	CreatedAt       time.Time     `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time     `json:"updated_at" db:"updated_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // EventReward récompense d'événement
 type EventReward struct {
-	Type     string  `json:"type"`     // experience, gold, item
-	Amount   int     `json:"amount"`
-	ItemID   string  `json:"item_id,omitempty"`
-	Rarity   string  `json:"rarity,omitempty"`
+	Type   string `json:"type"` // experience, gold, item
+	Amount int    `json:"amount"`
+	ItemID string `json:"item_id,omitempty"`
+	Rarity string `json:"rarity,omitempty"`
 }
 
 // Weather météo d'une zone
 type Weather struct {
-	ZoneID      string    `json:"zone_id" db:"zone_id"`
-	Type        string    `json:"type" db:"type"` // clear, rain, storm, snow, fog
-	Intensity   float64   `json:"intensity" db:"intensity"` // 0.0 à 1.0
-	Temperature float64   `json:"temperature" db:"temperature"` // en Celsius
-	WindSpeed   float64   `json:"wind_speed" db:"wind_speed"` // km/h
+	ZoneID        string  `json:"zone_id" db:"zone_id"`
+	Type          string  `json:"type" db:"type"`                     // clear, rain, storm, snow, fog
+	Intensity     float64 `json:"intensity" db:"intensity"`           // 0.0 à 1.0
+	Temperature   float64 `json:"temperature" db:"temperature"`       // en Celsius
+	WindSpeed     float64 `json:"wind_speed" db:"wind_speed"`         // km/h
 	WindDirection float64 `json:"wind_direction" db:"wind_direction"` // degrés
-	Visibility  float64   `json:"visibility" db:"visibility"` // distance en mètres
-	
+	Visibility    float64 `json:"visibility" db:"visibility"`         // distance en mètres
+
 	// Timing
-	StartTime   time.Time `json:"start_time" db:"start_time"`
-	EndTime     time.Time `json:"end_time" db:"end_time"`
-	
+	StartTime time.Time `json:"start_time" db:"start_time"`
+	EndTime   time.Time `json:"end_time" db:"end_time"`
+
 	// État
-	IsActive    bool      `json:"is_active" db:"is_active"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	IsActive  bool      `json:"is_active" db:"is_active"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Point3D représente un point dans l'espace 3D
@@ -196,61 +196,61 @@ type Point3D struct {
 
 // ZoneTransition transition entre zones
 type ZoneTransition struct {
-	ID           uuid.UUID `json:"id" db:"id"`
-	FromZoneID   string    `json:"from_zone_id" db:"from_zone_id"`
-	ToZoneID     string    `json:"to_zone_id" db:"to_zone_id"`
-	
+	ID         uuid.UUID `json:"id" db:"id"`
+	FromZoneID string    `json:"from_zone_id" db:"from_zone_id"`
+	ToZoneID   string    `json:"to_zone_id" db:"to_zone_id"`
+
 	// Point de départ dans la zone source
-	TriggerX     float64   `json:"trigger_x" db:"trigger_x"`
-	TriggerY     float64   `json:"trigger_y" db:"trigger_y"`
-	TriggerZ     float64   `json:"trigger_z" db:"trigger_z"`
-	TriggerRadius float64  `json:"trigger_radius" db:"trigger_radius"`
-	
+	TriggerX      float64 `json:"trigger_x" db:"trigger_x"`
+	TriggerY      float64 `json:"trigger_y" db:"trigger_y"`
+	TriggerZ      float64 `json:"trigger_z" db:"trigger_z"`
+	TriggerRadius float64 `json:"trigger_radius" db:"trigger_radius"`
+
 	// Point d'arrivée dans la zone cible
-	DestinationX float64   `json:"destination_x" db:"destination_x"`
-	DestinationY float64   `json:"destination_y" db:"destination_y"`
-	DestinationZ float64   `json:"destination_z" db:"destination_z"`
-	
+	DestinationX float64 `json:"destination_x" db:"destination_x"`
+	DestinationY float64 `json:"destination_y" db:"destination_y"`
+	DestinationZ float64 `json:"destination_z" db:"destination_z"`
+
 	// Conditions
-	RequiredLevel int      `json:"required_level" db:"required_level"`
-	RequiredQuest string   `json:"required_quest" db:"required_quest"`
-	
+	RequiredLevel int    `json:"required_level" db:"required_level"`
+	RequiredQuest string `json:"required_quest" db:"required_quest"`
+
 	// État
-	IsActive     bool      `json:"is_active" db:"is_active"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	IsActive  bool      `json:"is_active" db:"is_active"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Spawn point de spawn pour NPCs ou ressources
 type Spawn struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	ZoneID      string    `json:"zone_id" db:"zone_id"`
-	Type        string    `json:"type" db:"type"` // npc, resource, item
-	EntityID    string    `json:"entity_id" db:"entity_id"` // ID de l'entité à spawner
-	
+	ID       uuid.UUID `json:"id" db:"id"`
+	ZoneID   string    `json:"zone_id" db:"zone_id"`
+	Type     string    `json:"type" db:"type"`           // npc, resource, item
+	EntityID string    `json:"entity_id" db:"entity_id"` // ID de l'entité à spawner
+
 	// Position
-	X           float64   `json:"x" db:"x"`
-	Y           float64   `json:"y" db:"y"`
-	Z           float64   `json:"z" db:"z"`
-	Radius      float64   `json:"radius" db:"radius"` // zone de spawn aléatoire
-	
+	X      float64 `json:"x" db:"x"`
+	Y      float64 `json:"y" db:"y"`
+	Z      float64 `json:"z" db:"z"`
+	Radius float64 `json:"radius" db:"radius"` // zone de spawn aléatoire
+
 	// Timing
 	RespawnTime int       `json:"respawn_time" db:"respawn_time"` // secondes
 	LastSpawn   time.Time `json:"last_spawn" db:"last_spawn"`
 	NextSpawn   time.Time `json:"next_spawn" db:"next_spawn"`
-	
+
 	// Configuration
-	MaxSpawns   int       `json:"max_spawns" db:"max_spawns"` // nombre max simultané
-	SpawnChance float64   `json:"spawn_chance" db:"spawn_chance"` // probabilité 0-1
-	
+	MaxSpawns   int     `json:"max_spawns" db:"max_spawns"`     // nombre max simultané
+	SpawnChance float64 `json:"spawn_chance" db:"spawn_chance"` // probabilité 0-1
+
 	// Conditions
-	RequiredTime string   `json:"required_time" db:"required_time"` // day, night, any
+	RequiredTime    string `json:"required_time" db:"required_time"` // day, night, any
 	RequiredWeather string `json:"required_weather" db:"required_weather"`
-	
+
 	// État
-	IsActive    bool      `json:"is_active" db:"is_active"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	IsActive  bool      `json:"is_active" db:"is_active"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // DTOs pour les requêtes
@@ -306,19 +306,19 @@ type UpdatePositionRequest struct {
 
 // CreateNPCRequest requête de création de NPC
 type CreateNPCRequest struct {
-	ZoneID      string      `json:"zone_id" binding:"required"`
-	Name        string      `json:"name" binding:"required,min=2,max=50"`
-	Type        string      `json:"type" binding:"required,oneof=merchant guard quest_giver monster"`
-	Subtype     string      `json:"subtype" binding:"max=50"`
-	PositionX   float64     `json:"position_x" binding:"required"`
-	PositionY   float64     `json:"position_y" binding:"required"`
-	PositionZ   float64     `json:"position_z" binding:"required"`
-	Model       string      `json:"model" binding:"required"`
-	Texture     string      `json:"texture"`
-	Scale       float64     `json:"scale" binding:"min=0.1,max=10"`
-	Behavior    NPCBehavior `json:"behavior"`
-	Level       int         `json:"level" binding:"min=1,max=100"`
-	MaxHealth   int         `json:"max_health" binding:"min=1"`
+	ZoneID    string      `json:"zone_id" binding:"required"`
+	Name      string      `json:"name" binding:"required,min=2,max=50"`
+	Type      string      `json:"type" binding:"required,oneof=merchant guard quest_giver monster"`
+	Subtype   string      `json:"subtype" binding:"max=50"`
+	PositionX float64     `json:"position_x" binding:"required"`
+	PositionY float64     `json:"position_y" binding:"required"`
+	PositionZ float64     `json:"position_z" binding:"required"`
+	Model     string      `json:"model" binding:"required"`
+	Texture   string      `json:"texture"`
+	Scale     float64     `json:"scale" binding:"min=0.1,max=10"`
+	Behavior  NPCBehavior `json:"behavior"`
+	Level     int         `json:"level" binding:"min=1,max=100"`
+	MaxHealth int         `json:"max_health" binding:"min=1"`
 }
 
 // CreateEventRequest requête de création d'événement
@@ -382,7 +382,7 @@ const (
 	WeatherTypeFog   = "fog"
 )
 
-// Statuts
+// status
 const (
 	StatusActive      = "active"
 	StatusInactive    = "inactive"
@@ -390,7 +390,7 @@ const (
 	StatusDisabled    = "disabled"
 	StatusScheduled   = "scheduled"
 	StatusCompleted   = "completed"
-	StatusCancelled   = "cancelled"
+	StatusCancelled   = "canceled"
 )
 
 // Fonctions utilitaires
@@ -399,13 +399,13 @@ const (
 func GetDefaultZoneSettings() ZoneSettings {
 	return ZoneSettings{
 		Weather:              WeatherTypeClear,
-		TimeOfDay:           "day",
-		BackgroundMusic:     "ambient_forest",
-		AllowedClasses:      []string{"warrior", "mage", "archer", "rogue"},
-		RestrictedItems:     []string{},
+		TimeOfDay:            "day",
+		BackgroundMusic:      "ambient_forest",
+		AllowedClasses:       []string{"warrior", "mage", "archer", "rogue"},
+		RestrictedItems:      []string{},
 		ExperienceMultiplier: 1.0,
 		LootMultiplier:       1.0,
-		DeathPenalty:        "durability",
+		DeathPenalty:         "durability",
 	}
 }
 
@@ -434,8 +434,8 @@ func (p1 Point3D) Distance(p2 Point3D) float64 {
 // IsInZone vérifie si un point est dans les limites d'une zone
 func (zone *Zone) IsInZone(x, y, z float64) bool {
 	return x >= zone.MinX && x <= zone.MaxX &&
-		   y >= zone.MinY && y <= zone.MaxY &&
-		   z >= zone.MinZ && z <= zone.MaxZ
+		y >= zone.MinY && y <= zone.MaxY &&
+		z >= zone.MinZ && z <= zone.MaxZ
 }
 
 // GetSpawnPoint retourne le point de spawn de la zone
@@ -446,3 +446,4 @@ func (zone *Zone) GetSpawnPoint() Point3D {
 		Z: zone.SpawnZ,
 	}
 }
+

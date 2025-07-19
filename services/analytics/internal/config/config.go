@@ -2,7 +2,24 @@ package config
 
 import (
 	"os"
-	"strconv"
+)
+
+const (
+	// Health status constants
+	HealthStatusHealthy   = "healthy"
+	HealthStatusUnhealthy = "unhealthy"
+
+	// Damage type constants
+	DamageTypeMagical = "magical"
+
+	// HTTP method constants
+	HTTPMethodPOST = "POST"
+
+	// Action type constants
+	ActionTypeUnknown = "unknown"
+
+	// JSON constants
+	EmptyJSON = "{}"
 )
 
 type Config struct {
@@ -52,15 +69,6 @@ func Load() *Config {
 func getEnvString(key string, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
-	}
-	return defaultValue
-}
-
-func getEnvBool(key string, defaultValue bool) bool {
-	if value := os.Getenv(key); value != "" {
-		if boolValue, err := strconv.ParseBool(value); err == nil {
-			return boolValue
-		}
 	}
 	return defaultValue
 }

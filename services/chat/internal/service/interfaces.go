@@ -44,9 +44,9 @@ type ChatService interface {
 	GetModerationLogs(ctx context.Context, channelID uuid.UUID, limit, offset int, requesterID uuid.UUID) ([]*models.ModerationLog, error)
 }
 
-// WebSocketService interface pour la gestion des connexions WebSocket
+// WebSocketService interface pour la gestion des connections WebSocket
 type WebSocketService interface {
-	// Gestion des connexions
+	// Gestion des connections
 	RegisterConnection(userID uuid.UUID, conn WebSocketConnection) error
 	UnregisterConnection(userID uuid.UUID) error
 	GetConnection(userID uuid.UUID) (WebSocketConnection, bool)
@@ -67,7 +67,7 @@ type WebSocketService interface {
 	HandlePing(userID uuid.UUID) error
 }
 
-// WebSocketConnection interface pour une connexion WebSocket
+// WebSocketConnection interface pour une connection WebSocket
 type WebSocketConnection interface {
 	Send(message []byte) error
 	Close() error
@@ -94,3 +94,4 @@ type NotificationService interface {
 	// Notifications système
 	NotifySystemMessage(ctx context.Context, channelID uuid.UUID, message string) error
 }
+

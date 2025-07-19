@@ -136,7 +136,7 @@ func (s *EffectService) ApplyEffect(req *models.ApplyEffectRequest) (*models.Eff
 				Message:        fmt.Sprintf("Effect %s stacked (x%d)", template.Name, stackedEffect.CurrentStacks),
 			}, nil
 		} else {
-			// Rafraîchir l'effet existant
+			// Rafraîchir l'effet existing
 			existingEffect.RemainingTurns = template.BaseDuration
 			if application.Duration > 0 {
 				existingEffect.RemainingTurns = application.Duration
@@ -357,7 +357,7 @@ func (s *EffectService) CleanupExpiredEffects(combatID uuid.UUID) error {
 	return nil
 }
 
-// StackEffect empile un effet existant avec un nouveau
+// StackEffect empile un effet existing avec un nouveau
 func (s *EffectService) StackEffect(existingEffect *models.CombatEffect, newEffect *models.CombatEffect) (*models.CombatEffect, error) {
 	if !existingEffect.CanStack() {
 		return nil, fmt.Errorf("effect cannot be stacked")
@@ -651,7 +651,7 @@ func (s *EffectService) GetEffectDuration(effectID uuid.UUID) (time.Duration, er
 		return time.Until(*effect.ExpiresAt), nil
 	}
 
-	// Si pas d'expiration absolue, estimer basé sur les tours restants
+	// Si pas d'expiration absolute, estimer basé sur les tours restants
 	// Assume 30 secondes par tour (devrait être configuré)
 	estimatedDuration := time.Duration(effect.RemainingTurns) * 30 * time.Second
 	return estimatedDuration, nil
@@ -734,3 +734,4 @@ func (s *EffectService) StartEffectCleanupRoutine() {
 		}
 	}()
 }
+

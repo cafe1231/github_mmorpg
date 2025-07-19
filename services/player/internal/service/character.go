@@ -139,7 +139,7 @@ func (s *CharacterService) UpdateCharacter(characterID uuid.UUID, userID uuid.UU
 		return nil, err
 	}
 
-	// Récupérer le personnage existant
+	// Récupérer le personnage existing
 	character, err := s.characterRepo.GetByID(characterID)
 	if err != nil {
 		return nil, fmt.Errorf("character not found: %w", err)
@@ -278,8 +278,8 @@ func (s *CharacterService) UpdateCharacterStats(characterID uuid.UUID, userID uu
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"character_id":   characterID,
-		"points_spent":   totalPointsToSpend,
+		"character_id":     characterID,
+		"points_spent":     totalPointsToSpend,
 		"remaining_points": stats.StatPoints,
 	}).Info("Character stats updated successfully")
 
@@ -300,12 +300,12 @@ func (s *CharacterService) AddExperience(characterID uuid.UUID, experience int64
 	for character.CanLevelUp() && character.Level < s.config.Game.MaxLevel {
 		character.LevelUp()
 		levelsGained++
-		
+
 		// Ajouter des points de stats et de compétences
 		stats, err := s.characterRepo.GetStats(characterID)
 		if err == nil {
 			stats.AddStatPoints(5) // 5 points par niveau
-			stats.SkillPoints += 2  // 2 points de compétence par niveau
+			stats.SkillPoints += 2 // 2 points de compétence par niveau
 			s.characterRepo.UpdateStats(stats)
 		}
 	}
@@ -317,10 +317,10 @@ func (s *CharacterService) AddExperience(characterID uuid.UUID, experience int64
 
 	if levelsGained > 0 {
 		logrus.WithFields(logrus.Fields{
-			"character_id":   characterID,
-			"levels_gained":  levelsGained,
-			"new_level":      character.Level,
-			"experience":     character.Experience,
+			"character_id":  characterID,
+			"levels_gained": levelsGained,
+			"new_level":     character.Level,
+			"experience":    character.Experience,
 		}).Info("Character leveled up")
 	}
 
@@ -453,7 +453,8 @@ func isValidCharacterName(name string) bool {
 			return false
 		}
 	}
-	
+
 	// Pas d'espaces consécutifs ou de caractères spéciaux consécutifs
 	return !strings.Contains(name, "--") && !strings.Contains(name, "''")
 }
+

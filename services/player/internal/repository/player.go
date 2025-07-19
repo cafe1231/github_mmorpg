@@ -103,7 +103,9 @@ func (r *PlayerRepository) GetByID(id uuid.UUID) (*models.Player, error) {
 	}
 
 	// Désérialiser les préférences
-	if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+	if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		player.Preferences = models.GetDefaultPreferences()
 	}
 
@@ -138,7 +140,9 @@ func (r *PlayerRepository) GetByUserID(userID uuid.UUID) (*models.Player, error)
 	}
 
 	// Désérialiser les préférences
-	if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+	if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		player.Preferences = models.GetDefaultPreferences()
 	}
 
@@ -173,7 +177,9 @@ func (r *PlayerRepository) GetByDisplayName(displayName string) (*models.Player,
 	}
 
 	// Désérialiser les préférences
-	if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+	if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		player.Preferences = models.GetDefaultPreferences()
 	}
 
@@ -274,7 +280,9 @@ func (r *PlayerRepository) List(limit, offset int) ([]*models.Player, error) {
 		}
 
 		// Désérialiser les préférences
-		if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+		if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			player.Preferences = models.GetDefaultPreferences()
 		}
 
@@ -347,3 +355,4 @@ func (r *PlayerRepository) GetCharacterCount(playerID uuid.UUID) (int, error) {
 
 	return count, nil
 }
+

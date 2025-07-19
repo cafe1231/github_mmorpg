@@ -9,16 +9,16 @@ import (
 
 // Config structure principale de configuration
 type Config struct {
-	Server        ServerConfig        `mapstructure:"server"`
-	Database      DatabaseConfig      `mapstructure:"database"`
-	JWT           JWTConfig          `mapstructure:"jwt"`
-	Redis         RedisConfig        `mapstructure:"redis"`
-	Services      ServicesConfig     `mapstructure:"services"`
-	Combat        CombatConfig       `mapstructure:"combat"`
-	AntiCheat     AntiCheatConfig    `mapstructure:"anticheat"`
-	RateLimit     RateLimitConfig    `mapstructure:"rate_limit"`
-	Monitoring    MonitoringConfig   `mapstructure:"monitoring"`
-	Logging       LoggingConfig      `mapstructure:"logging"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	Services   ServicesConfig   `mapstructure:"services"`
+	Combat     CombatConfig     `mapstructure:"combat"`
+	AntiCheat  AntiCheatConfig  `mapstructure:"anticheat"`
+	RateLimit  RateLimitConfig  `mapstructure:"rate_limit"`
+	Monitoring MonitoringConfig `mapstructure:"monitoring"`
+	Logging    LoggingConfig    `mapstructure:"logging"`
 }
 
 // ServerConfig configuration du serveur HTTP
@@ -76,13 +76,13 @@ type ServiceEndpoint struct {
 
 // CombatConfig configuration spécifique au combat
 type CombatConfig struct {
-	MaxDuration       time.Duration `mapstructure:"max_duration"`
-	TurnTimeout       time.Duration `mapstructure:"turn_timeout"`
-	MaxConcurrent     int           `mapstructure:"max_concurrent"`
-	CleanupInterval   time.Duration `mapstructure:"cleanup_interval"`
-	EnablePvP         bool          `mapstructure:"enable_pvp"`
-	EnablePvE         bool          `mapstructure:"enable_pve"`
-	MaxPartySize      int           `mapstructure:"max_party_size"`
+	MaxDuration     time.Duration `mapstructure:"max_duration"`
+	TurnTimeout     time.Duration `mapstructure:"turn_timeout"`
+	MaxConcurrent   int           `mapstructure:"max_concurrent"`
+	CleanupInterval time.Duration `mapstructure:"cleanup_interval"`
+	EnablePvP       bool          `mapstructure:"enable_pvp"`
+	EnablePvE       bool          `mapstructure:"enable_pve"`
+	MaxPartySize    int           `mapstructure:"max_party_size"`
 }
 
 // AntiCheatConfig configuration anti-triche
@@ -311,7 +311,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// GetDSN retourne la chaîne de connexion PostgreSQL
+// GetDSN retourne la chaîne de connection PostgreSQL
 func (c *DatabaseConfig) GetDSN() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -323,3 +323,4 @@ func (c *DatabaseConfig) GetDSN() string {
 func (c *RedisConfig) GetRedisAddr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
+

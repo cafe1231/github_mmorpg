@@ -80,7 +80,7 @@ type MonitoringConfig struct {
 	HealthPath  string `mapstructure:"health_path"`
 }
 
-// GetDSN retourne la chaîne de connexion PostgreSQL
+// GetDSN retourne la chaîne de connection PostgreSQL
 func (d DatabaseConfig) GetDSN() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -168,3 +168,4 @@ func Load() (*Config, error) {
 
 	return &config, nil
 }
+

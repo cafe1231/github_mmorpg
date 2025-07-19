@@ -18,31 +18,31 @@ type ActionServiceInterface interface {
 	// Exécution d'actions
 	ExecuteAction(combat *models.CombatInstance, actor *models.CombatParticipant, req *models.ActionRequest) (*models.ActionResult, error)
 	ValidateAction(combat *models.CombatInstance, actor *models.CombatParticipant, req *models.ValidateActionRequest) (*models.ValidationResponse, error)
-	
+
 	// Actions disponibles
 	GetAvailableActions(combat *models.CombatInstance, actor *models.CombatParticipant) ([]*models.ActionTemplate, error)
 	GetActionTemplates() []*models.ActionTemplate
-	
+
 	// Traitement des actions
 	ProcessAction(action *models.CombatAction, combat *models.CombatInstance) (*models.ActionResult, error)
 	CalculateActionResult(action *models.CombatAction, actor, target *models.CombatParticipant, skill *models.SkillInfo) error
-	
+
 	// Cooldowns et restrictions
 	IsActionOnCooldown(actorID uuid.UUID, actionType models.ActionType, skillID string) (bool, time.Duration, error)
 	SetActionCooldown(actorID uuid.UUID, actionType models.ActionType, skillID string, duration time.Duration) error
-	
+
 	// Statistiques
 	GetActionStatistics(actorID uuid.UUID, timeWindow time.Duration) (*models.ActionStatistics, error)
 }
 
 // ActionService implémente l'interface ActionServiceInterface
 type ActionService struct {
-	actionRepo   repository.ActionRepositoryInterface
-	combatRepo   repository.CombatRepositoryInterface
-	effectRepo   repository.EffectRepositoryInterface
-	damageCalc   DamageCalculatorInterface
-	config       *config.Config
-	cooldowns    map[string]*models.ActionCooldown // Cache des cooldowns
+	actionRepo repository.ActionRepositoryInterface
+	combatRepo repository.CombatRepositoryInterface
+	effectRepo repository.EffectRepositoryInterface
+	damageCalc DamageCalculatorInterface
+	config     *config.Config
+	cooldowns  map[string]*models.ActionCooldown // Cache des cooldowns
 }
 
 // NewActionService crée un nouveau service d'actions
@@ -300,7 +300,7 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 	return nil
 }
 
-// executeItem utilise un objet
+// executeItem utilize un objet
 func (s *ActionService) executeItem(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
 	if action.ItemID == nil {
 		return fmt.Errorf("item ID required")
@@ -315,7 +315,7 @@ func (s *ActionService) executeItem(action *models.CombatAction, combat *models.
 
 		// Log d'utilisation
 		result.Logs = append(result.Logs, &models.CombatLog{
-			Message: fmt.Sprintf("%s utilise une potion de soin (+%d PV)", actor.Character.Name, healing),
+			Message: fmt.Sprintf("%s utilize une potion de soin (+%d PV)", actor.Character.Name, healing),
 		})
 	} else {
 		return fmt.Errorf("unknown item: %s", *action.ItemID)
@@ -329,17 +329,17 @@ func (s *ActionService) executeDefend(action *models.CombatAction, combat *model
 	// Appliquer un effet de défense temporaire
 	defenseEffect := &models.EffectApplication{
 		EffectTemplate: &models.EffectTemplate{
-			ID:           "defense_bonus",
-			Name:         "Défense renforcée",
-			Description:  "Réduit les dégâts reçus de 50%",
-			EffectType:   models.EffectTypeBuff,
-			StatAffected: "damage_reduction",
+			ID:            "defense_bonus",
+			Name:          "Défense renforcée",
+			Description:   "Réduit les dégâts reçus de 50%",
+			EffectType:    models.EffectTypeBuff,
+			StatAffected:  "damage_reduction",
 			ModifierValue: 50,
-			ModifierType: models.ModifierTypePercentage,
-			BaseDuration: 1, // Un tour
-			MaxStacks:    1,
+			ModifierType:  models.ModifierTypePercentage,
+			BaseDuration:  1, // Un tour
+			MaxStacks:     1,
 			IsDispellable: false,
-			IsBeneficial: true,
+			IsBeneficial:  true,
 		},
 		TargetID: actor.CharacterID,
 		Duration: 1,
@@ -397,7 +397,7 @@ func (s *ActionService) executeWait(action *models.CombatAction, combat *models.
 		manaRecovery = 1
 	}
 
-	action.HealingDone = 0 // Pas de soins
+	action.HealingDone = 0          // Pas de soins
 	action.ManaUsed = -manaRecovery // Récupération de mana
 
 	change := &models.ParticipantChange{
@@ -481,17 +481,17 @@ func (s *ActionService) applySkillEffect(caster, target *models.CombatParticipan
 	// Créer un effet de combat basé sur l'effet de compétence
 	effectApp := &models.EffectApplication{
 		EffectTemplate: &models.EffectTemplate{
-			ID:           fmt.Sprintf("skill_effect_%s", effect.Type),
-			Name:         effect.Type,
-			Description:  fmt.Sprintf("Effet de compétence: %s", effect.Type),
-			EffectType:   s.mapSkillEffectType(effect.Type),
-			StatAffected: effect.StatAffected,
+			ID:            fmt.Sprintf("skill_effect_%s", effect.Type),
+			Name:          effect.Type,
+			Description:   fmt.Sprintf("Effet de compétence: %s", effect.Type),
+			EffectType:    s.mapSkillEffectType(effect.Type),
+			StatAffected:  effect.StatAffected,
 			ModifierValue: effect.Value,
-			ModifierType: models.ModifierTypeFlat,
-			BaseDuration: effect.Duration,
-			MaxStacks:    1,
+			ModifierType:  models.ModifierTypeFlat,
+			BaseDuration:  effect.Duration,
+			MaxStacks:     1,
 			IsDispellable: true,
-			IsBeneficial: s.isEffectBeneficial(effect.Type),
+			IsBeneficial:  s.isEffectBeneficial(effect.Type),
 		},
 		TargetID: target.CharacterID,
 		CasterID: &caster.CharacterID,
@@ -567,7 +567,7 @@ func (s *ActionService) applyParticipantChanges(participantID uuid.UUID, change 
 	// Récupérer le participant actuel
 	// Note: Nous aurions besoin du combat ID ici, mais pour simplifier on va faire une recherche
 	// Dans une vraie implémentation, il faudrait passer le combat ID ou restructurer
-	
+
 	// TODO: Implémenter la mise à jour réelle du participant
 	// participant, err := s.combatRepo.GetParticipant(combatID, participantID)
 	// if err != nil {
@@ -597,8 +597,8 @@ func (s *ActionService) applyParticipantChanges(participantID uuid.UUID, change 
 
 	logrus.WithFields(logrus.Fields{
 		"participant_id": participantID,
-		"health_change": change.HealthChange,
-		"mana_change":   change.ManaChange,
+		"health_change":  change.HealthChange,
+		"mana_change":    change.ManaChange,
 	}).Debug("Applied participant changes")
 
 	return nil
@@ -607,7 +607,7 @@ func (s *ActionService) applyParticipantChanges(participantID uuid.UUID, change 
 // ValidateAction valide une action sans l'exécuter
 func (s *ActionService) ValidateAction(combat *models.CombatInstance, actor *models.CombatParticipant, req *models.ValidateActionRequest) (*models.ValidationResponse, error) {
 	validation := req.Action.Validate()
-	
+
 	response := &models.ValidationResponse{
 		Valid:    validation.IsValid,
 		Errors:   validation.Errors,
@@ -778,7 +778,7 @@ func (s *ActionService) CalculateActionResult(action *models.CombatAction, actor
 // IsActionOnCooldown vérifie si une action est en cooldown
 func (s *ActionService) IsActionOnCooldown(actorID uuid.UUID, actionType models.ActionType, skillID string) (bool, time.Duration, error) {
 	key := fmt.Sprintf("%s_%s_%s", actorID.String(), actionType, skillID)
-	
+
 	cooldown, exists := s.cooldowns[key]
 	if !exists {
 		return false, 0, nil
@@ -797,16 +797,16 @@ func (s *ActionService) IsActionOnCooldown(actorID uuid.UUID, actionType models.
 // SetActionCooldown définit un cooldown pour une action
 func (s *ActionService) SetActionCooldown(actorID uuid.UUID, actionType models.ActionType, skillID string, duration time.Duration) error {
 	key := fmt.Sprintf("%s_%s_%s", actorID.String(), actionType, skillID)
-	
+
 	cooldownKey := fmt.Sprintf("%s_%s_%s", actorID.String(), actionType, skillID)
 	cooldown := &models.ActionCooldown{
-	ID:         cooldownKey,
-	ActorID:    actorID,
-	ActionType: actionType,
-	SkillID:    skillID,
-	ExpiresAt:  time.Now().Add(duration),
-	Duration:   duration,
-}
+		ID:         cooldownKey,
+		ActorID:    actorID,
+		ActionType: actionType,
+		SkillID:    skillID,
+		ExpiresAt:  time.Now().Add(duration),
+		Duration:   duration,
+	}
 
 	s.cooldowns[key] = cooldown
 	return nil
@@ -822,18 +822,18 @@ func (s *ActionService) GetActionStatistics(actorID uuid.UUID, timeWindow time.D
 
 	// Convertir le type interne vers le type de modèle
 	stats := &models.ActionStatistics{
-		TotalActions:       actionStats.TotalActions,
-		CriticalHits:       actionStats.CriticalHits,
-		Misses:             actionStats.Misses,
-		Blocks:             actionStats.Blocks,
-		AvgDamage:          actionStats.AvgDamage,
-		MaxDamage:          actionStats.MaxDamage,
-		AvgHealing:         actionStats.AvgHealing,
-		AvgProcessingTime:  actionStats.AvgProcessingTime,
-		CriticalRate:       actionStats.CriticalRate,
-		MissRate:           actionStats.MissRate,
-		BlockRate:          actionStats.BlockRate,
-		AccuracyRate:       actionStats.AccuracyRate,
+		TotalActions:      actionStats.TotalActions,
+		CriticalHits:      actionStats.CriticalHits,
+		Misses:            actionStats.Misses,
+		Blocks:            actionStats.Blocks,
+		AvgDamage:         actionStats.AvgDamage,
+		MaxDamage:         actionStats.MaxDamage,
+		AvgHealing:        actionStats.AvgHealing,
+		AvgProcessingTime: actionStats.AvgProcessingTime,
+		CriticalRate:      actionStats.CriticalRate,
+		MissRate:          actionStats.MissRate,
+		BlockRate:         actionStats.BlockRate,
+		AccuracyRate:      actionStats.AccuracyRate,
 	}
 
 	return stats, nil
@@ -858,3 +858,4 @@ func (s *ActionService) StartCooldownCleanupRoutine() {
 		}
 	}()
 }
+

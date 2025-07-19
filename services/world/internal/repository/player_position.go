@@ -22,7 +22,7 @@ type PlayerPositionRepositoryInterface interface {
 	SetOnline(characterID uuid.UUID) error
 	CleanupOfflinePlayers(timeout time.Duration) error
 	UpdateZone(characterID uuid.UUID, newZoneID string, x, y, z float64) error
-	
+
 	// Statistiques
 	GetOnlinePlayerCount() (int, error)
 	GetZonePlayerCounts() (map[string]int, error)
@@ -277,7 +277,7 @@ func (r *PlayerPositionRepository) CleanupOfflinePlayers(timeout time.Duration) 
 		  AND last_update < $1`
 
 	cutoffTime := time.Now().Add(-timeout)
-	
+
 	result, err := r.db.Exec(query, cutoffTime)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup offline players: %w", err)

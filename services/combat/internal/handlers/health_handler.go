@@ -108,7 +108,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	c.JSON(statusCode, response)
 }
 
-// ReadinessCheck vérifie si le service est prêt à recevoir du trafic
+// ReadinessCheck vérifie si le service est prêt à recevoir du traffic
 // @Summary Vérification de préparation
 // @Description Vérifie si le service est prêt à traiter les requêtes
 // @Tags health
@@ -199,7 +199,7 @@ func (h *HealthHandler) checkDatabase() HealthCheck {
 	// Obtenir les statistiques de la DB
 	stats := h.db.GetStats()
 
-	// Vérifier si on a trop de connexions ouvertes
+	// Vérifier si on a trop de connections ouvertes
 	status := "healthy"
 	if stats["open_connections"].(int) > 20 {
 		status = "degraded"
@@ -275,3 +275,4 @@ func (h *HealthHandler) getMemoryUsage() map[string]interface{} {
 		"goroutines":  100,
 	}
 }
+

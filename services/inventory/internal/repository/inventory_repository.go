@@ -122,7 +122,11 @@ func (r *inventoryRepository) Delete(ctx context.Context, characterID uuid.UUID)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Delete inventory items first
 	_, err = tx.ExecContext(ctx, "DELETE FROM inventory_items WHERE character_id = $1", characterID)
@@ -247,7 +251,11 @@ func (r *inventoryRepository) MoveItem(ctx context.Context, characterID uuid.UUI
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Update item in from slot
 	_, err = tx.ExecContext(ctx,
@@ -271,7 +279,11 @@ func (r *inventoryRepository) SwapItems(ctx context.Context, characterID uuid.UU
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Use a temporary slot to avoid conflicts
 	tempSlot := -1
@@ -314,7 +326,11 @@ func (r *inventoryRepository) SplitStack(ctx context.Context, characterID uuid.U
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Get item from source slot
 	var itemID uuid.UUID
@@ -445,7 +461,11 @@ func (r *inventoryRepository) AddItems(ctx context.Context, characterID uuid.UUI
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	query := `
 		INSERT INTO inventory_items (id, character_id, item_id, quantity, slot, created_at, updated_at)
@@ -477,7 +497,11 @@ func (r *inventoryRepository) RemoveItems(ctx context.Context, characterID uuid.
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	for _, item := range items {
 		err := r.RemoveItem(ctx, characterID, item.ItemID, item.Quantity)
@@ -493,3 +517,4 @@ func (r *inventoryRepository) RemoveItems(ctx context.Context, characterID uuid.
 
 	return nil
 }
+

@@ -8,34 +8,34 @@ import (
 
 // Player représente un joueur (lié au service Auth)
 type Player struct {
-	ID           uuid.UUID `json:"id" db:"id"`
-	UserID       uuid.UUID `json:"user_id" db:"user_id"` // ID du service Auth
-	DisplayName  string    `json:"display_name" db:"display_name"`
-	Avatar       string    `json:"avatar" db:"avatar"`
-	Title        string    `json:"title" db:"title"`
-	GuildID      *uuid.UUID `json:"guild_id" db:"guild_id"`
-	
+	ID          uuid.UUID  `json:"id" db:"id"`
+	UserID      uuid.UUID  `json:"user_id" db:"user_id"` // ID du service Auth
+	DisplayName string     `json:"display_name" db:"display_name"`
+	Avatar      string     `json:"avatar" db:"avatar"`
+	Title       string     `json:"title" db:"title"`
+	GuildID     *uuid.UUID `json:"guild_id" db:"guild_id"`
+
 	// Statistiques globales du joueur
-	TotalPlayTime    int       `json:"total_play_time" db:"total_play_time"` // en minutes
-	LastSeen         time.Time `json:"last_seen" db:"last_seen"`
-	CreatedAt        time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
-	
+	TotalPlayTime int       `json:"total_play_time" db:"total_play_time"` // en minutes
+	LastSeen      time.Time `json:"last_seen" db:"last_seen"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+
 	// Préférences
-	Preferences      PlayerPreferences `json:"preferences" db:"preferences"`
-	
+	Preferences PlayerPreferences `json:"preferences" db:"preferences"`
+
 	// Relations (chargées séparément)
-	Characters       []*Character `json:"characters,omitempty" db:"-"`
-	CharacterCount   int         `json:"character_count" db:"-"`
+	Characters     []*Character `json:"characters,omitempty" db:"-"`
+	CharacterCount int          `json:"character_count" db:"-"`
 }
 
 // PlayerPreferences représente les préférences du joueur
 type PlayerPreferences struct {
-	Language        string            `json:"language"`
-	Theme           string            `json:"theme"`
-	SoundEnabled    bool              `json:"sound_enabled"`
-	MusicEnabled    bool              `json:"music_enabled"`
-	ChatSettings    ChatSettings      `json:"chat_settings"`
+	Language             string               `json:"language"`
+	Theme                string               `json:"theme"`
+	SoundEnabled         bool                 `json:"sound_enabled"`
+	MusicEnabled         bool                 `json:"music_enabled"`
+	ChatSettings         ChatSettings         `json:"chat_settings"`
 	NotificationSettings NotificationSettings `json:"notification_settings"`
 }
 
@@ -49,10 +49,10 @@ type ChatSettings struct {
 
 // NotificationSettings paramètres de notifications
 type NotificationSettings struct {
-	FriendRequests    bool `json:"friend_requests"`
-	GuildInvitations  bool `json:"guild_invitations"`
-	TradeRequests     bool `json:"trade_requests"`
-	SystemMessages    bool `json:"system_messages"`
+	FriendRequests   bool `json:"friend_requests"`
+	GuildInvitations bool `json:"guild_invitations"`
+	TradeRequests    bool `json:"trade_requests"`
+	SystemMessages   bool `json:"system_messages"`
 }
 
 // CreatePlayerRequest représente une demande de création de profil joueur
@@ -76,14 +76,14 @@ type PlayerStats struct {
 	HighestLevel     int       `json:"highest_level" db:"highest_level"`
 	TotalExperience  int64     `json:"total_experience" db:"total_experience"`
 	AchievementCount int       `json:"achievement_count" db:"achievement_count"`
-	
+
 	// Statistiques de jeu
-	TotalKills       int       `json:"total_kills" db:"total_kills"`
-	TotalDeaths      int       `json:"total_deaths" db:"total_deaths"`
-	TotalQuests      int       `json:"total_quests" db:"total_quests"`
-	TotalGold        int64     `json:"total_gold" db:"total_gold"`
-	
-	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
+	TotalKills  int   `json:"total_kills" db:"total_kills"`
+	TotalDeaths int   `json:"total_deaths" db:"total_deaths"`
+	TotalQuests int   `json:"total_quests" db:"total_quests"`
+	TotalGold   int64 `json:"total_gold" db:"total_gold"`
+
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // PlayerResponse représente la réponse complète d'un profil joueur

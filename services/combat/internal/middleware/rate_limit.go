@@ -22,9 +22,9 @@ type RateLimiter interface {
 
 // RateLimitInfo informations sur l'état du rate limiting
 type RateLimitInfo struct {
-	Limit     int           `json:"limit"`
-	Remaining int           `json:"remaining"`
-	ResetTime time.Time     `json:"reset_time"`
+	Limit      int           `json:"limit"`
+	Remaining  int           `json:"remaining"`
+	ResetTime  time.Time     `json:"reset_time"`
 	RetryAfter time.Duration `json:"retry_after"`
 }
 
@@ -66,7 +66,7 @@ func (rl *MemoryRateLimiter) AllowN(key string, n int) bool {
 // GetInfo retourne les informations sur le rate limiting
 func (rl *MemoryRateLimiter) GetInfo(key string) RateLimitInfo {
 	limiter := rl.getLimiter(key)
-	
+
 	// Calculer les tokens restants (approximation)
 	tokens := int(limiter.Tokens())
 	if tokens > rl.burst {
@@ -74,9 +74,9 @@ func (rl *MemoryRateLimiter) GetInfo(key string) RateLimitInfo {
 	}
 
 	return RateLimitInfo{
-		Limit:     rl.burst,
-		Remaining: tokens,
-		ResetTime: time.Now().Add(time.Duration(float64(rl.burst-tokens) / float64(rl.rate))),
+		Limit:      rl.burst,
+		Remaining:  tokens,
+		ResetTime:  time.Now().Add(time.Duration(float64(rl.burst-tokens) / float64(rl.rate))),
 		RetryAfter: time.Second,
 	}
 }
@@ -123,19 +123,19 @@ func RateLimit(config config.RateLimitConfig) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		key := getClientKey(c)
-		
+
 		if !limiter.Allow(key) {
 			info := limiter.GetInfo(key)
-			
+
 			logrus.WithFields(logrus.Fields{
-				"client_key":  key,
-				"client_ip":   c.ClientIP(),
-				"path":        c.Request.URL.Path,
-				"method":      c.Request.Method,
-				"user_agent":  c.Request.UserAgent(),
-				"limit":       info.Limit,
-				"remaining":   info.Remaining,
-				"request_id":  c.GetHeader("X-Request-ID"),
+				"client_key": key,
+				"client_ip":  c.ClientIP(),
+				"path":       c.Request.URL.Path,
+				"method":     c.Request.Method,
+				"user_agent": c.Request.UserAgent(),
+				"limit":      info.Limit,
+				"remaining":  info.Remaining,
+				"request_id": c.GetHeader("X-Request-ID"),
 			}).Warn("Rate limit exceeded")
 
 			c.Header("X-RateLimit-Limit", fmt.Sprintf("%d", info.Limit))
@@ -144,12 +144,12 @@ func RateLimit(config config.RateLimitConfig) gin.HandlerFunc {
 			c.Header("Retry-After", fmt.Sprintf("%.0f", info.RetryAfter.Seconds()))
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":        "Rate limit exceeded",
-				"limit":        info.Limit,
-				"remaining":    info.Remaining,
-				"reset_time":   info.ResetTime.Unix(),
-				"retry_after":  int(info.RetryAfter.Seconds()),
-				"request_id":   c.GetHeader("X-Request-ID"),
+				"error":       "Rate limit exceeded",
+				"limit":       info.Limit,
+				"remaining":   info.Remaining,
+				"reset_time":  info.ResetTime.Unix(),
+				"retry_after": int(info.RetryAfter.Seconds()),
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -177,10 +177,10 @@ func CombatRateLimit(actionsPerMinute int) gin.HandlerFunc {
 		}
 
 		key := fmt.Sprintf("combat:%s", characterID)
-		
+
 		if !limiter.Allow(key) {
 			info := limiter.GetInfo(key)
-			
+
 			logrus.WithFields(logrus.Fields{
 				"character_id": characterID,
 				"client_ip":    c.ClientIP(),
@@ -191,12 +191,12 @@ func CombatRateLimit(actionsPerMinute int) gin.HandlerFunc {
 			}).Warn("Combat action rate limit exceeded")
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":        "Too many combat actions",
-				"limit":        info.Limit,
-				"remaining":    info.Remaining,
-				"retry_after":  int(info.RetryAfter.Seconds()),
-				"message":      "Please wait before performing another action",
-				"request_id":   c.GetHeader("X-Request-ID"),
+				"error":       "Too many combat actions",
+				"limit":       info.Limit,
+				"remaining":   info.Remaining,
+				"retry_after": int(info.RetryAfter.Seconds()),
+				"message":     "Please wait before performing another action",
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -212,25 +212,25 @@ func AuthRateLimit(attemptsPerMinute int) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		key := fmt.Sprintf("auth:%s", c.ClientIP())
-		
+
 		if !limiter.Allow(key) {
 			info := limiter.GetInfo(key)
-			
+
 			logrus.WithFields(logrus.Fields{
-				"client_ip":   c.ClientIP(),
-				"user_agent":  c.Request.UserAgent(),
-				"path":        c.Request.URL.Path,
-				"limit":       info.Limit,
-				"remaining":   info.Remaining,
-				"request_id":  c.GetHeader("X-Request-ID"),
+				"client_ip":  c.ClientIP(),
+				"user_agent": c.Request.UserAgent(),
+				"path":       c.Request.URL.Path,
+				"limit":      info.Limit,
+				"remaining":  info.Remaining,
+				"request_id": c.GetHeader("X-Request-ID"),
 			}).Warn("Authentication rate limit exceeded")
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":        "Too many authentication attempts",
-				"limit":        info.Limit,
-				"retry_after":  int(info.RetryAfter.Seconds()),
-				"message":      "Please wait before trying again",
-				"request_id":   c.GetHeader("X-Request-ID"),
+				"error":       "Too many authentication attempts",
+				"limit":       info.Limit,
+				"retry_after": int(info.RetryAfter.Seconds()),
+				"message":     "Please wait before trying again",
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -251,10 +251,10 @@ func PvPRateLimit(actionsPerMinute int) gin.HandlerFunc {
 		}
 
 		key := fmt.Sprintf("pvp:%s", characterID)
-		
+
 		if !limiter.Allow(key) {
 			info := limiter.GetInfo(key)
-			
+
 			logrus.WithFields(logrus.Fields{
 				"character_id": characterID,
 				"client_ip":    c.ClientIP(),
@@ -265,12 +265,12 @@ func PvPRateLimit(actionsPerMinute int) gin.HandlerFunc {
 			}).Warn("PvP action rate limit exceeded")
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":        "Too many PvP actions",
-				"limit":        info.Limit,
-				"remaining":    info.Remaining,
-				"retry_after":  int(info.RetryAfter.Seconds()),
-				"message":      "Please wait before performing another PvP action",
-				"request_id":   c.GetHeader("X-Request-ID"),
+				"error":       "Too many PvP actions",
+				"limit":       info.Limit,
+				"remaining":   info.Remaining,
+				"retry_after": int(info.RetryAfter.Seconds()),
+				"message":     "Please wait before performing another PvP action",
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -282,10 +282,10 @@ func PvPRateLimit(actionsPerMinute int) gin.HandlerFunc {
 
 // AdaptiveRateLimit rate limiting adaptatif basé sur la charge
 type AdaptiveRateLimit struct {
-	baseLimiter   *MemoryRateLimiter
-	currentLoad   float64
-	maxLoad       float64
-	mu            sync.RWMutex
+	baseLimiter *MemoryRateLimiter
+	currentLoad float64
+	maxLoad     float64
+	mu          sync.RWMutex
 }
 
 // NewAdaptiveRateLimit crée un rate limiter adaptatif
@@ -317,25 +317,25 @@ func (arl *AdaptiveRateLimit) Middleware() gin.HandlerFunc {
 		}
 
 		key := getClientKey(c)
-		
+
 		// Appliquer la pénalité en demandant plus de tokens
 		tokensNeeded := int(penalty)
 		if !arl.baseLimiter.AllowN(key, tokensNeeded) {
 			info := arl.baseLimiter.GetInfo(key)
-			
+
 			logrus.WithFields(logrus.Fields{
-				"client_key":     key,
-				"system_load":    load,
-				"penalty":        penalty,
-				"tokens_needed":  tokensNeeded,
-				"request_id":     c.GetHeader("X-Request-ID"),
+				"client_key":    key,
+				"system_load":   load,
+				"penalty":       penalty,
+				"tokens_needed": tokensNeeded,
+				"request_id":    c.GetHeader("X-Request-ID"),
 			}).Warn("Adaptive rate limit exceeded due to high system load")
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":        "Rate limit exceeded due to high system load",
-				"system_load":  load,
-				"retry_after":  int(info.RetryAfter.Seconds()),
-				"request_id":   c.GetHeader("X-Request-ID"),
+				"error":       "Rate limit exceeded due to high system load",
+				"system_load": load,
+				"retry_after": int(info.RetryAfter.Seconds()),
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -351,18 +351,18 @@ func getClientKey(c *gin.Context) string {
 	if userID := c.GetString("user_id"); userID != "" {
 		return fmt.Sprintf("user:%s", userID)
 	}
-	
+
 	if characterID := c.GetString("character_id"); characterID != "" {
 		return fmt.Sprintf("char:%s", characterID)
 	}
-	
+
 	return fmt.Sprintf("ip:%s", c.ClientIP())
 }
 
 // WhitelistRateLimit rate limiter avec liste blanche
 func WhitelistRateLimit(config config.RateLimitConfig, whitelist []string) gin.HandlerFunc {
 	limiter := NewMemoryRateLimiter(config.RequestsPerMinute, config.BurstSize)
-	
+
 	// Convertir la liste blanche en map pour une recherche plus rapide
 	whitelistMap := make(map[string]bool)
 	for _, ip := range whitelist {
@@ -371,7 +371,7 @@ func WhitelistRateLimit(config config.RateLimitConfig, whitelist []string) gin.H
 
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
-		
+
 		// Vérifier si l'IP est dans la liste blanche
 		if whitelistMap[clientIP] {
 			c.Next()
@@ -382,11 +382,11 @@ func WhitelistRateLimit(config config.RateLimitConfig, whitelist []string) gin.H
 		key := getClientKey(c)
 		if !limiter.Allow(key) {
 			info := limiter.GetInfo(key)
-			
+
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":        "Rate limit exceeded",
-				"retry_after":  int(info.RetryAfter.Seconds()),
-				"request_id":   c.GetHeader("X-Request-ID"),
+				"error":       "Rate limit exceeded",
+				"retry_after": int(info.RetryAfter.Seconds()),
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -402,7 +402,7 @@ func BurstProtection(maxBurstSize int, timeWindow time.Duration) gin.HandlerFunc
 		requests  []time.Time
 		lastReset time.Time
 	}
-	
+
 	clients := make(map[string]*clientBurst)
 	mu := sync.RWMutex{}
 
@@ -434,19 +434,19 @@ func BurstProtection(maxBurstSize int, timeWindow time.Duration) gin.HandlerFunc
 		// Vérifier si le burst est dépassé
 		if len(client.requests) >= maxBurstSize {
 			logrus.WithFields(logrus.Fields{
-				"client_key":    key,
-				"burst_size":    len(client.requests),
-				"max_burst":     maxBurstSize,
-				"time_window":   timeWindow,
-				"request_id":    c.GetHeader("X-Request-ID"),
+				"client_key":  key,
+				"burst_size":  len(client.requests),
+				"max_burst":   maxBurstSize,
+				"time_window": timeWindow,
+				"request_id":  c.GetHeader("X-Request-ID"),
 			}).Warn("Burst protection triggered")
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":        "Burst limit exceeded",
-				"max_burst":    maxBurstSize,
-				"time_window":  timeWindow.String(),
-				"retry_after":  int(timeWindow.Seconds()),
-				"request_id":   c.GetHeader("X-Request-ID"),
+				"error":       "Burst limit exceeded",
+				"max_burst":   maxBurstSize,
+				"time_window": timeWindow.String(),
+				"retry_after": int(timeWindow.Seconds()),
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -454,7 +454,7 @@ func BurstProtection(maxBurstSize int, timeWindow time.Duration) gin.HandlerFunc
 
 		// Ajouter la requête actuelle
 		client.requests = append(client.requests, now)
-		
+
 		c.Next()
 	}
 }

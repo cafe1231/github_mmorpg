@@ -12,29 +12,29 @@ import (
 	"player/internal/config"
 )
 
-// DB représente la connexion à la base de données
+// DB représente la connection à la base de données
 type DB struct {
 	*sqlx.DB
 	Config *config.DatabaseConfig
 }
 
-// NewConnection crée une nouvelle connexion à la base de données
+// NewConnection crée une nouvelle connection à la base de données
 func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
-	// Construction de l'URL de connexion
+	// Construction de l'URL de connection
 	dsn := cfg.GetDatabaseURL()
 
-	// Connexion à la base de données
+	// connection à la base de données
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Configuration de la pool de connexions
+	// Configuration de la pool de connections
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(time.Hour)
 
-	// Test de la connexion
+	// Test de la connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -55,7 +55,7 @@ func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
 	}, nil
 }
 
-// Close ferme la connexion à la base de données
+// Close ferme la connection à la base de données
 func (db *DB) Close() error {
 	if db.DB != nil {
 		logrus.Info("Closing player database connection")
@@ -343,3 +343,4 @@ BEGIN
 END;
 $$ language 'plpgsql';
 `
+

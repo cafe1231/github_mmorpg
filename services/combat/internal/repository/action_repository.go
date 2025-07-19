@@ -18,28 +18,27 @@ type ActionRepositoryInterface interface {
 	GetByID(id uuid.UUID) (*models.CombatAction, error)
 	Update(action *models.CombatAction) error
 	Delete(id uuid.UUID) error
-	
+
 	// Récupération par combat
 	GetByCombat(combatID uuid.UUID) ([]*models.CombatAction, error)
 	GetByCombatAndTurn(combatID uuid.UUID, turnNumber int) ([]*models.CombatAction, error)
 	GetRecentActions(combatID uuid.UUID, limit int) ([]*models.CombatAction, error)
-	
+
 	// Récupération par acteur
 	GetByActor(actorID uuid.UUID) ([]*models.CombatAction, error)
 	GetByActorAndCombat(actorID, combatID uuid.UUID) ([]*models.CombatAction, error)
-	
-	// Statistiques et analyse
+
+	// Statistiques et analyze
 	GetActionCount(combatID uuid.UUID) (int, error)
 	GetActionsPerSecond(actorID uuid.UUID, timeWindow time.Duration) (int, error)
 	GetSuspiciousActions(timeWindow time.Duration) ([]*models.CombatAction, error)
-	
+
 	// Validation et anti-cheat
 	GetRecentActionsByActor(actorID uuid.UUID, timeWindow time.Duration) ([]*models.CombatAction, error)
 	MarkAsInvalid(actionID uuid.UUID, reason string) error
 	GetInvalidActions(combatID uuid.UUID) ([]*models.CombatAction, error)
-	
+
 	GetActionStatistics(actorID uuid.UUID, timeWindow time.Duration) (*models.ActionStatistics, error)
-	
 }
 
 // ActionRepository implémente l'interface ActionRepositoryInterface
@@ -136,7 +135,7 @@ func (r *ActionRepository) Update(action *models.CombatAction) error {
 // Delete supprime une action
 func (r *ActionRepository) Delete(id uuid.UUID) error {
 	query := `DELETE FROM combat_actions WHERE id = $1`
-	
+
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete action: %w", err)
@@ -221,8 +220,6 @@ func (r *ActionRepository) GetRecentActions(combatID uuid.UUID, limit int) ([]*m
 	return actions, nil
 }
 
-
-
 // GetByActor récupère toutes les actions d'un acteur
 func (r *ActionRepository) GetByActor(actorID uuid.UUID) ([]*models.CombatAction, error) {
 	var actions []*models.CombatAction
@@ -272,7 +269,7 @@ func (r *ActionRepository) GetByActorAndCombat(actorID, combatID uuid.UUID) ([]*
 func (r *ActionRepository) GetActionCount(combatID uuid.UUID) (int, error) {
 	var count int
 	query := `SELECT COUNT(*) FROM combat_actions WHERE combat_id = $1`
-	
+
 	err := r.db.Get(&count, query, combatID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get action count: %w", err)
@@ -285,12 +282,12 @@ func (r *ActionRepository) GetActionCount(combatID uuid.UUID) (int, error) {
 func (r *ActionRepository) GetActionsPerSecond(actorID uuid.UUID, timeWindow time.Duration) (int, error) {
 	var count int
 	since := time.Now().Add(-timeWindow)
-	
+
 	query := `
 		SELECT COUNT(*) 
 		FROM combat_actions 
 		WHERE actor_id = $1 AND server_timestamp >= $2`
-	
+
 	err := r.db.Get(&count, query, actorID, since)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get actions per second: %w", err)
@@ -299,7 +296,7 @@ func (r *ActionRepository) GetActionsPerSecond(actorID uuid.UUID, timeWindow tim
 	return count, nil
 }
 
-// GetSuspiciousActions récupère les actions suspectes récentes
+// GetSuspiciousActions récupère les actions suspicious récentes
 func (r *ActionRepository) GetSuspiciousActions(timeWindow time.Duration) ([]*models.CombatAction, error) {
 	var actions []*models.CombatAction
 	since := time.Now().Add(-timeWindow)
@@ -400,7 +397,7 @@ func (r *ActionRepository) GetInvalidActions(combatID uuid.UUID) ([]*models.Comb
 
 func (r *ActionRepository) GetActionStatistics(actorID uuid.UUID, timeWindow time.Duration) (*models.ActionStatistics, error) {
 	since := time.Now().Add(-timeWindow)
-	
+
 	query := `
 		SELECT 
 			COUNT(*) as total_actions,
@@ -431,8 +428,6 @@ func (r *ActionRepository) GetActionStatistics(actorID uuid.UUID, timeWindow tim
 	return &stats, nil
 }
 
-
-
 // GetActionsByType récupère les actions par type pour un combat
 func (r *ActionRepository) GetActionsByType(combatID uuid.UUID, actionType models.ActionType) ([]*models.CombatAction, error) {
 	var actions []*models.CombatAction
@@ -458,13 +453,13 @@ func (r *ActionRepository) GetActionsByType(combatID uuid.UUID, actionType model
 // CleanupOldActions supprime les anciennes actions pour libérer de l'espace
 func (r *ActionRepository) CleanupOldActions(olderThan time.Duration) error {
 	cutoff := time.Now().Add(-olderThan)
-	
+
 	query := `
 		DELETE FROM combat_actions 
 		WHERE created_at < $1 
 		AND combat_id IN (
 			SELECT id FROM combat_instances 
-			WHERE status IN ('finished', 'cancelled') 
+			WHERE status IN ('finished', 'canceled') 
 			AND ended_at < $1
 		)`
 
@@ -484,3 +479,4 @@ func (r *ActionRepository) CleanupOldActions(olderThan time.Duration) error {
 
 	return nil
 }
+

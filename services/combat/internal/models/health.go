@@ -14,7 +14,7 @@ type HealthResponse struct {
 	Checks    map[string]interface{} `json:"checks"`
 }
 
-// HealthCheck représente un contrôle de santé individuel
+// HealthCheck représente un contrôle de santé individual
 type HealthCheck struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message,omitempty"`
@@ -52,12 +52,12 @@ type SystemHealth struct {
 
 // CombatHealth représente la santé spécifique au service combat
 type CombatHealth struct {
-	ActiveCombats    int           `json:"active_combats"`
-	QueuedActions    int           `json:"queued_actions"`
-	PendingChallenges int          `json:"pending_challenges"`
+	ActiveCombats       int           `json:"active_combats"`
+	QueuedActions       int           `json:"queued_actions"`
+	PendingChallenges   int           `json:"pending_challenges"`
 	AverageResponseTime time.Duration `json:"average_response_time"`
-	ErrorRate        float64       `json:"error_rate"`
-	LastCleanup      time.Time     `json:"last_cleanup"`
+	ErrorRate           float64       `json:"error_rate"`
+	LastCleanup         time.Time     `json:"last_cleanup"`
 }
 
 // MetricsResponse représente la réponse des métriques
@@ -72,61 +72,61 @@ type MetricsResponse struct {
 // CombatMetrics représente les métriques spécifiques au combat
 type CombatMetrics struct {
 	// Métriques des combats
-	TotalCombats        int64   `json:"total_combats"`
-	ActiveCombats       int     `json:"active_combats"`
-	CombatsPerHour      float64 `json:"combats_per_hour"`
-	AverageDuration     float64 `json:"average_duration_seconds"`
-	
+	TotalCombats    int64   `json:"total_combats"`
+	ActiveCombats   int     `json:"active_combats"`
+	CombatsPerHour  float64 `json:"combats_per_hour"`
+	AverageDuration float64 `json:"average_duration_seconds"`
+
 	// Métriques des actions
-	TotalActions        int64   `json:"total_actions"`
-	ActionsPerSecond    float64 `json:"actions_per_second"`
-	FailedActions       int64   `json:"failed_actions"`
-	ActionFailureRate   float64 `json:"action_failure_rate"`
-	
+	TotalActions      int64   `json:"total_actions"`
+	ActionsPerSecond  float64 `json:"actions_per_second"`
+	FailedActions     int64   `json:"failed_actions"`
+	ActionFailureRate float64 `json:"action_failure_rate"`
+
 	// Métriques PvP
-	PvPChallenges       int64   `json:"pvp_challenges"`
-	PvPMatches          int64   `json:"pvp_matches"`
-	AveragePvPDuration  float64 `json:"average_pvp_duration_seconds"`
-	
+	PvPChallenges      int64   `json:"pvp_challenges"`
+	PvPMatches         int64   `json:"pvp_matches"`
+	AveragePvPDuration float64 `json:"average_pvp_duration_seconds"`
+
 	// Métriques de performance
-	ResponseTime        PerformanceMetrics `json:"response_time"`
-	ThroughputMetrics   ThroughputMetrics  `json:"throughput"`
-	ErrorMetrics        ErrorMetrics       `json:"errors"`
-	
+	ResponseTime      PerformanceMetrics `json:"response_time"`
+	ThroughputMetrics ThroughputMetrics  `json:"throughput"`
+	ErrorMetrics      ErrorMetrics       `json:"errors"`
+
 	// Cache et base de données
-	CacheHitRate        float64 `json:"cache_hit_rate"`
-	DatabaseQueries     int64   `json:"database_queries"`
-	SlowQueries         int64   `json:"slow_queries"`
+	CacheHitRate    float64 `json:"cache_hit_rate"`
+	DatabaseQueries int64   `json:"database_queries"`
+	SlowQueries     int64   `json:"slow_queries"`
 }
 
 // PerformanceMetrics représente les métriques de performance
 type PerformanceMetrics struct {
-	Min    float64 `json:"min_ms"`
-	Max    float64 `json:"max_ms"`
-	Avg    float64 `json:"avg_ms"`
-	P50    float64 `json:"p50_ms"`
-	P90    float64 `json:"p90_ms"`
-	P95    float64 `json:"p95_ms"`
-	P99    float64 `json:"p99_ms"`
+	Min float64 `json:"min_ms"`
+	Max float64 `json:"max_ms"`
+	Avg float64 `json:"avg_ms"`
+	P50 float64 `json:"p50_ms"`
+	P90 float64 `json:"p90_ms"`
+	P95 float64 `json:"p95_ms"`
+	P99 float64 `json:"p99_ms"`
 }
 
 // ThroughputMetrics représente les métriques de débit
 type ThroughputMetrics struct {
-	RequestsPerSecond   float64 `json:"requests_per_second"`
-	RequestsPerMinute   float64 `json:"requests_per_minute"`
-	RequestsPerHour     float64 `json:"requests_per_hour"`
+	RequestsPerSecond     float64 `json:"requests_per_second"`
+	RequestsPerMinute     float64 `json:"requests_per_minute"`
+	RequestsPerHour       float64 `json:"requests_per_hour"`
 	PeakRequestsPerSecond float64 `json:"peak_requests_per_second"`
 }
 
 // ErrorMetrics représente les métriques d'erreurs
 type ErrorMetrics struct {
-	TotalErrors     int64   `json:"total_errors"`
-	ErrorRate       float64 `json:"error_rate_percent"`
-	ValidationErrors int64  `json:"validation_errors"`
-	DatabaseErrors  int64   `json:"database_errors"`
-	TimeoutErrors   int64   `json:"timeout_errors"`
-	AuthErrors      int64   `json:"auth_errors"`
-	AntiCheatFlags  int64   `json:"anti_cheat_flags"`
+	TotalErrors      int64   `json:"total_errors"`
+	ErrorRate        float64 `json:"error_rate_percent"`
+	ValidationErrors int64   `json:"validation_errors"`
+	DatabaseErrors   int64   `json:"database_errors"`
+	TimeoutErrors    int64   `json:"timeout_errors"`
+	AuthErrors       int64   `json:"auth_errors"`
+	AntiCheatFlags   int64   `json:"anti_cheat_flags"`
 }
 
 // ServiceStatus représente le statut d'un service externe
@@ -161,12 +161,12 @@ type MemoryStats struct {
 
 // ReadinessProbe représente une sonde de préparation
 type ReadinessProbe struct {
-	Database     bool   `json:"database"`
-	Redis        bool   `json:"redis"`
-	Services     bool   `json:"external_services"`
-	Migrations   bool   `json:"migrations"`
-	Ready        bool   `json:"ready"`
-	Message      string `json:"message,omitempty"`
+	Database   bool   `json:"database"`
+	Redis      bool   `json:"redis"`
+	Services   bool   `json:"external_services"`
+	Migrations bool   `json:"migrations"`
+	Ready      bool   `json:"ready"`
+	Message    string `json:"message,omitempty"`
 }
 
 // LivenessProbe représente une sonde de vie
@@ -198,12 +198,12 @@ type BuildInfo struct {
 
 // RuntimeInfo représente les informations runtime
 type RuntimeInfo struct {
-	OS           string `json:"os"`
-	Arch         string `json:"arch"`
-	Goroutines   int    `json:"goroutines"`
-	CGOCalls     int64  `json:"cgo_calls"`
-	StartTime    time.Time `json:"start_time"`
-	Uptime       time.Duration `json:"uptime"`
+	OS         string        `json:"os"`
+	Arch       string        `json:"arch"`
+	Goroutines int           `json:"goroutines"`
+	CGOCalls   int64         `json:"cgo_calls"`
+	StartTime  time.Time     `json:"start_time"`
+	Uptime     time.Duration `json:"uptime"`
 }
 
 // DependencyInfo représente les informations d'une dépendance
@@ -231,7 +231,7 @@ func CreateHealthCheck(status, message string, details interface{}, err error) *
 		Message: message,
 		Details: details,
 	}
-	
+
 	if err != nil {
 		check.Error = err.Error()
 		if status == "" {
@@ -240,7 +240,7 @@ func CreateHealthCheck(status, message string, details interface{}, err error) *
 	} else if status == "" {
 		check.Status = "healthy"
 	}
-	
+
 	return check
 }
 
@@ -255,9 +255,10 @@ func (h *HealthResponse) AddCheck(name string, check *HealthCheck) {
 		h.Checks = make(map[string]interface{})
 	}
 	h.Checks[name] = check
-	
+
 	// Mettre à jour le statut global
 	if check.Status != "healthy" {
 		h.Status = "unhealthy"
 	}
 }
+

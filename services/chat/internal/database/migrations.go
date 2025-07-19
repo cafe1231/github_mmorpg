@@ -90,7 +90,11 @@ func runMigration(db *sql.DB, migration Migration) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Exécuter le script de migration
 	if _, err := tx.Exec(migration.UpScript); err != nil {
@@ -173,3 +177,4 @@ func loadMigrationsFromFiles() ([]Migration, error) {
 
 	return result, nil
 }
+

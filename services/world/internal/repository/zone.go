@@ -20,11 +20,11 @@ type ZoneRepositoryInterface interface {
 	GetByLevel(minLevel, maxLevel int) ([]*models.Zone, error)
 	Update(zone *models.Zone) error
 	Delete(id string) error
-	
+
 	// Gestion des joueurs dans les zones
 	GetPlayerCount(zoneID string) (int, error)
 	GetPlayersInZone(zoneID string) ([]*models.PlayerPosition, error)
-	
+
 	// Transitions
 	GetTransitions(fromZoneID string) ([]*models.ZoneTransition, error)
 	CreateTransition(transition *models.ZoneTransition) error
@@ -107,7 +107,9 @@ func (r *ZoneRepository) GetByID(id string) (*models.Zone, error) {
 	}
 
 	// Désérialiser les settings
-	if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+	if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		zone.Settings = models.GetDefaultZoneSettings()
 	}
 
@@ -153,7 +155,9 @@ func (r *ZoneRepository) GetAll() ([]*models.Zone, error) {
 		}
 
 		// Désérialiser les settings
-		if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+		if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			zone.Settings = models.GetDefaultZoneSettings()
 		}
 
@@ -202,7 +206,9 @@ func (r *ZoneRepository) GetByType(zoneType string) ([]*models.Zone, error) {
 		}
 
 		// Désérialiser les settings
-		if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+		if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			zone.Settings = models.GetDefaultZoneSettings()
 		}
 
@@ -249,7 +255,9 @@ func (r *ZoneRepository) GetByLevel(minLevel, maxLevel int) ([]*models.Zone, err
 		}
 
 		// Désérialiser les settings
-		if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+		if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			zone.Settings = models.GetDefaultZoneSettings()
 		}
 
@@ -502,3 +510,4 @@ func (r *ZoneRepository) DeleteTransition(id uuid.UUID) error {
 
 	return nil
 }
+

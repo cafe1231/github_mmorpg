@@ -244,7 +244,7 @@ func (s *PvPService) CancelChallenge(challengeID, playerID uuid.UUID) error {
 	logrus.WithFields(logrus.Fields{
 		"challenge_id": challengeID,
 		"challenger":   challenge.ChallengerID,
-	}).Info("PvP challenge cancelled")
+	}).Info("PvP challenge canceled")
 
 	return nil
 }
@@ -683,3 +683,4 @@ func abs(x int) int {
 	}
 	return x
 }
+

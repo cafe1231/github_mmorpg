@@ -96,7 +96,9 @@ func (r *NPCRepository) GetByID(id string) (*models.NPC, error) {
 	}
 
 	// Désérialiser le comportement
-	if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+	if err := if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		npc.Behavior = models.GetDefaultNPCBehavior()
 	}
 
@@ -138,7 +140,9 @@ func (r *NPCRepository) GetAll() ([]*models.NPC, error) {
 		}
 
 		// Désérialiser le comportement
-		if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		if err := if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			npc.Behavior = models.GetDefaultNPCBehavior()
 		}
 
@@ -240,7 +244,9 @@ func (r *NPCRepository) GetByZone(zoneID string) ([]*models.NPC, error) {
 		}
 
 		// Désérialiser le comportement
-		if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		if err := if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			npc.Behavior = models.GetDefaultNPCBehavior()
 		}
 
@@ -285,7 +291,9 @@ func (r *NPCRepository) GetByType(npcType string) ([]*models.NPC, error) {
 		}
 
 		// Désérialiser le comportement
-		if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		if err := if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			npc.Behavior = models.GetDefaultNPCBehavior()
 		}
 
@@ -330,7 +338,9 @@ func (r *NPCRepository) GetActiveByZone(zoneID string) ([]*models.NPC, error) {
 		}
 
 		// Désérialiser le comportement
-		if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		if err := if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			npc.Behavior = models.GetDefaultNPCBehavior()
 		}
 
@@ -400,7 +410,9 @@ func (r *NPCRepository) GetNearbyNPCs(zoneID string, x, y, z, radius float64) ([
 		}
 
 		// Désérialiser le comportement
-		if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		if err := if err := json.Unmarshal([]byte(behaviorJSON), &npc.Behavior); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			npc.Behavior = models.GetDefaultNPCBehavior()
 		}
 
@@ -493,7 +505,9 @@ func (r *WorldEventRepository) GetByID(id string) (*models.WorldEvent, error) {
 	}
 
 	// Désérialiser les récompenses
-	if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+	if err := if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		event.Rewards = []models.EventReward{}
 	}
 
@@ -509,7 +523,7 @@ func (r *WorldEventRepository) GetAll() ([]*models.WorldEvent, error) {
 		       max_participants, min_level, max_level, rewards, status,
 		       created_at, updated_at
 		FROM world_events 
-		WHERE status != 'cancelled'
+		WHERE status != 'canceled'
 		ORDER BY start_time ASC`
 
 	rows, err := r.db.Query(query)
@@ -538,7 +552,9 @@ func (r *WorldEventRepository) GetAll() ([]*models.WorldEvent, error) {
 		}
 
 		// Désérialiser les récompenses
-		if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		if err := if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			event.Rewards = []models.EventReward{}
 		}
 
@@ -584,7 +600,7 @@ func (r *WorldEventRepository) Update(event *models.WorldEvent) error {
 }
 
 func (r *WorldEventRepository) Delete(id string) error {
-	query := `UPDATE world_events SET status = 'cancelled' WHERE id = $1`
+	query := `UPDATE world_events SET status = 'canceled' WHERE id = $1`
 
 	result, err := r.db.Exec(query, id)
 	if err != nil {
@@ -612,7 +628,7 @@ func (r *WorldEventRepository) GetByZone(zoneID string) ([]*models.WorldEvent, e
 		       max_participants, min_level, max_level, rewards, status,
 		       created_at, updated_at
 		FROM world_events 
-		WHERE zone_id = $1 AND status != 'cancelled'
+		WHERE zone_id = $1 AND status != 'canceled'
 		ORDER BY start_time ASC`
 
 	rows, err := r.db.Query(query, zoneID)
@@ -641,7 +657,9 @@ func (r *WorldEventRepository) GetByZone(zoneID string) ([]*models.WorldEvent, e
 		}
 
 		// Désérialiser les récompenses
-		if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		if err := if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			event.Rewards = []models.EventReward{}
 		}
 
@@ -691,7 +709,9 @@ func (r *WorldEventRepository) GetActive() ([]*models.WorldEvent, error) {
 		}
 
 		// Désérialiser les récompenses
-		if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		if err := if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			event.Rewards = []models.EventReward{}
 		}
 
@@ -741,7 +761,9 @@ func (r *WorldEventRepository) GetUpcoming() ([]*models.WorldEvent, error) {
 		}
 
 		// Désérialiser les récompenses
-		if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		if err := if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			event.Rewards = []models.EventReward{}
 		}
 
@@ -789,7 +811,9 @@ func (r *WorldEventRepository) GetByStatus(status string) ([]*models.WorldEvent,
 		}
 
 		// Désérialiser les récompenses
-		if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		if err := if err := json.Unmarshal([]byte(rewardsJSON), &event.Rewards); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			event.Rewards = []models.EventReward{}
 		}
 
@@ -1002,3 +1026,4 @@ func (r *WeatherRepository) UpdateWeatherStatus(zoneID string, isActive bool) er
 
 	return nil
 }
+

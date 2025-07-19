@@ -770,7 +770,7 @@ func (s *CombatService) createCombatSummary(combat *models.CombatInstance, parti
 
 func (s *CombatService) updateParticipantStatistics(combat *models.CombatInstance, participants []*models.CombatParticipant, result *models.CombatResult) error {
 	for _, participant := range participants {
-		// Récupérer les statistiques existantes
+		// Récupérer les statistiques existing
 		stats, err := s.combatRepo.GetStatistics(participant.CharacterID)
 		if err != nil {
 			logrus.WithError(err).WithField("character_id", participant.CharacterID).Error("Failed to get statistics")
@@ -802,7 +802,7 @@ func (s *CombatService) updateParticipantStatistics(combat *models.CombatInstanc
 		case models.CombatTypePvE:
 			if isWinner {
 				stats.PvEBattlesWon++
-				stats.MonstersKilled++ // Simplifié pour l'exemple
+				stats.MonstersKilled++ // Simplifié pour l'example
 			} else {
 				stats.PvEBattlesLost++
 			}
@@ -1047,7 +1047,7 @@ func (s *CombatService) StartCombatCleanupRoutine() {
 	}()
 }
 
-// IsParticipantInCombat vérifie si un personnage participe à un combat actif
+// IsParticipantInCombat vérifie si un personnage participate à un combat actif
 func (s *CombatService) IsParticipantInCombat(characterID uuid.UUID) (bool, *models.CombatInstance, error) {
 	combats, err := s.combatRepo.GetByParticipant(characterID)
 	if err != nil {
@@ -1079,3 +1079,4 @@ func (s *CombatService) GetCombatMetrics() (*models.CombatMetrics, error) {
 
 	return metrics, nil
 }
+

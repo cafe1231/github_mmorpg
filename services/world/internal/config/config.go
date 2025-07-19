@@ -48,7 +48,7 @@ type MonitoringConfig struct {
 	MetricsPath string
 }
 
-// GetDatabaseURL construit l'URL de connexion à la base de données
+// GetDatabaseURL construit l'URL de connection à la base de données
 func (d *DatabaseConfig) GetDatabaseURL() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		d.Host, d.Port, d.User, d.Password, d.Name)
@@ -103,3 +103,4 @@ func LoadConfig() (*Config, error) {
 		},
 	}, nil
 }
+

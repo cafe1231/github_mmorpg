@@ -208,7 +208,7 @@ type WebSocketMessage struct {
 	Data    interface{} `json:"data"`
 }
 
-// ConnectionInfo représente les informations d'une connexion WebSocket
+// ConnectionInfo représente les informations d'une connection WebSocket
 type ConnectionInfo struct {
 	UserID      uuid.UUID `json:"user_id"`
 	Username    string    `json:"username"`
@@ -216,3 +216,4 @@ type ConnectionInfo struct {
 	LastPing    time.Time `json:"last_ping"`
 	Channels    []string  `json:"channels"`
 }
+

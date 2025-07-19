@@ -143,8 +143,8 @@ var (
 func PrometheusMetrics() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
-		// Incrémenter les connexions actives
+
+		// Incrémenter les connections actives
 		activeConnections.Inc()
 		defer activeConnections.Dec()
 
@@ -153,7 +153,7 @@ func PrometheusMetrics() gin.HandlerFunc {
 
 		// Calculer la durée
 		duration := time.Since(start)
-		
+
 		// Normaliser l'endpoint pour éviter la cardinalité élevée
 		endpoint := normalizeEndpoint(c.FullPath())
 		method := c.Request.Method
@@ -162,12 +162,12 @@ func PrometheusMetrics() gin.HandlerFunc {
 		// Enregistrer les métriques HTTP
 		httpRequestsTotal.WithLabelValues(method, endpoint, statusCode).Inc()
 		httpRequestDuration.WithLabelValues(method, endpoint).Observe(duration.Seconds())
-		
+
 		// Taille de la requête
 		if c.Request.ContentLength > 0 {
 			httpRequestSize.WithLabelValues(method, endpoint).Observe(float64(c.Request.ContentLength))
 		}
-		
+
 		// Taille de la réponse
 		httpResponseSize.WithLabelValues(method, endpoint).Observe(float64(c.Writer.Size()))
 
@@ -192,9 +192,9 @@ func PrometheusMetrics() gin.HandlerFunc {
 func CombatMetrics() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		c.Next()
-		
+
 		duration := time.Since(start)
 		path := c.FullPath()
 
@@ -202,16 +202,16 @@ func CombatMetrics() gin.HandlerFunc {
 		if path == "/api/v1/combat/:id/action" && c.Request.Method == "POST" {
 			actionType := "unknown"
 			result := "success"
-			
+
 			if c.Writer.Status() >= 400 {
 				result = "failure"
 			}
-			
+
 			// Essayer d'extraire le type d'action du contexte
 			if action := c.GetString("action_type"); action != "" {
 				actionType = action
 			}
-			
+
 			combatActionsTotal.WithLabelValues(actionType, result).Inc()
 			combatActionDuration.WithLabelValues(actionType).Observe(duration.Seconds())
 		}
@@ -252,7 +252,7 @@ func AntiCheatMetrics() gin.HandlerFunc {
 			if suspicion > 80 {
 				severity = "high"
 			}
-			
+
 			antiCheatDetections.WithLabelValues("combat_suspicious", severity).Inc()
 		}
 	}
@@ -295,11 +295,10 @@ func normalizeEndpoint(path string) string {
 	// Remplacer les IDs par des placeholders
 	normalized := path
 
-
 	// Appliquer les patterns de normalisation
 	// Note: Dans un vrai projet, vous utiliseriez regexp pour cela
 	// Ici on simplifie en retournant le path tel quel
-	
+
 	return normalized
 }
 
@@ -325,10 +324,10 @@ func getErrorType(statusCode int) string {
 
 // CustomMetrics structure pour les métriques personnalisées
 type CustomMetrics struct {
-	PvPMatchesTotal   prometheus.Counter
-	PvPMatchDuration  prometheus.Histogram
-	QueueWaitTime     prometheus.Histogram
-	CombatTurnTime    prometheus.Histogram
+	PvPMatchesTotal  prometheus.Counter
+	PvPMatchDuration prometheus.Histogram
+	QueueWaitTime    prometheus.Histogram
+	CombatTurnTime   prometheus.Histogram
 }
 
 // NewCustomMetrics crée les métriques personnalisées
@@ -372,10 +371,11 @@ func UpdateHealthMetrics(healthy bool) {
 			Help: "Whether the combat service is healthy (1) or not (0)",
 		},
 	)
-	
+
 	if healthy {
 		healthStatus.Set(1)
 	} else {
 		healthStatus.Set(0)
 	}
 }
+

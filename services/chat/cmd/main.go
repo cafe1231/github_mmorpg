@@ -43,7 +43,7 @@ func main() {
 		logrus.Fatal("Failed to load config: ", err)
 	}
 
-	// Connexion à la base de données
+	// connection à la base de données
 	db, err := database.NewConnection(cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
@@ -158,7 +158,7 @@ func setupRoutes(chatHandler *handlers.ChatHandler, cfg *config.Config) *gin.Eng
 	return router
 }
 
-// initLogger initialise la configuration des logs
+// initLogger initialize la configuration des logs
 func initLogger() {
 	// Configuration du format JSON pour la production
 	logrus.SetFormatter(&logrus.JSONFormatter{
@@ -201,3 +201,4 @@ func gracefulShutdown(server *http.Server) {
 
 	logrus.Info("💬 Chat Service stopped gracefully")
 }
+

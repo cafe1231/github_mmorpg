@@ -19,13 +19,13 @@ type CharacterRepositoryInterface interface {
 	GetByPlayerID(playerID uuid.UUID) ([]*models.Character, error)
 	Update(character *models.Character) error
 	Delete(id uuid.UUID) error
-	
+
 	// Stats management
 	GetStats(characterID uuid.UUID) (*models.CharacterStats, error)
 	UpdateStats(stats *models.CharacterStats) error
 	GetCombatStats(characterID uuid.UUID) (*models.CombatStats, error)
 	UpdateCombatStats(stats *models.CombatStats) error
-	
+
 	// Modifiers
 	AddStatModifier(modifier *models.StatModifier) error
 	GetActiveModifiers(characterID uuid.UUID) ([]*models.StatModifier, error)
@@ -119,7 +119,9 @@ func (r *CharacterRepository) GetByID(id uuid.UUID) (*models.Character, error) {
 	}
 
 	// Désérialiser l'apparence
-	if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+	if err := if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		character.Appearance = models.GetDefaultAppearance(character.Race)
 	}
 
@@ -155,7 +157,9 @@ func (r *CharacterRepository) GetByName(name string) (*models.Character, error) 
 	}
 
 	// Désérialiser l'apparence
-	if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+	if err := if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 		character.Appearance = models.GetDefaultAppearance(character.Race)
 	}
 
@@ -196,7 +200,9 @@ func (r *CharacterRepository) GetByPlayerID(playerID uuid.UUID) ([]*models.Chara
 		}
 
 		// Désérialiser l'apparence
-		if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+		if err := if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+	}; err != nil {
 			character.Appearance = models.GetDefaultAppearance(character.Race)
 		}
 
@@ -452,3 +458,4 @@ func (r *CharacterRepository) CleanupExpiredModifiers() error {
 
 	return nil
 }
+

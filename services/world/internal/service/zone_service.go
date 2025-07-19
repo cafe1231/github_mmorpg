@@ -418,9 +418,9 @@ func (s *ZoneService) ProcessZoneTransition(characterID uuid.UUID, userID uuid.U
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"character_id": characterID,
-		"from_zone":    targetTransition.FromZoneID,
-		"to_zone":      targetTransition.ToZoneID,
+		"character_id":  characterID,
+		"from_zone":     targetTransition.FromZoneID,
+		"to_zone":       targetTransition.ToZoneID,
 		"transition_id": transitionID,
 	}).Info("Player zone transition completed")
 
@@ -460,10 +460,10 @@ func (s *ZoneService) GetZoneStatistics(zoneID string) (map[string]interface{}, 
 		"current_players":   playerCount,
 		"max_players":       zone.MaxPlayers,
 		"occupancy_rate":    float64(playerCount) / float64(zone.MaxPlayers) * 100,
-		"is_pvp":           zone.IsPvP,
-		"is_safe_zone":     zone.IsSafeZone,
+		"is_pvp":            zone.IsPvP,
+		"is_safe_zone":      zone.IsSafeZone,
 		"recommended_level": zone.Level,
-		"status":           zone.Status,
+		"status":            zone.Status,
 	}
 
 	return stats, nil
@@ -519,7 +519,7 @@ func (s *ZoneService) validateZoneGeometry(zone *models.Zone) error {
 
 	// Vérifier que le point de spawn est dans la zone
 	if !zone.IsInZone(zone.SpawnX, zone.SpawnY, zone.SpawnZ) {
-		return fmt.Errorf("spawn point (%.2f, %.2f, %.2f) is outside zone bounds", 
+		return fmt.Errorf("spawn point (%.2f, %.2f, %.2f) is outside zone bounds",
 			zone.SpawnX, zone.SpawnY, zone.SpawnZ)
 	}
 
@@ -541,7 +541,7 @@ func sqrt(x float64) float64 {
 	if x == 0 {
 		return 0
 	}
-	
+
 	// Implémentation simple de la racine carrée par méthode de Newton
 	z := x
 	for i := 0; i < 10; i++ {

@@ -1,95 +1,95 @@
 package database
 
 import (
-"context"
-"fmt"
-"time"
+	"context"
+	"fmt"
+	"time"
 
-"github.com/jmoiron/sqlx"
-_ "github.com/lib/pq"
-"github.com/sirupsen/logrus"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 
-"world/internal/config"
+	"world/internal/config"
 )
 
 type DB struct {
-*sqlx.DB
-Config *config.DatabaseConfig
+	*sqlx.DB
+	Config *config.DatabaseConfig
 }
 
 func NewConnection(cfg *config.Config) (*DB, error) {
-dsn := cfg.Database.GetDatabaseURL()
+	dsn := cfg.Database.GetDatabaseURL()
 
-db, err := sqlx.Connect("postgres", dsn)
-if err != nil {
-return nil, fmt.Errorf("failed to connect to database: %w", err)
-}
+	db, err := sqlx.Connect("postgres", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
 
-db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
-db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
-db.SetConnMaxLifetime(time.Hour)
+	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+	db.SetConnMaxLifetime(time.Hour)
 
-ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-if err := db.PingContext(ctx); err != nil {
-return nil, fmt.Errorf("failed to ping database: %w", err)
-}
+	if err := db.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
 
-logrus.WithFields(logrus.Fields{
-"host":     cfg.Database.Host,
-"port":     cfg.Database.Port,
-"database": cfg.Database.Name,
-"service":  "world",
-}).Info("Connected to PostgreSQL database")
+	logrus.WithFields(logrus.Fields{
+		"host":     cfg.Database.Host,
+		"port":     cfg.Database.Port,
+		"database": cfg.Database.Name,
+		"service":  "world",
+	}).Info("Connected to PostgreSQL database")
 
-return &DB{
-DB:     db,
-Config: &cfg.Database,
-}, nil
+	return &DB{
+		DB:     db,
+		Config: &cfg.Database,
+	}, nil
 }
 
 func (db *DB) Close() error {
-if db.DB != nil {
-logrus.Info("Closing world database connection")
-return db.DB.Close()
-}
-return nil
+	if db.DB != nil {
+		logrus.Info("Closing world database connection")
+		return db.DB.Close()
+	}
+	return nil
 }
 
 func (db *DB) HealthCheck() error {
-ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-if err := db.PingContext(ctx); err != nil {
-return fmt.Errorf("world database health check failed: %w", err)
-}
+	if err := db.PingContext(ctx); err != nil {
+		return fmt.Errorf("world database health check failed: %w", err)
+	}
 
-return nil
+	return nil
 }
 
 func RunMigrations(db *DB) error {
-logrus.Info("Running world database migrations...")
+	logrus.Info("Running world database migrations...")
 
-migrations := []string{
-createZonesTable,
-createPlayerPositionsTable,
-createWeatherTable,
-createZoneTransitionsTable,
-createIndexes,
-insertDefaultData,
-}
+	migrations := []string{
+		createZonesTable,
+		createPlayerPositionsTable,
+		createWeatherTable,
+		createZoneTransitionsTable,
+		createIndexes,
+		insertDefaultData,
+	}
 
-for i, migration := range migrations {
-logrus.WithField("migration", i+1).Debug("Executing migration")
+	for i, migration := range migrations {
+		logrus.WithField("migration", i+1).Debug("Executing migration")
 
-if _, err := db.Exec(migration); err != nil {
-return fmt.Errorf("failed to execute migration %d: %w", i+1, err)
-}
-}
+		if _, err := db.Exec(migration); err != nil {
+			return fmt.Errorf("failed to execute migration %d: %w", i+1, err)
+		}
+	}
 
-logrus.Info("World database migrations completed successfully")
-return nil
+	logrus.Info("World database migrations completed successfully")
+	return nil
 }
 
 const createZonesTable = `

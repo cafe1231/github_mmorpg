@@ -160,15 +160,15 @@ func NewHTTPServer(
 			admin.POST("/zones", zoneHandler.CreateZone)
 			admin.PUT("/zones/:id", zoneHandler.UpdateZone)
 			admin.DELETE("/zones/:id", zoneHandler.DeleteZone)
-			
+
 			admin.POST("/npcs", npcHandler.CreateNPC)
 			admin.PUT("/npcs/:id", npcHandler.UpdateNPC)
 			admin.DELETE("/npcs/:id", npcHandler.DeleteNPC)
-			
+
 			admin.POST("/events", eventHandler.CreateEvent)
 			admin.PUT("/events/:id", eventHandler.UpdateEvent)
 			admin.DELETE("/events/:id", eventHandler.DeleteEvent)
-			
+
 			admin.POST("/weather/:zoneId", weatherHandler.SetWeather)
 		}
 	}

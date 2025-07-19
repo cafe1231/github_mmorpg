@@ -34,15 +34,15 @@ type JWTClaims struct {
 func Logger() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		logrus.WithFields(logrus.Fields{
-			"timestamp":    param.TimeStamp.Format(time.RFC3339),
-			"client_ip":    param.ClientIP,
-			"method":       param.Method,
-			"path":         param.Path,
-			"status_code":  param.StatusCode,
-			"latency_ms":   param.Latency.Milliseconds(),
-			"user_agent":   param.Request.UserAgent(),
-			"request_id":   param.Request.Header.Get("X-Request-ID"),
-			"service":      "player",
+			"timestamp":   param.TimeStamp.Format(time.RFC3339),
+			"client_ip":   param.ClientIP,
+			"method":      param.Method,
+			"path":        param.Path,
+			"status_code": param.StatusCode,
+			"latency_ms":  param.Latency.Milliseconds(),
+			"user_agent":  param.Request.UserAgent(),
+			"request_id":  param.Request.Header.Get("X-Request-ID"),
+			"service":     "player",
 		}).Info("HTTP Request")
 
 		return ""
@@ -187,10 +187,10 @@ func RateLimit(cfg config.RateLimitConfig) gin.HandlerFunc {
 
 			c.Header("X-Rate-Limit-Remaining", "0")
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":      "Rate limit exceeded",
-				"message":    "Too many requests, please slow down",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests, please slow down",
 				"retry_after": 60,
-				"request_id": c.GetHeader("X-Request-ID"),
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -317,10 +317,10 @@ func RequireRole(requiredRoles ...string) gin.HandlerFunc {
 			}).Warn("Access denied: insufficient permissions")
 
 			c.JSON(http.StatusForbidden, gin.H{
-				"error":         "Insufficient permissions",
+				"error":          "Insufficient permissions",
 				"required_roles": requiredRoles,
-				"user_role":     userRole,
-				"request_id":    c.GetHeader("X-Request-ID"),
+				"user_role":      userRole,
+				"request_id":     c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -356,7 +356,7 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 		c.Header("Content-Security-Policy", "default-src 'none'; connect-src 'self'")
-		
+
 		if c.Request.TLS != nil {
 			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
@@ -368,7 +368,7 @@ func SecurityHeaders() gin.HandlerFunc {
 // PlayerOwnership middleware qui vérifie que l'utilisateur accède à ses propres données
 func PlayerOwnership() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Ce middleware peut être utilisé pour les routes qui nécessitent 
+		// Ce middleware peut être utilisé pour les routes qui nécessitent
 		// une vérification de propriété des données joueur
 		// La logique de vérification sera implémentée dans les services
 		c.Next()

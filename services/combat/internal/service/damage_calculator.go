@@ -9,11 +9,11 @@ import (
 
 // DamageCalculatorInterface définit les méthodes du calculateur de dégâts
 type DamageCalculatorInterface interface {
-	// Calculs de base
+	// calculations de base
 	CalculateDamage(attacker, defender *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) *DamageResult
 	CalculateHealing(caster, target *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) *HealingResult
 
-	// Calculs spécialisés
+	// calculations spécialisés
 	CalculatePhysicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int
 	CalculateMagicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int
 	CalculateTrueDamage(baseDamage int, modifiers map[string]float64) int
@@ -28,7 +28,7 @@ type DamageCalculatorInterface interface {
 	ApplyResistances(damage int, resistances map[string]float64, damageType string) int
 	ApplyVulnerabilities(damage int, vulnerabilities map[string]float64, damageType string) int
 
-	// Calculs avancés
+	// calculations avancés
 	CalculateElementalDamage(attacker *models.CombatParticipant, element string, baseDamage int) int
 	CalculateDamageOverTime(effect *models.CombatEffect, target *models.CombatParticipant) int
 	CalculateStatusEffectChance(caster *models.CombatParticipant, target *models.CombatParticipant, effect models.SkillEffect) float64
@@ -651,7 +651,7 @@ func (dc *DamageCalculator) CalculateAdvancedDamage(
 	return result
 }
 
-// GetDamageBreakdown retourne une analyse détaillée des dégâts
+// GetDamageBreakdown retourne une analyze détaillée des dégâts
 func (dc *DamageCalculator) GetDamageBreakdown(result *DamageResult) string {
 	if len(result.Breakdown) == 0 {
 		return "No damage breakdown available"
@@ -671,3 +671,4 @@ func (dc *DamageCalculator) GetDamageBreakdown(result *DamageResult) string {
 
 	return breakdown
 }
+

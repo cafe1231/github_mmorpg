@@ -29,7 +29,7 @@ func main() {
 		logrus.Fatal("Failed to load configuration: ", err)
 	}
 
-	// Connexion à la base de données
+	// connection à la base de données
 	db, err := database.NewConnection(cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
@@ -146,3 +146,4 @@ func initLogger() {
 		TimestampFormat: time.RFC3339,
 	})
 }
+

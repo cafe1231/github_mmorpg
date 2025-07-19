@@ -19,16 +19,16 @@ type AntiCheatServiceInterface interface {
 	ValidateAction(actor *models.CombatParticipant, req *models.ActionRequest) *models.ValidationResponse
 	CheckActionFrequency(actorID uuid.UUID, timeWindow time.Duration) (bool, int, error)
 	ValidateTimestamp(clientTime, serverTime time.Time) (bool, string)
-	
+
 	// Détection de patterns suspects
 	DetectSuspiciousPatterns(actorID uuid.UUID) (*models.AntiCheatResult, error)
 	CheckDamageIntegrity(action *models.CombatAction, actor, target *models.CombatParticipant) (bool, string)
 	ValidateMovement(oldPos, newPos *models.Position, timeElapsed time.Duration) (bool, string)
-	
+
 	// Système de scoring
 	CalculateSuspicionScore(actorID uuid.UUID) (float64, []string, error)
 	RecordSuspiciousActivity(actorID uuid.UUID, activityType string, details map[string]interface{})
-	
+
 	// Actions correctives
 	ApplyAntiCheatMeasures(actorID uuid.UUID, score float64, flags []string) string
 	TemporaryBan(actorID uuid.UUID, duration time.Duration, reason string) error
@@ -44,24 +44,24 @@ type AntiCheatService struct {
 
 // SuspiciousActivity représente une activité suspecte
 type SuspiciousActivity struct {
-	Type        string                 `json:"type"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Severity    int                    `json:"severity"`
-	Details     map[string]interface{} `json:"details"`
-	ActionID    *uuid.UUID             `json:"action_id,omitempty"`
+	Type      string                 `json:"type"`
+	Timestamp time.Time              `json:"timestamp"`
+	Severity  int                    `json:"severity"`
+	Details   map[string]interface{} `json:"details"`
+	ActionID  *uuid.UUID             `json:"action_id,omitempty"`
 }
 
 // PlayerStats représente les statistiques d'un joueur pour l'anti-cheat
 type PlayerStats struct {
-	ActorID               uuid.UUID     `json:"actor_id"`
-	LastActionTime        time.Time     `json:"last_action_time"`
-	ActionsInLastMinute   []time.Time   `json:"actions_in_last_minute"`
-	AverageDamage         float64       `json:"average_damage"`
-	MaxDamageRecorded     int           `json:"max_damage_recorded"`
-	SuspicionScore        float64       `json:"suspicion_score"`
-	LastPositionUpdate    time.Time     `json:"last_position_update"`
-	ConsistentHighDamage  int           `json:"consistent_high_damage"`
-	ImpossibleActions     int           `json:"impossible_actions"`
+	ActorID              uuid.UUID   `json:"actor_id"`
+	LastActionTime       time.Time   `json:"last_action_time"`
+	ActionsInLastMinute  []time.Time `json:"actions_in_last_minute"`
+	AverageDamage        float64     `json:"average_damage"`
+	MaxDamageRecorded    int         `json:"max_damage_recorded"`
+	SuspicionScore       float64     `json:"suspicion_score"`
+	LastPositionUpdate   time.Time   `json:"last_position_update"`
+	ConsistentHighDamage int         `json:"consistent_high_damage"`
+	ImpossibleActions    int         `json:"impossible_actions"`
 }
 
 // NewAntiCheatService crée un nouveau service anti-cheat
@@ -97,7 +97,7 @@ func (s *AntiCheatService) ValidateAction(actor *models.CombatParticipant, req *
 		response.AntiCheat.Score += 25
 		response.AntiCheat.Flags = append(response.AntiCheat.Flags, "high_action_frequency")
 		response.Warnings = append(response.Warnings, fmt.Sprintf("High action frequency: %d actions/minute", count))
-		
+
 		s.RecordSuspiciousActivity(actor.CharacterID, "high_frequency", map[string]interface{}{
 			"actions_per_minute": count,
 			"threshold":          s.config.AntiCheat.MaxActionsPerSecond * 60,
@@ -110,11 +110,11 @@ func (s *AntiCheatService) ValidateAction(actor *models.CombatParticipant, req *
 			response.AntiCheat.Score += 15
 			response.AntiCheat.Flags = append(response.AntiCheat.Flags, "timestamp_anomaly")
 			response.Warnings = append(response.Warnings, reason)
-			
+
 			s.RecordSuspiciousActivity(actor.CharacterID, "timestamp_anomaly", map[string]interface{}{
 				"client_timestamp": req.ClientTimestamp,
 				"server_timestamp": time.Now(),
-				"reason":          reason,
+				"reason":           reason,
 			})
 		}
 	}
@@ -205,7 +205,7 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 		if s.isPatternTooRegular(intervals) {
 			result.Score += 20
 			result.Flags = append(result.Flags, "regular_pattern")
-			
+
 			s.RecordSuspiciousActivity(actorID, "regular_pattern", map[string]interface{}{
 				"action_count": len(actions),
 				"intervals":    intervals,
@@ -233,7 +233,7 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 	if highDamageActions > 3 {
 		result.Flags = append(result.Flags, "excessive_damage")
 		s.RecordSuspiciousActivity(actorID, "excessive_damage", map[string]interface{}{
-			"high_damage_actions": highDamageActions,
+			"high_damage_actions":  highDamageActions,
 			"max_damage_threshold": float64(stats.MaxDamageRecorded) * s.config.AntiCheat.MaxDamageMultiplier,
 		})
 	}
@@ -255,10 +255,10 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 		if critRate > 0.5 { // Plus de 50% de critiques est suspect
 			result.Score += 15
 			result.Flags = append(result.Flags, "high_critical_rate")
-			
+
 			s.RecordSuspiciousActivity(actorID, "high_critical_rate", map[string]interface{}{
-				"critical_rate":       critRate,
-				"critical_actions":    criticalActions,
+				"critical_rate":        critRate,
+				"critical_actions":     criticalActions,
 				"total_damage_actions": totalDamageActions,
 			})
 		}
@@ -272,7 +272,7 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 	return result, nil
 }
 
-// CheckDamageIntegrity vérifie l'intégrité des calculs de dégâts
+// CheckDamageIntegrity vérifie l'intégrité des calculations de dégâts
 func (s *AntiCheatService) CheckDamageIntegrity(action *models.CombatAction, actor, target *models.CombatParticipant) (bool, string) {
 	if action.DamageDealt <= 0 {
 		return true, "" // Pas de dégâts à vérifier
@@ -280,7 +280,7 @@ func (s *AntiCheatService) CheckDamageIntegrity(action *models.CombatAction, act
 
 	// Calculer les dégâts attendus
 	expectedDamage := action.CalculateDamage(actor, target, nil)
-	
+
 	// Tolérance de ±20% pour la variance
 	tolerance := 0.20
 	minExpected := float64(expectedDamage) * (1 - tolerance)
@@ -331,7 +331,7 @@ func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (float64, 
 	var flags []string
 	score := 0.0
 
-	// Facteur 1: Activités suspectes récentes
+	// Facteur 1: Activités suspicious récentes
 	suspiciousActivities := s.suspiciousLogs[actorID]
 	recentActivities := 0
 	for _, activity := range suspiciousActivities {
@@ -346,7 +346,7 @@ func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (float64, 
 		score += 15
 	}
 
-	// Facteur 2: Consistance des performances
+	// Facteur 2: Consistency des performances
 	if stats.ConsistentHighDamage > 5 {
 		flags = append(flags, "consistent_high_performance")
 		score += 10
@@ -496,7 +496,7 @@ func (s *AntiCheatService) isPatternTooRegular(intervals []float64) bool {
 		return false
 	}
 
-	// Calculer l'écart-type des intervalles
+	// Calculer l'écart-type des intervals
 	mean := 0.0
 	for _, interval := range intervals {
 		mean += interval
@@ -538,14 +538,14 @@ func (s *AntiCheatService) calculateAverageProcessingTime(actions []*models.Comb
 
 func (s *AntiCheatService) getSeverityForActivity(activityType string) int {
 	severityMap := map[string]int{
-		"high_frequency":      5,
-		"timestamp_anomaly":   3,
-		"regular_pattern":     7,
-		"excessive_damage":    8,
-		"high_critical_rate":  6,
-		"impossible_movement": 9,
-		"damage_integrity":    8,
-		"superhuman_reflexes": 7,
+		"high_frequency":       5,
+		"timestamp_anomaly":    3,
+		"regular_pattern":      7,
+		"excessive_damage":     8,
+		"high_critical_rate":   6,
+		"impossible_movement":  9,
+		"damage_integrity":     8,
+		"superhuman_reflexes":  7,
 		"multiple_infractions": 10,
 	}
 
@@ -614,7 +614,7 @@ func (s *AntiCheatService) UpdatePlayerStats(actorID uuid.UUID, action *models.C
 		if stats.AverageDamage == 0 {
 			stats.AverageDamage = float64(action.DamageDealt)
 		} else {
-			stats.AverageDamage = (stats.AverageDamage*0.9) + (float64(action.DamageDealt)*0.1)
+			stats.AverageDamage = (stats.AverageDamage * 0.9) + (float64(action.DamageDealt) * 0.1)
 		}
 
 		// Vérifier si les dégâts sont anormalement élevés
@@ -694,7 +694,7 @@ func (s *AntiCheatService) CleanupOldData() {
 				newActivities = append(newActivities, activity)
 			}
 		}
-		
+
 		if len(newActivities) == 0 {
 			delete(s.suspiciousLogs, actorID)
 		} else {
@@ -722,3 +722,4 @@ func (s *AntiCheatService) StartCleanupRoutine() {
 		}
 	}()
 }
+

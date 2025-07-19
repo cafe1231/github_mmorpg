@@ -1,15 +1,13 @@
 package database
 
-import (
-		
-)
+import ()
 
 // Migration 1: Table des instances de combat
 const createCombatInstancesTable = `
 CREATE TABLE IF NOT EXISTS combat_instances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     combat_type VARCHAR(20) NOT NULL CHECK (combat_type IN ('pve', 'pvp', 'dungeon', 'raid')),
-    status VARCHAR(20) NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'active', 'paused', 'finished', 'cancelled')),
+    status VARCHAR(20) NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'active', 'paused', 'finished', 'canceled')),
     zone_id VARCHAR(255),
     max_participants INTEGER NOT NULL DEFAULT 2,
     current_turn INTEGER NOT NULL DEFAULT 0,
@@ -149,7 +147,7 @@ CREATE TABLE IF NOT EXISTS pvp_challenges (
     stakes JSONB DEFAULT '{}',
     
     -- État du défi
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired', 'completed')),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'canceled', 'expired', 'completed')),
     
     -- Résultat
     winner_id UUID,
@@ -260,3 +258,4 @@ CREATE INDEX IF NOT EXISTS idx_combat_logs_timestamp ON combat_logs(combat_id, t
 CREATE INDEX IF NOT EXISTS idx_combat_statistics_character_id ON combat_statistics(character_id);
 CREATE INDEX IF NOT EXISTS idx_combat_statistics_user_id ON combat_statistics(user_id);
 CREATE INDEX IF NOT EXISTS idx_combat_statistics_pvp_rating ON combat_statistics(pvp_rating DESC);`
+

@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Event représente un événement de jeu (connexion, achat, combat, etc.)
+// Event représente un événement de jeu (connection, achat, combat, etc.)
 type Event struct {
 	ID        uuid.UUID  `json:"id" db:"id"`
 	Type      string     `json:"type" db:"type"` // ex: login, purchase, combat, quest

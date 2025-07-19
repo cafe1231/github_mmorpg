@@ -305,7 +305,7 @@ func (h *PlayerHandler) UpdatePlayTime(c *gin.Context) {
 }
 
 // UpdateLastSeen godoc
-// @Summary      Mise à jour de la dernière connexion
+// @Summary      Mise à jour de la dernière connection
 // @Description  Met à jour l'horodatage de la dernière activité du joueur
 // @Tags         player
 // @Security     BearerAuth
@@ -369,9 +369,9 @@ func (h *PlayerHandler) CanCreateCharacter(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"can_create":   canCreate,
-		"max_allowed":  h.config.Game.MaxCharactersPerPlayer,
-		"request_id":   c.GetHeader("X-Request-ID"),
+		"can_create":  canCreate,
+		"max_allowed": h.config.Game.MaxCharactersPerPlayer,
+		"request_id":  c.GetHeader("X-Request-ID"),
 	})
 }
 
@@ -635,15 +635,15 @@ func (h *PlayerHandler) GetPlayerSummary(c *gin.Context) {
 
 	// Retourner un résumé simplifié pour les autres services
 	summary := gin.H{
-		"player_id":     playerResponse.Player.ID,
-		"user_id":       playerResponse.Player.UserID,
-		"display_name":  playerResponse.Player.DisplayName,
-		"avatar":        playerResponse.Player.Avatar,
-		"title":         playerResponse.Player.Title,
-		"guild_id":      playerResponse.Player.GuildID,
-		"is_online":     playerResponse.Player.IsOnline(),
+		"player_id":       playerResponse.Player.ID,
+		"user_id":         playerResponse.Player.UserID,
+		"display_name":    playerResponse.Player.DisplayName,
+		"avatar":          playerResponse.Player.Avatar,
+		"title":           playerResponse.Player.Title,
+		"guild_id":        playerResponse.Player.GuildID,
+		"is_online":       playerResponse.Player.IsOnline(),
 		"character_count": len(playerResponse.Characters),
-		"last_seen":     playerResponse.Player.LastSeen,
+		"last_seen":       playerResponse.Player.LastSeen,
 	}
 
 	if playerResponse.Stats != nil {
@@ -750,10 +750,10 @@ func (h *PlayerHandler) ValidateDisplayName(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"valid":       isValid,
-		"message":     message,
+		"valid":        isValid,
+		"message":      message,
 		"display_name": req.DisplayName,
-		"request_id":  c.GetHeader("X-Request-ID"),
+		"request_id":   c.GetHeader("X-Request-ID"),
 	})
 }
 
@@ -867,3 +867,4 @@ func (h *PlayerHandler) UpdatePlayerPreferences(c *gin.Context) {
 		"request_id":  c.GetHeader("X-Request-ID"),
 	})
 }
+

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"inventory/internal/models"
 	"github.com/jmoiron/sqlx"
+	"inventory/internal/models"
 )
 
 type itemRepository struct {
@@ -288,7 +288,11 @@ func (r *itemRepository) CreateBatch(ctx context.Context, items []models.Item) e
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	query := `
 		INSERT INTO items (id, name, description, type, rarity, level, stats, requirements, 
@@ -324,7 +328,11 @@ func (r *itemRepository) UpdateBatch(ctx context.Context, items []models.Item) e
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	query := `
 		UPDATE items SET
@@ -361,3 +369,4 @@ func (r *itemRepository) UpdateBatch(ctx context.Context, items []models.Item) e
 
 	return nil
 }
+

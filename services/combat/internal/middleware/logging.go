@@ -34,7 +34,7 @@ func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
-		
+
 		// Vérifier si on doit ignorer ce chemin
 		for _, skipPath := range config.SkipPaths {
 			if strings.HasPrefix(path, skipPath) {
@@ -55,7 +55,7 @@ func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 		// Wrapper pour capturer la réponse
 		writer := &responseWriter{
 			ResponseWriter: c.Writer,
-			body:          bytes.NewBufferString(""),
+			body:           bytes.NewBufferString(""),
 		}
 		if config.LogResponse {
 			c.Writer = writer
@@ -66,22 +66,22 @@ func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 
 		// Calculer la durée
 		duration := time.Since(start)
-		
+
 		// Préparer les champs de log
 		fields := logrus.Fields{
-			"method":        c.Request.Method,
-			"path":          path,
-			"query":         c.Request.URL.RawQuery,
-			"status":        c.Writer.Status(),
-			"user_agent":    c.Request.UserAgent(),
-			"client_ip":     c.ClientIP(),
-			"latency":       duration,
-			"latency_ms":    duration.Milliseconds(),
-			"bytes_in":      c.Request.ContentLength,
-			"bytes_out":     c.Writer.Size(),
-			"request_id":    c.GetHeader("X-Request-ID"),
-			"referer":       c.Request.Referer(),
-			"protocol":      c.Request.Proto,
+			"method":     c.Request.Method,
+			"path":       path,
+			"query":      c.Request.URL.RawQuery,
+			"status":     c.Writer.Status(),
+			"user_agent": c.Request.UserAgent(),
+			"client_ip":  c.ClientIP(),
+			"latency":    duration,
+			"latency_ms": duration.Milliseconds(),
+			"bytes_in":   c.Request.ContentLength,
+			"bytes_out":  c.Writer.Size(),
+			"request_id": c.GetHeader("X-Request-ID"),
+			"referer":    c.Request.Referer(),
+			"protocol":   c.Request.Proto,
 		}
 
 		// Ajouter les informations utilisateur si disponibles
@@ -153,8 +153,8 @@ func RequestLogging() gin.HandlerFunc {
 			"client_ip":  param.ClientIP,
 			"user_agent": param.Request.UserAgent(),
 		}).Info("HTTP Request")
-		
-		return "" // Retourner une chaîne vide car on utilise logrus
+
+		return "" // Retourner une chaîne vide car on utilize logrus
 	})
 }
 
@@ -285,11 +285,11 @@ func AuditLogging(auditPaths []string) gin.HandlerFunc {
 
 		if needsAudit {
 			start := time.Now()
-			
+
 			c.Next()
-			
+
 			duration := time.Since(start)
-			
+
 			logrus.WithFields(logrus.Fields{
 				"audit":        true,
 				"action":       method + " " + path,
@@ -322,7 +322,7 @@ func containsSQLInjection(input string) bool {
 		"union", "select", "insert", "delete", "update",
 		"drop", "create", "alter", "exec", "execute",
 	}
-	
+
 	lowerInput := strings.ToLower(input)
 	for _, pattern := range sqlPatterns {
 		if strings.Contains(lowerInput, pattern) {
@@ -338,7 +338,7 @@ func containsXSS(input string) bool {
 		"onload=", "onclick=", "onmouseover=", "onfocus=",
 		"alert(", "document.cookie", "document.write",
 	}
-	
+
 	lowerInput := strings.ToLower(input)
 	for _, pattern := range xssPatterns {
 		if strings.Contains(lowerInput, pattern) {
@@ -353,7 +353,7 @@ func containsPathTraversal(path string) bool {
 		"../", "..\\", "..%2f", "..%5c",
 		"%2e%2e%2f", "%2e%2e%5c",
 	}
-	
+
 	lowerPath := strings.ToLower(path)
 	for _, pattern := range traversalPatterns {
 		if strings.Contains(lowerPath, pattern) {
@@ -362,3 +362,4 @@ func containsPathTraversal(path string) bool {
 	}
 	return false
 }
+

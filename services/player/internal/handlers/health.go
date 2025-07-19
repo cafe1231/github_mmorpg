@@ -186,7 +186,7 @@ func (h *HealthHandler) Readiness(c *gin.Context) {
 	}
 
 	// Vérifier d'autres dépendances critiques si nécessaire
-	// Par exemple, connexion au service Auth, etc.
+	// Par example, connection au service Auth, etc.
 
 	status := "ready"
 	if !ready {
@@ -217,8 +217,8 @@ func (h *HealthHandler) Liveness(c *gin.Context) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	// Vérification simple: si le service utilise trop de mémoire, il pourrait être en problème
-	maxMemoryMB := uint64(1024) // 1GB limite par exemple
+	// Vérification simple: si le service utilize trop de mémoire, il pourrait être en problème
+	maxMemoryMB := uint64(1024) // 1GB limite par example
 	currentMemoryMB := bToMb(m.Alloc)
 
 	alive := true
@@ -474,3 +474,4 @@ func (h *HealthHandler) GCStats(c *gin.Context) {
 func bToMb(b uint64) uint64 {
 	return b / 1024 / 1024
 }
+

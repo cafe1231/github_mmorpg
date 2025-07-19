@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"inventory/internal/models"
 	"github.com/jmoiron/sqlx"
+	"inventory/internal/models"
 )
 
 type equipmentRepository struct {
@@ -66,7 +66,11 @@ func (r *equipmentRepository) EquipItem(ctx context.Context, characterID uuid.UU
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du rollback")
+		}
+	}()
 
 	// Check if slot is already occupied
 	var existingID uuid.UUID
@@ -205,3 +209,4 @@ func (r *equipmentRepository) GetSetBonuses(ctx context.Context, characterID uui
 	equipmentSet.CalculateSetBonuses()
 	return equipmentSet.SetBonuses, nil
 }
+

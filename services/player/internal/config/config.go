@@ -242,8 +242,9 @@ func validateConfig(config *Config) error {
 	return nil
 }
 
-// GetDatabaseURL retourne l'URL de connexion PostgreSQL
+// GetDatabaseURL retourne l'URL de connection PostgreSQL
 func (c *DatabaseConfig) GetDatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		c.User, c.Password, c.Host, c.Port, c.Name, c.SSLMode)
 }
+

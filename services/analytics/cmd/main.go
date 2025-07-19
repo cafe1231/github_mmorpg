@@ -45,7 +45,7 @@ func init() {
 	prometheus.MustRegister(httpRequestDuration)
 }
 
-// setupDatabase configure la connexion à la base de données
+// setupDatabase configure la connection à la base de données
 func setupDatabase(cfg *config.Config) (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Database.Host, cfg.Database.Port, cfg.Database.User,
@@ -56,14 +56,14 @@ func setupDatabase(cfg *config.Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("erreur lors de l'ouverture de la base de données: %w", err)
 	}
 
-	// Configurer la connexion
+	// Configurer la connection
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	// Tester la connexion
+	// Tester la connection
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("erreur lors du test de connexion à la base de données: %w", err)
+		return nil, fmt.Errorf("erreur lors du test de connection à la base de données: %w", err)
 	}
 
 	return db, nil

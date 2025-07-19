@@ -8,61 +8,61 @@ import (
 
 // CharacterStats représente les statistiques d'un personnage
 type CharacterStats struct {
-	CharacterID  uuid.UUID `json:"character_id" db:"character_id"`
-	
+	CharacterID uuid.UUID `json:"character_id" db:"character_id"`
+
 	// Statistiques de base
-	Health       int `json:"health" db:"health"`
-	MaxHealth    int `json:"max_health" db:"max_health"`
-	Mana         int `json:"mana" db:"mana"`
-	MaxMana      int `json:"max_mana" db:"max_mana"`
-	
+	Health    int `json:"health" db:"health"`
+	MaxHealth int `json:"max_health" db:"max_health"`
+	Mana      int `json:"mana" db:"mana"`
+	MaxMana   int `json:"max_mana" db:"max_mana"`
+
 	// Attributs principaux
 	Strength     int `json:"strength" db:"strength"`
 	Agility      int `json:"agility" db:"agility"`
 	Intelligence int `json:"intelligence" db:"intelligence"`
 	Vitality     int `json:"vitality" db:"vitality"`
-	
+
 	// Points disponibles
-	StatPoints   int `json:"stat_points" db:"stat_points"`
-	SkillPoints  int `json:"skill_points" db:"skill_points"`
-	
+	StatPoints  int `json:"stat_points" db:"stat_points"`
+	SkillPoints int `json:"skill_points" db:"skill_points"`
+
 	// Statistiques dérivées (calculées)
 	PhysicalDamage  int `json:"physical_damage" db:"physical_damage"`
 	MagicalDamage   int `json:"magical_damage" db:"magical_damage"`
 	PhysicalDefense int `json:"physical_defense" db:"physical_defense"`
 	MagicalDefense  int `json:"magical_defense" db:"magical_defense"`
-	CriticalChance  int `json:"critical_chance" db:"critical_chance"`   // en pourcentage
-	AttackSpeed     int `json:"attack_speed" db:"attack_speed"`        // en pourcentage
-	MovementSpeed   int `json:"movement_speed" db:"movement_speed"`    // en pourcentage
-	
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	CriticalChance  int `json:"critical_chance" db:"critical_chance"` // en pourcentage
+	AttackSpeed     int `json:"attack_speed" db:"attack_speed"`       // en pourcentage
+	MovementSpeed   int `json:"movement_speed" db:"movement_speed"`   // en pourcentage
+
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // CombatStats représente les statistiques de combat
 type CombatStats struct {
 	CharacterID uuid.UUID `json:"character_id" db:"character_id"`
-	
+
 	// Statistiques PvE
-	MonstersKilled    int `json:"monsters_killed" db:"monsters_killed"`
-	BossesKilled      int `json:"bosses_killed" db:"bosses_killed"`
-	Deaths            int `json:"deaths" db:"deaths"`
-	DamageDealt       int64 `json:"damage_dealt" db:"damage_dealt"`
-	DamageTaken       int64 `json:"damage_taken" db:"damage_taken"`
-	HealingDone       int64 `json:"healing_done" db:"healing_done"`
-	
+	MonstersKilled int   `json:"monsters_killed" db:"monsters_killed"`
+	BossesKilled   int   `json:"bosses_killed" db:"bosses_killed"`
+	Deaths         int   `json:"deaths" db:"deaths"`
+	DamageDealt    int64 `json:"damage_dealt" db:"damage_dealt"`
+	DamageTaken    int64 `json:"damage_taken" db:"damage_taken"`
+	HealingDone    int64 `json:"healing_done" db:"healing_done"`
+
 	// Statistiques PvP
-	PvPKills         int `json:"pvp_kills" db:"pvp_kills"`
-	PvPDeaths        int `json:"pvp_deaths" db:"pvp_deaths"`
-	PvPDamageDealt   int64 `json:"pvp_damage_dealt" db:"pvp_damage_dealt"`
-	PvPDamageTaken   int64 `json:"pvp_damage_taken" db:"pvp_damage_taken"`
-	
+	PvPKills       int   `json:"pvp_kills" db:"pvp_kills"`
+	PvPDeaths      int   `json:"pvp_deaths" db:"pvp_deaths"`
+	PvPDamageDealt int64 `json:"pvp_damage_dealt" db:"pvp_damage_dealt"`
+	PvPDamageTaken int64 `json:"pvp_damage_taken" db:"pvp_damage_taken"`
+
 	// Statistiques générales
-	QuestsCompleted  int `json:"quests_completed" db:"quests_completed"`
-	ItemsLooted      int `json:"items_looted" db:"items_looted"`
-	GoldEarned       int64 `json:"gold_earned" db:"gold_earned"`
+	QuestsCompleted  int     `json:"quests_completed" db:"quests_completed"`
+	ItemsLooted      int     `json:"items_looted" db:"items_looted"`
+	GoldEarned       int64   `json:"gold_earned" db:"gold_earned"`
 	DistanceTraveled float64 `json:"distance_traveled" db:"distance_traveled"` // en kilomètres
-	
-	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
+
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // UpdateStatsRequest représente une demande de mise à jour des stats
@@ -75,22 +75,22 @@ type UpdateStatsRequest struct {
 
 // StatsResponse représente la réponse complète des statistiques
 type StatsResponse struct {
-	BaseStats   *CharacterStats   `json:"base_stats"`
-	CombatStats *CombatStats      `json:"combat_stats"`
-	Modifiers   []*StatModifier   `json:"modifiers,omitempty"` // Changé pour utiliser des pointeurs
+	BaseStats   *CharacterStats `json:"base_stats"`
+	CombatStats *CombatStats    `json:"combat_stats"`
+	Modifiers   []*StatModifier `json:"modifiers,omitempty"` // Changé pour utiliser des pointeurs
 }
 
 // StatModifier représente un modificateur temporaire de statistiques
 type StatModifier struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	CharacterID uuid.UUID `json:"character_id" db:"character_id"`
-	Type        string    `json:"type" db:"type"`         // buff, debuff, equipment
-	Source      string    `json:"source" db:"source"`     // spell_name, item_id, etc.
-	StatName    string    `json:"stat_name" db:"stat_name"`
-	Value       int       `json:"value" db:"value"`       // peut être négatif
-	Duration    int       `json:"duration" db:"duration"` // en secondes, 0 = permanent
+	ID          uuid.UUID  `json:"id" db:"id"`
+	CharacterID uuid.UUID  `json:"character_id" db:"character_id"`
+	Type        string     `json:"type" db:"type"`     // buff, debuff, equipment
+	Source      string     `json:"source" db:"source"` // spell_name, item_id, etc.
+	StatName    string     `json:"stat_name" db:"stat_name"`
+	Value       int        `json:"value" db:"value"`       // peut être négatif
+	Duration    int        `json:"duration" db:"duration"` // en secondes, 0 = permanent
 	ExpiresAt   *time.Time `json:"expires_at" db:"expires_at"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 }
 
 // CalculateMaxHealth calcule la santé maximale basée sur la vitalité
@@ -184,7 +184,7 @@ func (s *CharacterStats) SpendStatPoint(stat string, amount int) bool {
 	if s.StatPoints < amount {
 		return false
 	}
-	
+
 	switch stat {
 	case "strength":
 		s.Strength += amount
@@ -197,7 +197,7 @@ func (s *CharacterStats) SpendStatPoint(stat string, amount int) bool {
 	default:
 		return false
 	}
-	
+
 	s.StatPoints -= amount
 	s.RecalculateAll()
 	return true

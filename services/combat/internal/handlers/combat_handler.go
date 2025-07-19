@@ -655,7 +655,7 @@ func (h *CombatHandler) GetActiveCombatCount(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":       true,
+		"success":        true,
 		"active_combats": count,
 	})
 }

@@ -108,7 +108,8 @@ func (r *eventRepository) List(ctx context.Context, eventType *string, from, to 
 	}
 
 	// Récupérer les données
-	query := "SELECT id, type, player_id, guild_id, timestamp, payload FROM analytics_events " + whereClause + " ORDER BY timestamp DESC LIMIT $" + fmt.Sprintf("%d", argIndex) + " OFFSET $" + fmt.Sprintf("%d", argIndex+1)
+	baseQuery := "SELECT id, type, player_id, guild_id, timestamp, payload FROM analytics_events " + whereClause + " ORDER BY timestamp DESC"
+	query := baseQuery + " LIMIT $" + fmt.Sprintf("%d", argIndex) + " OFFSET $" + fmt.Sprintf("%d", argIndex+1)
 	args = append(args, limit, (page-1)*limit)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)

@@ -8,55 +8,55 @@ import (
 
 // Character représente un personnage de jeu
 type Character struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	PlayerID  uuid.UUID `json:"player_id" db:"player_id"`
-	Name      string    `json:"name" db:"name"`
-	Class     string    `json:"class" db:"class"`
-	Race      string    `json:"race" db:"race"`
-	Gender    string    `json:"gender" db:"gender"`
-	
+	ID       uuid.UUID `json:"id" db:"id"`
+	PlayerID uuid.UUID `json:"player_id" db:"player_id"`
+	Name     string    `json:"name" db:"name"`
+	Class    string    `json:"class" db:"class"`
+	Race     string    `json:"race" db:"race"`
+	Gender   string    `json:"gender" db:"gender"`
+
 	// Apparence
 	Appearance CharacterAppearance `json:"appearance" db:"appearance"`
-	
+
 	// Progression
 	Level      int   `json:"level" db:"level"`
 	Experience int64 `json:"experience" db:"experience"`
-	
+
 	// Position dans le monde
-	ZoneID     string  `json:"zone_id" db:"zone_id"`
-	PositionX  float64 `json:"position_x" db:"position_x"`
-	PositionY  float64 `json:"position_y" db:"position_y"`
-	PositionZ  float64 `json:"position_z" db:"position_z"`
-	
+	ZoneID    string  `json:"zone_id" db:"zone_id"`
+	PositionX float64 `json:"position_x" db:"position_x"`
+	PositionY float64 `json:"position_y" db:"position_y"`
+	PositionZ float64 `json:"position_z" db:"position_z"`
+
 	// État
 	Status     string    `json:"status" db:"status"` // active, inactive, deleted
 	LastPlayed time.Time `json:"last_played" db:"last_played"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
-	
+
 	// Relations (chargées séparément)
-	Stats      *CharacterStats `json:"stats,omitempty" db:"-"`
-	Equipment  []Equipment     `json:"equipment,omitempty" db:"-"`
-	Inventory  []InventoryItem `json:"inventory,omitempty" db:"-"`
+	Stats     *CharacterStats `json:"stats,omitempty" db:"-"`
+	Equipment []Equipment     `json:"equipment,omitempty" db:"-"`
+	Inventory []InventoryItem `json:"inventory,omitempty" db:"-"`
 }
 
 // CharacterAppearance représente l'apparence d'un personnage
 type CharacterAppearance struct {
-	SkinColor    string `json:"skin_color"`
-	HairColor    string `json:"hair_color"`
-	HairStyle    string `json:"hair_style"`
-	EyeColor     string `json:"eye_color"`
-	Height       int    `json:"height"`      // en cm
-	BodyType     string `json:"body_type"`   // slim, normal, muscular
-	FaceType     string `json:"face_type"`
-	Accessories  []string `json:"accessories"` // scars, tattoos, etc.
+	SkinColor   string   `json:"skin_color"`
+	HairColor   string   `json:"hair_color"`
+	HairStyle   string   `json:"hair_style"`
+	EyeColor    string   `json:"eye_color"`
+	Height      int      `json:"height"`    // en cm
+	BodyType    string   `json:"body_type"` // slim, normal, muscular
+	FaceType    string   `json:"face_type"`
+	Accessories []string `json:"accessories"` // scars, tattoos, etc.
 }
 
 // Equipment représente un équipement porté
 type Equipment struct {
 	ID       uuid.UUID `json:"id" db:"id"`
-	Slot     string    `json:"slot" db:"slot"`         // helmet, armor, weapon, etc.
-	ItemID   string    `json:"item_id" db:"item_id"`   // Référence vers le service Inventory
+	Slot     string    `json:"slot" db:"slot"`       // helmet, armor, weapon, etc.
+	ItemID   string    `json:"item_id" db:"item_id"` // Référence vers le service Inventory
 	ItemName string    `json:"item_name" db:"item_name"`
 	Equipped time.Time `json:"equipped" db:"equipped"`
 }
@@ -100,8 +100,8 @@ type CharacterSummary struct {
 // CharacterClasses définit les classes disponibles
 var CharacterClasses = map[string]ClassInfo{
 	"warrior": {
-		Name:        "Warrior",
-		Description: "Master of melee combat and defense",
+		Name:         "Warrior",
+		Description:  "Master of melee combat and defense",
 		PrimaryStats: []string{"strength", "vitality"},
 		StartingBonus: map[string]int{
 			"strength": 5,
@@ -109,8 +109,8 @@ var CharacterClasses = map[string]ClassInfo{
 		},
 	},
 	"mage": {
-		Name:        "Mage",
-		Description: "Wielder of arcane magic and spells",
+		Name:         "Mage",
+		Description:  "Wielder of arcane magic and spells",
 		PrimaryStats: []string{"intelligence", "mana"},
 		StartingBonus: map[string]int{
 			"intelligence": 5,
@@ -118,8 +118,8 @@ var CharacterClasses = map[string]ClassInfo{
 		},
 	},
 	"archer": {
-		Name:        "Archer",
-		Description: "Expert marksman and ranger",
+		Name:         "Archer",
+		Description:  "Expert marksman and ranger",
 		PrimaryStats: []string{"agility", "strength"},
 		StartingBonus: map[string]int{
 			"agility":  5,
@@ -127,11 +127,11 @@ var CharacterClasses = map[string]ClassInfo{
 		},
 	},
 	"rogue": {
-		Name:        "Rogue",
-		Description: "Master of stealth and critical strikes",
+		Name:         "Rogue",
+		Description:  "Master of stealth and critical strikes",
 		PrimaryStats: []string{"agility", "intelligence"},
 		StartingBonus: map[string]int{
-			"agility":     4,
+			"agility":      4,
 			"intelligence": 3,
 		},
 	},
@@ -177,10 +177,10 @@ var CharacterRaces = map[string]RaceInfo{
 
 // ClassInfo informations sur une classe
 type ClassInfo struct {
-	Name          string            `json:"name"`
-	Description   string            `json:"description"`
-	PrimaryStats  []string          `json:"primary_stats"`
-	StartingBonus map[string]int    `json:"starting_bonus"`
+	Name          string         `json:"name"`
+	Description   string         `json:"description"`
+	PrimaryStats  []string       `json:"primary_stats"`
+	StartingBonus map[string]int `json:"starting_bonus"`
 }
 
 // RaceInfo informations sur une race
@@ -225,15 +225,15 @@ func (c *Character) GetExperienceProgress() float64 {
 	if c.Level >= 100 { // Max level
 		return 100.0
 	}
-	
+
 	currentLevelXP := int64(c.Level * c.Level * 100)
 	nextLevelXP := c.GetExperienceToNextLevel()
 	progressXP := c.Experience - currentLevelXP
-	
+
 	if progressXP <= 0 {
 		return 0.0
 	}
-	
+
 	return (float64(progressXP) / float64(nextLevelXP-currentLevelXP)) * 100.0
 }
 
@@ -242,7 +242,7 @@ func (c *Character) CanLevelUp() bool {
 	if c.Level >= 100 { // Max level
 		return false
 	}
-	
+
 	requiredXP := c.GetExperienceToNextLevel()
 	return c.Experience >= requiredXP
 }
@@ -252,7 +252,7 @@ func (c *Character) LevelUp() bool {
 	if !c.CanLevelUp() {
 		return false
 	}
-	
+
 	c.Level++
 	c.UpdatedAt = time.Now()
 	return true
@@ -303,10 +303,10 @@ func GetDefaultAppearance(race string) CharacterAppearance {
 			FaceType:  "angular",
 		},
 	}
-	
+
 	if appearance, exists := defaults[race]; exists {
 		return appearance
 	}
-	
+
 	return defaults["human"] // fallback
 }
