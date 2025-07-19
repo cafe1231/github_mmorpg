@@ -247,4 +247,3 @@ func (c *DatabaseConfig) GetDatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		c.User, c.Password, c.Host, c.Port, c.Name, c.SSLMode)
 }
-

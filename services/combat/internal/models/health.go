@@ -261,4 +261,3 @@ func (h *HealthResponse) AddCheck(name string, check *HealthCheck) {
 		h.Status = "unhealthy"
 	}
 }
-

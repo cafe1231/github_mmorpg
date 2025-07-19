@@ -13,7 +13,7 @@ func Init(port int) {
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 		logrus.WithField("port", port).Info("Prometheus metrics server starting")
-		
+
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
 			logrus.WithError(err).Error("Failed to start metrics server")
 		}

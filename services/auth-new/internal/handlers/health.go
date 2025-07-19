@@ -74,8 +74,8 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		Status:  "healthy",
 		Message: "System resources normal",
 		Details: models.SystemHealth{
-			Goroutines: runtime.NumGoroutine(),
-			GCCycles:   m.NumGC,
+			Goroutines:  runtime.NumGoroutine(),
+			GCCycles:    m.NumGC,
 			MemoryUsage: float64(m.Alloc) / 1024 / 1024, // MB
 		},
 	}
@@ -276,11 +276,11 @@ func (h *HealthHandler) ConfigHandler(c *gin.Context) {
 			"environment": h.config.Server.Environment,
 		},
 		"database": gin.H{
-			"host":            h.config.Database.Host,
-			"port":            h.config.Database.Port,
-			"name":            h.config.Database.Name,
-			"max_open_conns":  h.config.Database.MaxOpenConns,
-			"max_idle_conns":  h.config.Database.MaxIdleConns,
+			"host":           h.config.Database.Host,
+			"port":           h.config.Database.Port,
+			"name":           h.config.Database.Name,
+			"max_open_conns": h.config.Database.MaxOpenConns,
+			"max_idle_conns": h.config.Database.MaxIdleConns,
 		},
 		"jwt": gin.H{
 			"issuer": h.config.JWT.Issuer,

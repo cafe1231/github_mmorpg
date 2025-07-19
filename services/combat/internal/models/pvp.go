@@ -529,4 +529,3 @@ func GetSeasonRewards() map[string]*PvPReward {
 		},
 	}
 }
-

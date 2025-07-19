@@ -712,4 +712,3 @@ func CreateAction(combatID, actorID uuid.UUID, request *ActionRequest) *CombatAc
 		CreatedAt:       time.Now(),
 	}
 }
-

@@ -1,4 +1,4 @@
-﻿package proxy
+package proxy
 
 import (
 	"bytes"
@@ -129,12 +129,12 @@ func (sp *ServiceProxy) Forward(c *gin.Context, endpoint config.ServiceEndpoint)
 func (sp *ServiceProxy) transformPath(originalPath string) string {
 	// Mapping des préfixes Gateway vers les paths des services
 	pathMappings := map[string]string{
-		"/auth/health":     "/health",                    // /auth/health -> /health
-		"/auth/metrics":    "/metrics",                   // /auth/metrics -> /metrics
-		"/auth/":           "/api/v1/auth/",             // /auth/register -> /api/v1/auth/register
-		"/api/v1/auth/":    "/api/v1/auth/",             // /api/v1/auth/login -> /api/v1/auth/login  
-		"/api/v1/user/":    "/api/v1/user/",             // /api/v1/user/profile -> /api/v1/user/profile
-		"/api/v1/validate/": "/api/v1/validate/",        // /api/v1/validate/token -> /api/v1/validate/token
+		"/auth/health":      "/health",           // /auth/health -> /health
+		"/auth/metrics":     "/metrics",          // /auth/metrics -> /metrics
+		"/auth/":            "/api/v1/auth/",     // /auth/register -> /api/v1/auth/register
+		"/api/v1/auth/":     "/api/v1/auth/",     // /api/v1/auth/login -> /api/v1/auth/login
+		"/api/v1/user/":     "/api/v1/user/",     // /api/v1/user/profile -> /api/v1/user/profile
+		"/api/v1/validate/": "/api/v1/validate/", // /api/v1/validate/token -> /api/v1/validate/token
 	}
 
 	// Chercher le mapping correspondant (plus spécifique en premier)
@@ -143,28 +143,28 @@ func (sp *ServiceProxy) transformPath(originalPath string) string {
 			// Pour les mappings exacts (health, metrics)
 			if originalPath == prefix {
 				newPath := replacement
-				
+
 				logrus.WithFields(logrus.Fields{
 					"original_path": originalPath,
-					"new_path":     newPath,
-					"mapping_type": "exact",
+					"new_path":      newPath,
+					"mapping_type":  "exact",
 				}).Debug("Path transformation")
-				
+
 				return newPath
 			}
-			
+
 			// Pour les mappings de préfixe
 			if strings.HasSuffix(prefix, "/") {
 				newPath := replacement + strings.TrimPrefix(originalPath, prefix)
-				
+
 				logrus.WithFields(logrus.Fields{
 					"original_path": originalPath,
-					"new_path":     newPath,
-					"prefix":       prefix,
-					"replacement":  replacement,
-					"mapping_type": "prefix",
+					"new_path":      newPath,
+					"prefix":        prefix,
+					"replacement":   replacement,
+					"mapping_type":  "prefix",
 				}).Debug("Path transformation")
-				
+
 				return newPath
 			}
 		}
@@ -173,10 +173,10 @@ func (sp *ServiceProxy) transformPath(originalPath string) string {
 	// Si aucun mapping trouvé, garder le path original
 	logrus.WithFields(logrus.Fields{
 		"original_path": originalPath,
-		"new_path":     originalPath,
-		"mapping_type": "none",
+		"new_path":      originalPath,
+		"mapping_type":  "none",
 	}).Debug("Path transformation")
-	
+
 	return originalPath
 }
 

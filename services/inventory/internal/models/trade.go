@@ -163,4 +163,3 @@ func (t *Trade) GetOtherPlayerID(playerID uuid.UUID) uuid.UUID {
 	}
 	return t.InitiatorID
 }
-

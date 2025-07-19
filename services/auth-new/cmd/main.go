@@ -160,11 +160,11 @@ func setupRoutes(
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
-			
+
 			// Récupération de mot de passe
 			auth.POST("/forgot-password", authHandler.ForgotPassword)
 			auth.POST("/reset-password", authHandler.ResetPassword)
-			
+
 			// Vérification d'email
 			auth.GET("/verify-email/:token", authHandler.VerifyEmail)
 			auth.POST("/resend-verification", authHandler.ResendVerification)
@@ -218,18 +218,18 @@ func setupRoutes(
 				admin.PUT("/users/:id", authHandler.UpdateUser)
 				admin.POST("/users", authHandler.CreateUser)
 				admin.DELETE("/users/:id", authHandler.DeleteUser)
-				
+
 				// Gestion des statuts
 				admin.POST("/users/:id/suspend", authHandler.SuspendUser)
 				admin.POST("/users/:id/activate", authHandler.ActivateUser)
 				admin.POST("/users/:id/ban", authHandler.BanUser)
 				admin.POST("/users/:id/unban", authHandler.UnbanUser)
-				
+
 				// Logs et audit
 				admin.GET("/login-attempts", authHandler.GetLoginAttempts)
 				admin.GET("/audit-log", authHandler.GetAuditLog)
 				admin.GET("/statistics", authHandler.GetStatistics)
-				
+
 				// Gestion des sessions
 				admin.GET("/sessions", authHandler.GetAllSessions)
 				admin.DELETE("/sessions/:id", authHandler.AdminRevokeSession)

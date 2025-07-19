@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"fmt"
 
+	"inventory/internal/models"
+
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"inventory/internal/models"
+	"github.com/sirupsen/logrus"
 )
 
 type equipmentRepository struct {
@@ -209,4 +211,3 @@ func (r *equipmentRepository) GetSetBonuses(ctx context.Context, characterID uui
 	equipmentSet.CalculateSetBonuses()
 	return equipmentSet.SetBonuses, nil
 }
-

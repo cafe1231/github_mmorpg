@@ -479,4 +479,3 @@ func (r *ActionRepository) CleanupOldActions(olderThan time.Duration) error {
 
 	return nil
 }
-

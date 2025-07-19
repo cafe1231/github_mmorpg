@@ -177,4 +177,3 @@ func loadMigrationsFromFiles() ([]Migration, error) {
 
 	return result, nil
 }
-

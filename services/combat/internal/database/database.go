@@ -103,4 +103,3 @@ func RunMigrations(db *DB) error {
 	logrus.Info("Database migrations completed successfully")
 	return nil
 }
-

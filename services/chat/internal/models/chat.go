@@ -216,4 +216,3 @@ type ConnectionInfo struct {
 	LastPing    time.Time `json:"last_ping"`
 	Channels    []string  `json:"channels"`
 }
-

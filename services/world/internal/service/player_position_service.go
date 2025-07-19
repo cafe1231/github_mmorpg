@@ -381,4 +381,3 @@ func (s *PlayerPositionService) GetMovementHistory(characterID uuid.UUID, limit 
 
 	return history, nil
 }
-

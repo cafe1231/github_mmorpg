@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/sirupsen/logrus"
 	"inventory/internal/models"
 )
 
@@ -369,4 +370,3 @@ func (r *itemRepository) UpdateBatch(ctx context.Context, items []models.Item) e
 
 	return nil
 }
-

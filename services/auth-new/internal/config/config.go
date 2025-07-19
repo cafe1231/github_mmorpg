@@ -60,18 +60,18 @@ type JWTConfig struct {
 
 // SecurityConfig configuration de sécurité
 type SecurityConfig struct {
-	BCryptCost               int           `mapstructure:"bcrypt_cost"`
-	MaxLoginAttempts         int           `mapstructure:"max_login_attempts"`
-	LockoutDuration          time.Duration `mapstructure:"lockout_duration"`
-	PasswordMinLength        int           `mapstructure:"password_min_length"`
-	PasswordRequireUpper     bool          `mapstructure:"password_require_upper"`
-	PasswordRequireLower     bool          `mapstructure:"password_require_lower"`
-	PasswordRequireNumber    bool          `mapstructure:"password_require_number"`
-	PasswordRequireDigit     bool          `mapstructure:"password_require_digit"`     // Alias pour Number
-	PasswordRequireSymbol    bool          `mapstructure:"password_require_symbol"`
-	PasswordRequireSpecial   bool          `mapstructure:"password_require_special"`   // Alias pour Symbol
-	SessionTimeout           time.Duration `mapstructure:"session_timeout"`
-	TwoFactorRequired        bool          `mapstructure:"two_factor_required"`
+	BCryptCost             int           `mapstructure:"bcrypt_cost"`
+	MaxLoginAttempts       int           `mapstructure:"max_login_attempts"`
+	LockoutDuration        time.Duration `mapstructure:"lockout_duration"`
+	PasswordMinLength      int           `mapstructure:"password_min_length"`
+	PasswordRequireUpper   bool          `mapstructure:"password_require_upper"`
+	PasswordRequireLower   bool          `mapstructure:"password_require_lower"`
+	PasswordRequireNumber  bool          `mapstructure:"password_require_number"`
+	PasswordRequireDigit   bool          `mapstructure:"password_require_digit"` // Alias pour Number
+	PasswordRequireSymbol  bool          `mapstructure:"password_require_symbol"`
+	PasswordRequireSpecial bool          `mapstructure:"password_require_special"` // Alias pour Symbol
+	SessionTimeout         time.Duration `mapstructure:"session_timeout"`
+	TwoFactorRequired      bool          `mapstructure:"two_factor_required"`
 }
 
 // EmailConfig configuration email
@@ -182,18 +182,18 @@ func LoadConfig() (*Config, error) {
 			PasswordResetExpiration:     1 * time.Hour,
 		},
 		Security: SecurityConfig{
-			BCryptCost:               12,
-			MaxLoginAttempts:         5,
-			LockoutDuration:          15 * time.Minute,
-			PasswordMinLength:        8,
-			PasswordRequireUpper:     true,
-			PasswordRequireLower:     true,
-			PasswordRequireNumber:    true,
-			PasswordRequireDigit:     true,  // Même valeur que Number
-			PasswordRequireSymbol:    true,
-			PasswordRequireSpecial:   true,  // Même valeur que Symbol
-			SessionTimeout:           24 * time.Hour,
-			TwoFactorRequired:        false,
+			BCryptCost:             12,
+			MaxLoginAttempts:       5,
+			LockoutDuration:        15 * time.Minute,
+			PasswordMinLength:      8,
+			PasswordRequireUpper:   true,
+			PasswordRequireLower:   true,
+			PasswordRequireNumber:  true,
+			PasswordRequireDigit:   true, // Même valeur que Number
+			PasswordRequireSymbol:  true,
+			PasswordRequireSpecial: true, // Même valeur que Symbol
+			SessionTimeout:         24 * time.Hour,
+			TwoFactorRequired:      false,
 		},
 		Email: EmailConfig{
 			SMTPHost: "localhost",

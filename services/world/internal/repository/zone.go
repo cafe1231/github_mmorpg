@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"world/internal/database"
 	"world/internal/models"
@@ -107,10 +108,10 @@ func (r *ZoneRepository) GetByID(id string) (*models.Zone, error) {
 	}
 
 	// Désérialiser les settings
-	if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+	if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
 		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-		zone.Settings = models.GetDefaultZoneSettings()
+
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 	}
 
 	// Récupérer le nombre de joueurs
@@ -155,10 +156,10 @@ func (r *ZoneRepository) GetAll() ([]*models.Zone, error) {
 		}
 
 		// Désérialiser les settings
-		if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-			zone.Settings = models.GetDefaultZoneSettings()
+		if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 		}
 
 		// Récupérer le nombre de joueurs
@@ -206,10 +207,10 @@ func (r *ZoneRepository) GetByType(zoneType string) ([]*models.Zone, error) {
 		}
 
 		// Désérialiser les settings
-		if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-			zone.Settings = models.GetDefaultZoneSettings()
+		if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 		}
 
 		zone.PlayerCount, _ = r.GetPlayerCount(zone.ID)
@@ -255,10 +256,10 @@ func (r *ZoneRepository) GetByLevel(minLevel, maxLevel int) ([]*models.Zone, err
 		}
 
 		// Désérialiser les settings
-		if err := if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-			zone.Settings = models.GetDefaultZoneSettings()
+		if err := json.Unmarshal([]byte(settingsJSON), &zone.Settings); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 		}
 
 		zone.PlayerCount, _ = r.GetPlayerCount(zone.ID)
@@ -510,4 +511,3 @@ func (r *ZoneRepository) DeleteTransition(id uuid.UUID) error {
 
 	return nil
 }
-

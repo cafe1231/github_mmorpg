@@ -275,4 +275,3 @@ func (h *HealthHandler) getMemoryUsage() map[string]interface{} {
 		"goroutines":  100,
 	}
 }
-

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/sirupsen/logrus"
 )
 
 type inventoryRepository struct {
@@ -517,4 +518,3 @@ func (r *inventoryRepository) RemoveItems(ctx context.Context, characterID uuid.
 
 	return nil
 }
-

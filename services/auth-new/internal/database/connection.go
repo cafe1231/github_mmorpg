@@ -78,7 +78,7 @@ func RunMigrations(db *sqlx.DB) error {
 	// Exécuter chaque migration
 	for i, migration := range migrationList {
 		logrus.WithField("migration", i+1).Debug("Executing migration")
-		
+
 		if _, err := db.Exec(migration); err != nil {
 			return fmt.Errorf("failed to execute migration %d: %w", i+1, err)
 		}

@@ -69,4 +69,3 @@ func (db *DB) HealthCheck() error {
 func (db *DB) GetStats() sql.DBStats {
 	return db.Stats()
 }
-

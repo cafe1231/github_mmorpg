@@ -488,4 +488,3 @@ func (h *PvPHandler) GetQueueStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, status)
 }
-

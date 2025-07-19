@@ -742,20 +742,20 @@ func (s *AuthService) extractDeviceInfo(userAgent string) string {
 // incrementFailedAttempts incrémente le compteur d'échecs de connexion
 func (s *AuthService) incrementFailedAttempts(user *models.User) {
 	user.LoginAttempts++
-	
+
 	// Verrouiller le compte si trop d'échecs
 	if user.LoginAttempts >= s.config.Security.MaxLoginAttempts {
 		lockUntil := time.Now().Add(s.config.Security.LockoutDuration)
 		user.LockedUntil = &lockUntil
-		
+
 		logrus.WithFields(logrus.Fields{
-			"user_id":     user.ID,
-			"username":    user.Username,
-			"attempts":    user.LoginAttempts,
+			"user_id":      user.ID,
+			"username":     user.Username,
+			"attempts":     user.LoginAttempts,
 			"locked_until": lockUntil,
 		}).Warn("User account locked due to failed login attempts")
 	}
-	
+
 	s.userRepo.Update(user)
 }
 

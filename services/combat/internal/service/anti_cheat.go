@@ -722,4 +722,3 @@ func (s *AntiCheatService) StartCleanupRoutine() {
 		}
 	}()
 }
-

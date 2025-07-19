@@ -201,4 +201,3 @@ func gracefulShutdown(server *http.Server) {
 
 	logrus.Info("💬 Chat Service stopped gracefully")
 }
-

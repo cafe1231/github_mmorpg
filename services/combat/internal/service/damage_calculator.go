@@ -671,4 +671,3 @@ func (dc *DamageCalculator) GetDamageBreakdown(result *DamageResult) string {
 
 	return breakdown
 }
-

@@ -9,25 +9,25 @@ import (
 
 // User représente un utilisateur du système d'authentification
 type User struct {
-	ID              uuid.UUID  `json:"id" db:"id"`
-	Username        string     `json:"username" db:"username"`
-	Email           string     `json:"email" db:"email"`
-	PasswordHash    string     `json:"-" db:"password_hash"` // Jamais exposé en JSON
-	FirstName       string     `json:"first_name" db:"first_name"`
-	LastName        string     `json:"last_name" db:"last_name"`
-	Avatar          string     `json:"avatar" db:"avatar"`
-	Role            string     `json:"role" db:"role"`
-	Status          string     `json:"status" db:"status"` // active, suspended, banned
-	EmailVerified   bool       `json:"email_verified" db:"email_verified"`
-	EmailVerifiedAt *time.Time `json:"email_verified_at" db:"email_verified_at"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
-	LastLoginAt     *time.Time `json:"last_login_at" db:"last_login_at"`
-	LastLoginIP     string     `json:"last_login_ip" db:"last_login_ip"`
-	LoginAttempts   int        `json:"-" db:"login_attempts"`
-	LockedUntil     *time.Time `json:"-" db:"locked_until"`
-	TwoFactorSecret string     `json:"-" db:"two_factor_secret"`
-	TwoFactorEnabled bool      `json:"two_factor_enabled" db:"two_factor_enabled"`
+	ID               uuid.UUID  `json:"id" db:"id"`
+	Username         string     `json:"username" db:"username"`
+	Email            string     `json:"email" db:"email"`
+	PasswordHash     string     `json:"-" db:"password_hash"` // Jamais exposé en JSON
+	FirstName        string     `json:"first_name" db:"first_name"`
+	LastName         string     `json:"last_name" db:"last_name"`
+	Avatar           string     `json:"avatar" db:"avatar"`
+	Role             string     `json:"role" db:"role"`
+	Status           string     `json:"status" db:"status"` // active, suspended, banned
+	EmailVerified    bool       `json:"email_verified" db:"email_verified"`
+	EmailVerifiedAt  *time.Time `json:"email_verified_at" db:"email_verified_at"`
+	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at" db:"updated_at"`
+	LastLoginAt      *time.Time `json:"last_login_at" db:"last_login_at"`
+	LastLoginIP      string     `json:"last_login_ip" db:"last_login_ip"`
+	LoginAttempts    int        `json:"-" db:"login_attempts"`
+	LockedUntil      *time.Time `json:"-" db:"locked_until"`
+	TwoFactorSecret  string     `json:"-" db:"two_factor_secret"`
+	TwoFactorEnabled bool       `json:"two_factor_enabled" db:"two_factor_enabled"`
 }
 
 // UserSession représente une session utilisateur active
@@ -126,11 +126,11 @@ func (u *User) CanLogin() bool {
 	if u.Status != StatusActive {
 		return false
 	}
-	
+
 	if u.LockedUntil != nil && time.Now().Before(*u.LockedUntil) {
 		return false
 	}
-	
+
 	return true
 }
 

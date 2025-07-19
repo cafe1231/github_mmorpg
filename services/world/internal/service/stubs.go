@@ -596,4 +596,3 @@ func (s *WeatherService) validateWeatherData(ctx context.Context, weather *model
 
 	return nil
 }
-

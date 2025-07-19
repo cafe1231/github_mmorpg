@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/sirupsen/logrus"
 	"inventory/internal/models"
 )
 
@@ -452,4 +453,3 @@ func (r *tradeRepository) loadTradeItems(ctx context.Context, trade *models.Trad
 
 	return nil
 }
-

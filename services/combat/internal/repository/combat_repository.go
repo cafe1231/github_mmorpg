@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/google/uuid"
@@ -123,9 +124,8 @@ func (r *CombatRepository) GetByID(id uuid.UUID) (*models.CombatInstance, error)
 	}
 
 	// Désérialiser les paramètres
-	if err := if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
+	if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
 		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
 		return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
 	}
 
@@ -292,9 +292,7 @@ func (r *CombatRepository) List(filters *models.SearchCombatsRequest) ([]*models
 		}
 
 		// Désérialiser les paramètres
-		if err := if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
 			return nil, 0, fmt.Errorf("failed to unmarshal settings: %w", err)
 		}
 
@@ -349,9 +347,7 @@ func (r *CombatRepository) GetByParticipant(participantID uuid.UUID) ([]*models.
 		}
 
 		// Désérialiser les paramètres
-		if err := if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(settingsJSON, &combat.Settings); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
 		}
 
@@ -750,4 +746,3 @@ func (r *CombatRepository) GetExpiredCombats() ([]*models.CombatInstance, error)
 	combats, _, err := r.List(filters)
 	return combats, err
 }
-

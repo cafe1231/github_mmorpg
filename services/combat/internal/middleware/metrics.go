@@ -378,4 +378,3 @@ func UpdateHealthMetrics(healthy bool) {
 		healthStatus.Set(0)
 	}
 }
-

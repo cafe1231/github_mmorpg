@@ -291,4 +291,3 @@ type CombatLog struct {
 	Timestamp  time.Time  `json:"timestamp" db:"timestamp"`
 	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
 }
-

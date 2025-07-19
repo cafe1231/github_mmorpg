@@ -258,4 +258,3 @@ CREATE INDEX IF NOT EXISTS idx_combat_logs_timestamp ON combat_logs(combat_id, t
 CREATE INDEX IF NOT EXISTS idx_combat_statistics_character_id ON combat_statistics(character_id);
 CREATE INDEX IF NOT EXISTS idx_combat_statistics_user_id ON combat_statistics(user_id);
 CREATE INDEX IF NOT EXISTS idx_combat_statistics_pvp_rating ON combat_statistics(pvp_rating DESC);`
-

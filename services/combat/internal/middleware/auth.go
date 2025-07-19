@@ -420,4 +420,3 @@ func ServiceAuthentication(allowedServices []string) gin.HandlerFunc {
 		c.Next()
 	}
 }
-

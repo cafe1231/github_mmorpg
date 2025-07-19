@@ -94,4 +94,3 @@ type NotificationService interface {
 	// Notifications système
 	NotifySystemMessage(ctx context.Context, channelID uuid.UUID, message string) error
 }
-

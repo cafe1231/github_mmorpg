@@ -734,4 +734,3 @@ func (s *EffectService) StartEffectCleanupRoutine() {
 		}
 	}()
 }
-

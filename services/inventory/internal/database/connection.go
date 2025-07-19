@@ -77,4 +77,3 @@ func (db *DB) GetStats() map[string]interface{} {
 		"max_lifetime_closed":  stats.MaxLifetimeClosed,
 	}
 }
-

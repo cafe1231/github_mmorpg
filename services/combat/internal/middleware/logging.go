@@ -362,4 +362,3 @@ func containsPathTraversal(path string) bool {
 	}
 	return false
 }
-

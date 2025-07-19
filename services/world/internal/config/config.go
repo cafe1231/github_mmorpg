@@ -103,4 +103,3 @@ func LoadConfig() (*Config, error) {
 		},
 	}, nil
 }
-

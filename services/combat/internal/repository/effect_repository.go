@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"combat/internal/database"
@@ -511,4 +512,3 @@ func (r *EffectRepository) BatchDelete(effectIDs []uuid.UUID) error {
 
 	return nil
 }
-

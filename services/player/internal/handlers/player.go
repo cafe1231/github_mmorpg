@@ -867,4 +867,3 @@ func (h *PlayerHandler) UpdatePlayerPreferences(c *gin.Context) {
 		"request_id":  c.GetHeader("X-Request-ID"),
 	})
 }
-

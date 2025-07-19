@@ -116,9 +116,7 @@ func (r *PvPRepository) GetChallengeByID(id uuid.UUID) (*models.PvPChallenge, er
 	}
 
 	// Désérialiser les stakes
-	if err := if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+	if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal stakes: %w", err)
 	}
 
@@ -216,9 +214,7 @@ func (r *PvPRepository) GetChallengesByPlayer(playerID uuid.UUID) ([]*models.PvP
 		}
 
 		// Désérialiser les stakes
-		if err := if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal stakes: %w", err)
 		}
 
@@ -261,9 +257,7 @@ func (r *PvPRepository) GetPendingChallenges(playerID uuid.UUID) ([]*models.PvPC
 		}
 
 		// Désérialiser les stakes
-		if err := if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal stakes: %w", err)
 		}
 
@@ -306,9 +300,7 @@ func (r *PvPRepository) GetChallengesByStatus(status models.ChallengeStatus) ([]
 		}
 
 		// Désérialiser les stakes
-		if err := if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal stakes: %w", err)
 		}
 
@@ -350,9 +342,7 @@ func (r *PvPRepository) GetExpiredChallenges() ([]*models.PvPChallenge, error) {
 		}
 
 		// Désérialiser les stakes
-		if err := if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(stakesJSON, &challenge.Stakes); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal stakes: %w", err)
 		}
 
@@ -643,9 +633,7 @@ func (r *PvPRepository) GetQueueEntry(playerID uuid.UUID) (*models.PvPQueueEntry
 	}
 
 	// Désérialiser les préférences
-	if err := if err := json.Unmarshal(preferencesJSON, &entry.Preferences); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+	if err := json.Unmarshal(preferencesJSON, &entry.Preferences); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal preferences: %w", err)
 	}
 
@@ -682,9 +670,7 @@ func (r *PvPRepository) GetQueueByType(queueType models.ChallengeType) ([]*model
 		}
 
 		// Désérialiser les préférences
-		if err := if err := json.Unmarshal(preferencesJSON, &entry.Preferences); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(preferencesJSON, &entry.Preferences); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal preferences: %w", err)
 		}
 
@@ -740,9 +726,7 @@ func (r *PvPRepository) FindMatchmakingCandidates(entry *models.PvPQueueEntry) (
 		}
 
 		// Désérialiser les préférences
-		if err := if err := json.Unmarshal(preferencesJSON, &candidate.Preferences); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
+		if err := json.Unmarshal(preferencesJSON, &candidate.Preferences); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal preferences: %w", err)
 		}
 
@@ -799,4 +783,3 @@ func (r *PvPRepository) CleanupOldQueue() error {
 
 	return nil
 }
-

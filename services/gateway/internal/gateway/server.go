@@ -1,4 +1,4 @@
-﻿package gateway
+package gateway
 
 import (
 	"encoding/json"
@@ -18,12 +18,12 @@ import (
 
 // Server reprÃ©sente le serveur Gateway
 type Server struct {
-	config       *config.Config
-	proxy        *proxy.ServiceProxy
-	natsConn     *nats.Conn
-	upgrader     websocket.Upgrader
-	wsClients    map[*websocket.Conn]bool
-	wsMutex      sync.RWMutex
+	config        *config.Config
+	proxy         *proxy.ServiceProxy
+	natsConn      *nats.Conn
+	upgrader      websocket.Upgrader
+	wsClients     map[*websocket.Conn]bool
+	wsMutex       sync.RWMutex
 	serviceHealth map[string]ServiceHealth
 	healthMutex   sync.RWMutex
 }
@@ -105,10 +105,10 @@ func (s *Server) ProxyTo(serviceName string) gin.HandlerFunc {
 		// Proxier la requÃªte
 		if err := s.proxy.Forward(c, endpoint); err != nil {
 			logrus.WithError(err).WithField("service", serviceName).Error("Proxy request failed")
-			
+
 			// Marquer le service comme potentiellement dÃ©faillant
 			s.incrementServiceError(serviceName)
-			
+
 			c.JSON(http.StatusBadGateway, gin.H{
 				"error": "Service request failed",
 			})
@@ -120,7 +120,7 @@ func (s *Server) ProxyTo(serviceName string) gin.HandlerFunc {
 // HealthCheck endpoint de santÃ© du gateway
 func (s *Server) HealthCheck(c *gin.Context) {
 	healthStatus := s.getOverallHealth()
-	
+
 	// VÃ©rifier le statut depuis la map
 	if status, ok := healthStatus["status"].(string); ok && status == "healthy" {
 		c.JSON(http.StatusOK, healthStatus)
@@ -216,7 +216,7 @@ func (s *Server) ShowConfig(c *gin.Context) {
 			"host":        s.config.Server.Host,
 			"environment": s.config.Server.Environment,
 		},
-		"services": s.config.Services,
+		"services":   s.config.Services,
 		"rate_limit": s.config.RateLimit,
 		"monitoring": s.config.Monitoring,
 	}
@@ -301,12 +301,12 @@ func (s *Server) getServiceEndpoint(serviceName string) (config.ServiceEndpoint,
 func (s *Server) isServiceHealthy(serviceName string) bool {
 	s.healthMutex.RLock()
 	defer s.healthMutex.RUnlock()
-	
+
 	health, exists := s.serviceHealth[serviceName]
 	if !exists {
 		return true // Si pas de donnÃ©es, on assume que c'est sain
 	}
-	
+
 	return health.Status == "healthy"
 }
 
@@ -314,7 +314,7 @@ func (s *Server) isServiceHealthy(serviceName string) bool {
 func (s *Server) incrementServiceError(serviceName string) {
 	s.healthMutex.Lock()
 	defer s.healthMutex.Unlock()
-	
+
 	if health, exists := s.serviceHealth[serviceName]; exists {
 		health.ErrorCount++
 		if health.ErrorCount > 5 {
@@ -331,7 +331,7 @@ func (s *Server) getOverallHealth() map[string]interface{} {
 
 	totalServices := len(s.serviceHealth)
 	healthyServices := 0
-	
+
 	for _, health := range s.serviceHealth {
 		if health.Status == "healthy" {
 			healthyServices++
@@ -347,12 +347,12 @@ func (s *Server) getOverallHealth() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"status":           status,
-		"timestamp":        time.Now().Unix(),
-		"services_total":   totalServices,
-		"services_healthy": healthyServices,
+		"status":            status,
+		"timestamp":         time.Now().Unix(),
+		"services_total":    totalServices,
+		"services_healthy":  healthyServices,
 		"websocket_clients": len(s.wsClients),
-		"version":          "1.0.0",
+		"version":           "1.0.0",
 	}
 }
 
@@ -512,20 +512,20 @@ func (s *Server) checkAllServicesHealth() {
 // checkServiceHealth vÃ©rifie la santÃ© d'un service spÃ©cifique
 func (s *Server) checkServiceHealth(name string, health ServiceHealth) {
 	start := time.Now()
-	
+
 	// Faire un ping simple au service
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(health.URL + "/health")
-	
+
 	responseTime := time.Since(start).Milliseconds()
-	
+
 	s.healthMutex.Lock()
 	defer s.healthMutex.Unlock()
-	
+
 	updatedHealth := health
 	updatedHealth.LastCheck = time.Now()
 	updatedHealth.ResponseTime = responseTime
-	
+
 	if err != nil || resp.StatusCode != http.StatusOK {
 		updatedHealth.ErrorCount++
 		if updatedHealth.ErrorCount > 3 {
@@ -535,10 +535,10 @@ func (s *Server) checkServiceHealth(name string, health ServiceHealth) {
 		updatedHealth.ErrorCount = 0
 		updatedHealth.Status = "healthy"
 	}
-	
+
 	if resp != nil {
 		resp.Body.Close()
 	}
-	
+
 	s.serviceHealth[name] = updatedHealth
 }

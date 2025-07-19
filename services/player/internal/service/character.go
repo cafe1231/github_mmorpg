@@ -457,4 +457,3 @@ func isValidCharacterName(name string) bool {
 	// Pas d'espaces consécutifs ou de caractères spéciaux consécutifs
 	return !strings.Contains(name, "--") && !strings.Contains(name, "''")
 }
-

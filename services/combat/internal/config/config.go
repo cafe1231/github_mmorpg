@@ -323,4 +323,3 @@ func (c *DatabaseConfig) GetDSN() string {
 func (c *RedisConfig) GetRedisAddr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
-

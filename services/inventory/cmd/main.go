@@ -146,4 +146,3 @@ func initLogger() {
 		TimestampFormat: time.RFC3339,
 	})
 }
-

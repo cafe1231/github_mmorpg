@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"player/internal/database"
 	"player/internal/models"
@@ -119,9 +120,8 @@ func (r *CharacterRepository) GetByID(id uuid.UUID) (*models.Character, error) {
 	}
 
 	// Désérialiser l'apparence
-	if err := if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+	if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
 		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
 		character.Appearance = models.GetDefaultAppearance(character.Race)
 	}
 
@@ -157,10 +157,10 @@ func (r *CharacterRepository) GetByName(name string) (*models.Character, error) 
 	}
 
 	// Désérialiser l'apparence
-	if err := if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+	if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
 		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-		character.Appearance = models.GetDefaultAppearance(character.Race)
+
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 	}
 
 	return &character, nil
@@ -200,10 +200,10 @@ func (r *CharacterRepository) GetByPlayerID(playerID uuid.UUID) ([]*models.Chara
 		}
 
 		// Désérialiser l'apparence
-		if err := if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-			character.Appearance = models.GetDefaultAppearance(character.Race)
+		if err := json.Unmarshal([]byte(appearanceJSON), &character.Appearance); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 		}
 
 		characters = append(characters, &character)
@@ -458,4 +458,3 @@ func (r *CharacterRepository) CleanupExpiredModifiers() error {
 
 	return nil
 }
-

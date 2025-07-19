@@ -446,4 +446,3 @@ func (zone *Zone) GetSpawnPoint() Point3D {
 		Z: zone.SpawnZ,
 	}
 }
-

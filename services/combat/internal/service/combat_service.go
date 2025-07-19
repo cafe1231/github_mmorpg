@@ -1079,4 +1079,3 @@ func (s *CombatService) GetCombatMetrics() (*models.CombatMetrics, error) {
 
 	return metrics, nil
 }
-

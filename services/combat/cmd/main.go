@@ -369,4 +369,3 @@ func respondWithSuccess(c *gin.Context, data interface{}, message ...string) {
 
 	c.JSON(http.StatusOK, response)
 }
-

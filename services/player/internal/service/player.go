@@ -368,4 +368,3 @@ func isValidDisplayName(displayName string) bool {
 	// Vérifier qu'il n'y a pas d'espaces consécutifs
 	return !strings.Contains(displayName, "  ")
 }
-

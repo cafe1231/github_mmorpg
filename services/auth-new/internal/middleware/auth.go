@@ -186,7 +186,7 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 		// Log de l'accès refusé
 		userID, _ := c.Get("user_id")
 		username, _ := c.Get("username")
-		
+
 		logrus.WithFields(logrus.Fields{
 			"user_id":       userID,
 			"username":      username,
@@ -199,11 +199,11 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 		}).Warn("Access denied: insufficient role")
 
 		c.JSON(http.StatusForbidden, gin.H{
-			"error":        "Insufficient permissions",
-			"message":      "You don't have permission to access this resource",
+			"error":          "Insufficient permissions",
+			"message":        "You don't have permission to access this resource",
 			"required_roles": allowedRoles,
-			"your_role":    role,
-			"request_id":   c.GetHeader("X-Request-ID"),
+			"your_role":      role,
+			"request_id":     c.GetHeader("X-Request-ID"),
 		})
 		c.Abort()
 	}
@@ -243,12 +243,12 @@ func RequirePermission(requiredPermissions ...string) gin.HandlerFunc {
 					break
 				}
 			}
-			
+
 			if !hasPermission {
 				// Log de l'accès refusé
 				userID, _ := c.Get("user_id")
 				username, _ := c.Get("username")
-				
+
 				logrus.WithFields(logrus.Fields{
 					"user_id":              userID,
 					"username":             username,
@@ -334,13 +334,13 @@ func RequireOwnership() gin.HandlerFunc {
 
 		if currentUserID != resourceUUID && role != models.RoleAdmin && role != models.RoleSuperUser {
 			logrus.WithFields(logrus.Fields{
-				"current_user_id": currentUserID,
+				"current_user_id":  currentUserID,
 				"resource_user_id": resourceUUID,
-				"user_role":       role,
-				"path":            c.Request.URL.Path,
-				"method":          c.Request.Method,
-				"client_ip":       c.ClientIP(),
-				"request_id":      c.GetHeader("X-Request-ID"),
+				"user_role":        role,
+				"path":             c.Request.URL.Path,
+				"method":           c.Request.Method,
+				"client_ip":        c.ClientIP(),
+				"request_id":       c.GetHeader("X-Request-ID"),
 			}).Warn("Access denied: not resource owner")
 
 			c.JSON(http.StatusForbidden, gin.H{

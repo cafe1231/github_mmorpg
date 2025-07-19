@@ -53,11 +53,11 @@ func Recovery() gin.HandlerFunc {
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		
+
 		// Liste des origines autorisées (à configurer selon l'environnement)
 		allowedOrigins := []string{
 			"http://localhost:3000",
-			"http://localhost:3001", 
+			"http://localhost:3001",
 			"http://localhost:8080",
 			"https://yourdomain.com",
 		}
@@ -99,12 +99,12 @@ func RequestID() gin.HandlerFunc {
 		if requestID == "" {
 			requestID = uuid.New().String()
 		}
-		
+
 		c.Header("X-Request-ID", requestID)
 		c.Set("request_id", requestID)
-		
+
 		logrus.WithField("request_id", requestID).Debug("Request ID assigned")
-		
+
 		c.Next()
 	}
 }
@@ -114,19 +114,19 @@ func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Protection contre le clickjacking
 		c.Header("X-Frame-Options", "DENY")
-		
+
 		// Protection contre le sniffing MIME
 		c.Header("X-Content-Type-Options", "nosniff")
-		
+
 		// Protection XSS
 		c.Header("X-XSS-Protection", "1; mode=block")
-		
+
 		// Référer Policy
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		
+
 		// Content Security Policy (à adapter selon vos besoins)
 		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self';")
-		
+
 		// HSTS (uniquement en HTTPS)
 		if c.Request.TLS != nil {
 			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -141,7 +141,7 @@ func SecurityHeaders() gin.HandlerFunc {
 // GlobalRateLimit middleware de limitation de taux global
 func GlobalRateLimit(config config.RateLimit) gin.HandlerFunc {
 	limiter := rate.NewLimiter(rate.Every(config.Window/time.Duration(config.Requests)), config.Burst)
-	
+
 	return func(c *gin.Context) {
 		if !limiter.Allow() {
 			logrus.WithFields(logrus.Fields{
@@ -152,10 +152,10 @@ func GlobalRateLimit(config config.RateLimit) gin.HandlerFunc {
 			}).Warn("Rate limit exceeded")
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":      "Rate limit exceeded",
-				"message":    "Too many requests, please try again later",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests, please try again later",
 				"retry_after": int(config.Window.Seconds()),
-				"request_id": c.GetHeader("X-Request-ID"),
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -168,21 +168,21 @@ func GlobalRateLimit(config config.RateLimit) gin.HandlerFunc {
 func AuthRateLimit(rateLimitConfig config.RateLimitConfig) gin.HandlerFunc {
 	// Limiteurs par type d'opération
 	loginLimiter := rate.NewLimiter(
-		rate.Every(rateLimitConfig.LoginAttempts.Window/time.Duration(rateLimitConfig.LoginAttempts.Requests)), 
+		rate.Every(rateLimitConfig.LoginAttempts.Window/time.Duration(rateLimitConfig.LoginAttempts.Requests)),
 		rateLimitConfig.LoginAttempts.Burst,
 	)
-	
+
 	registerLimiter := rate.NewLimiter(
-		rate.Every(rateLimitConfig.Registration.Window/time.Duration(rateLimitConfig.Registration.Requests)), 
+		rate.Every(rateLimitConfig.Registration.Window/time.Duration(rateLimitConfig.Registration.Requests)),
 		rateLimitConfig.Registration.Burst,
 	)
 
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		
+
 		var limiter *rate.Limiter
 		var operation string
-		
+
 		// Choisir le bon limiteur selon l'endpoint
 		if strings.Contains(path, "/login") {
 			limiter = loginLimiter
@@ -212,7 +212,7 @@ func AuthRateLimit(rateLimitConfig config.RateLimitConfig) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -278,10 +278,10 @@ func ValidateContentType(expectedTypes ...string) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusUnsupportedMediaType, gin.H{
-			"error":            "Unsupported Content-Type",
-			"message":          "Content-Type not supported",
-			"supported_types":  expectedTypes,
-			"provided_type":    contentType,
+			"error":           "Unsupported Content-Type",
+			"message":         "Content-Type not supported",
+			"supported_types": expectedTypes,
+			"provided_type":   contentType,
 		})
 		c.Abort()
 	}

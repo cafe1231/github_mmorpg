@@ -64,15 +64,15 @@ func Logger() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		// Log structurÃ© pour le gateway
 		logrus.WithFields(logrus.Fields{
-			"timestamp":    param.TimeStamp.Format(time.RFC3339),
-			"client_ip":    param.ClientIP,
-			"method":       param.Method,
-			"path":         param.Path,
-			"status_code":  param.StatusCode,
-			"latency_ms":   param.Latency.Milliseconds(),
-			"user_agent":   param.Request.UserAgent(),
-			"request_id":   param.Request.Header.Get("X-Request-ID"),
-			"service":      "gateway",
+			"timestamp":   param.TimeStamp.Format(time.RFC3339),
+			"client_ip":   param.ClientIP,
+			"method":      param.Method,
+			"path":        param.Path,
+			"status_code": param.StatusCode,
+			"latency_ms":  param.Latency.Milliseconds(),
+			"user_agent":  param.Request.UserAgent(),
+			"request_id":  param.Request.Header.Get("X-Request-ID"),
+			"service":     "gateway",
 		}).Info("HTTP Request")
 
 		return ""
@@ -228,10 +228,10 @@ func RateLimit(cfg config.RateLimitConfig) gin.HandlerFunc {
 
 			c.Header("X-Rate-Limit-Remaining", "0")
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":      "Rate limit exceeded",
-				"message":    "Too many requests, please slow down",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests, please slow down",
 				"retry_after": 60,
-				"request_id": c.GetHeader("X-Request-ID"),
+				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
 			return
@@ -285,13 +285,13 @@ func HighPerformanceMode() gin.HandlerFunc {
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 		c.Header("Pragma", "no-cache")
 		c.Header("Expires", "0")
-		
+
 		// PrioritÃ© Ã©levÃ©e pour les requÃªtes de combat
 		c.Header("X-Priority", "high")
-		
+
 		// Timeout rÃ©duit pour les opÃ©rations critiques
 		c.Set("timeout", 3*time.Second)
-		
+
 		c.Next()
 	}
 }
@@ -401,12 +401,12 @@ const (
 )
 
 type CircuitBreaker struct {
-	state         CircuitBreakerState
-	failureCount  int
-	lastFailTime  time.Time
-	timeout       time.Duration
-	threshold     int
-	mutex         sync.RWMutex
+	state        CircuitBreakerState
+	failureCount int
+	lastFailTime time.Time
+	timeout      time.Duration
+	threshold    int
+	mutex        sync.RWMutex
 }
 
 func NewCircuitBreaker(threshold int, timeout time.Duration) *CircuitBreaker {
@@ -500,19 +500,19 @@ func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Protection contre le clickjacking
 		c.Header("X-Frame-Options", "DENY")
-		
+
 		// Protection XSS
 		c.Header("X-XSS-Protection", "1; mode=block")
-		
+
 		// EmpÃªcher le sniffing MIME
 		c.Header("X-Content-Type-Options", "nosniff")
-		
+
 		// Politique de rÃ©fÃ©rent strict
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		
+
 		// CSP pour les API (pas de script inline nÃ©cessaire)
 		c.Header("Content-Security-Policy", "default-src 'none'; connect-src 'self'")
-		
+
 		// HSTS (HTTPS only)
 		if c.Request.TLS != nil {
 			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -595,16 +595,16 @@ func extractServiceFromPath(path string) string {
 	// /api/v1/auth/login -> auth
 	// /api/v1/player/profile -> player
 	// /ws -> websocket
-	
+
 	if path == "/ws" {
 		return "websocket"
 	}
-	
+
 	parts := strings.Split(path, "/")
 	if len(parts) >= 4 && parts[1] == "api" && parts[2] == "v1" {
 		return parts[3]
 	}
-	
+
 	return "unknown"
 }
 

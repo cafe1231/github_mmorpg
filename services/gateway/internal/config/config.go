@@ -1,4 +1,4 @@
-﻿package config
+package config
 
 import (
 	"fmt"
@@ -11,21 +11,21 @@ import (
 
 // Config représente la configuration du Gateway
 type Config struct {
-	Server    ServerConfig    `mapstructure:"server"`
-	JWT       JWTConfig       `mapstructure:"jwt"`
-	Services  ServicesConfig  `mapstructure:"services"`
-	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	Server     ServerConfig     `mapstructure:"server"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Services   ServicesConfig   `mapstructure:"services"`
+	RateLimit  RateLimitConfig  `mapstructure:"rate_limit"`
 	Monitoring MonitoringConfig `mapstructure:"monitoring"`
-	NATS      NATSConfig      `mapstructure:"nats"`
+	NATS       NATSConfig       `mapstructure:"nats"`
 }
 
 // ServerConfig configuration du serveur Gateway
 type ServerConfig struct {
-	Port        int           `mapstructure:"port"`
-	Host        string        `mapstructure:"host"`
-	Environment string        `mapstructure:"environment"`
-	Debug       bool          `mapstructure:"debug"`
-	ReadTimeout time.Duration `mapstructure:"read_timeout"`
+	Port         int           `mapstructure:"port"`
+	Host         string        `mapstructure:"host"`
+	Environment  string        `mapstructure:"environment"`
+	Debug        bool          `mapstructure:"debug"`
+	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 }
 
@@ -70,12 +70,12 @@ type MonitoringConfig struct {
 
 // NATSConfig configuration NATS
 type NATSConfig struct {
-	URL               string        `mapstructure:"url"`
-	ClusterID         string        `mapstructure:"cluster_id"`
-	ClientID          string        `mapstructure:"client_id"`
-	ConnectTimeout    time.Duration `mapstructure:"connect_timeout"`
-	ReconnectDelay    time.Duration `mapstructure:"reconnect_delay"`
-	MaxReconnectAttempts int        `mapstructure:"max_reconnect_attempts"`
+	URL                  string        `mapstructure:"url"`
+	ClusterID            string        `mapstructure:"cluster_id"`
+	ClientID             string        `mapstructure:"client_id"`
+	ConnectTimeout       time.Duration `mapstructure:"connect_timeout"`
+	ReconnectDelay       time.Duration `mapstructure:"reconnect_delay"`
+	MaxReconnectAttempts int           `mapstructure:"max_reconnect_attempts"`
 }
 
 // LoadConfig charge la configuration depuis les variables d'environnement et fichiers
@@ -96,42 +96,42 @@ func LoadConfig() (*Config, error) {
 		},
 		Services: ServicesConfig{
 			Auth: ServiceEndpoint{
-				URL:     "http://localhost:8081",  // Changé de auth-service vers localhost
+				URL:     "http://localhost:8081", // Changé de auth-service vers localhost
 				Timeout: 10 * time.Second,
 				Retries: 3,
 			},
 			Player: ServiceEndpoint{
-				URL:     "http://localhost:8082",  // Changé de player-service vers localhost
+				URL:     "http://localhost:8082", // Changé de player-service vers localhost
 				Timeout: 10 * time.Second,
 				Retries: 3,
 			},
 			World: ServiceEndpoint{
-				URL:     "http://localhost:8083",  // Changé de world-service vers localhost
+				URL:     "http://localhost:8083", // Changé de world-service vers localhost
 				Timeout: 5 * time.Second,
 				Retries: 2,
 			},
 			Combat: ServiceEndpoint{
-				URL:     "http://localhost:8084",  // Changé de combat-service vers localhost
+				URL:     "http://localhost:8084", // Changé de combat-service vers localhost
 				Timeout: 3 * time.Second,
 				Retries: 1,
 			},
 			Inventory: ServiceEndpoint{
-				URL:     "http://localhost:8085",  // Changé de inventory-service vers localhost
+				URL:     "http://localhost:8085", // Changé de inventory-service vers localhost
 				Timeout: 10 * time.Second,
 				Retries: 3,
 			},
 			Guild: ServiceEndpoint{
-				URL:     "http://localhost:8086",  // Changé de guild-service vers localhost
+				URL:     "http://localhost:8086", // Changé de guild-service vers localhost
 				Timeout: 10 * time.Second,
 				Retries: 3,
 			},
 			Chat: ServiceEndpoint{
-				URL:     "http://localhost:8087",  // Changé de chat-service vers localhost
+				URL:     "http://localhost:8087", // Changé de chat-service vers localhost
 				Timeout: 5 * time.Second,
 				Retries: 2,
 			},
 			Analytics: ServiceEndpoint{
-				URL:     "http://localhost:8088",  // Changé de analytics-service vers localhost
+				URL:     "http://localhost:8088", // Changé de analytics-service vers localhost
 				Timeout: 15 * time.Second,
 				Retries: 1,
 			},
@@ -147,7 +147,7 @@ func LoadConfig() (*Config, error) {
 			HealthPath:     "/health",
 		},
 		NATS: NATSConfig{
-			URL:                  "nats://localhost:4222",  // Changé de nats vers localhost
+			URL:                  "nats://localhost:4222", // Changé de nats vers localhost
 			ClusterID:            "mmorpg-cluster",
 			ClientID:             "gateway-service",
 			ConnectTimeout:       10 * time.Second,

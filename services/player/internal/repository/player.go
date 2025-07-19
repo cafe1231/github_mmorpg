@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"player/internal/database"
 	"player/internal/models"
@@ -103,10 +104,10 @@ func (r *PlayerRepository) GetByID(id uuid.UUID) (*models.Player, error) {
 	}
 
 	// Désérialiser les préférences
-	if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+	if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
 		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-		player.Preferences = models.GetDefaultPreferences()
+
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 	}
 
 	return &player, nil
@@ -140,10 +141,10 @@ func (r *PlayerRepository) GetByUserID(userID uuid.UUID) (*models.Player, error)
 	}
 
 	// Désérialiser les préférences
-	if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+	if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
 		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-		player.Preferences = models.GetDefaultPreferences()
+
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 	}
 
 	return &player, nil
@@ -177,10 +178,10 @@ func (r *PlayerRepository) GetByDisplayName(displayName string) (*models.Player,
 	}
 
 	// Désérialiser les préférences
-	if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+	if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
 		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-		player.Preferences = models.GetDefaultPreferences()
+
+		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 	}
 
 	return &player, nil
@@ -280,10 +281,10 @@ func (r *PlayerRepository) List(limit, offset int) ([]*models.Player, error) {
 		}
 
 		// Désérialiser les préférences
-		if err := if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
-		logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
-	}; err != nil {
-			player.Preferences = models.GetDefaultPreferences()
+		if err := json.Unmarshal([]byte(preferencesJSON), &player.Preferences); err != nil {
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
+
+			logrus.WithError(err).Warn("Erreur lors du unmarshaling JSON")
 		}
 
 		players = append(players, &player)
@@ -355,4 +356,3 @@ func (r *PlayerRepository) GetCharacterCount(playerID uuid.UUID) (int, error) {
 
 	return count, nil
 }
-
