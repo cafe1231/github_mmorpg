@@ -158,20 +158,20 @@ func (s *AntiCheatService) ValidateAction(actor *models.CombatParticipant, req *
 }
 
 // CheckActionFrequency vérifie la fréquence d'actions d'un joueur
-func (s *AntiCheatService) CheckActionFrequency(actorID uuid.UUID, timeWindow time.Duration) (bool, int, error) {
+func (s *AntiCheatService) CheckActionFrequency(actorID uuid.UUID, timeWindow time.Duration) (isValid bool, actionCount int, err error) {
 	actions, err := s.actionRepo.GetRecentActionsByActor(actorID, timeWindow)
 	if err != nil {
 		return false, 0, err
 	}
 
-	actionCount := len(actions)
+	actionCount = len(actions)
 	maxAllowed := int(timeWindow.Seconds()) * s.config.AntiCheat.MaxActionsPerSecond
 
 	return actionCount > maxAllowed, actionCount, nil
 }
 
 // ValidateTimestamp valide un timestamp client
-func (s *AntiCheatService) ValidateTimestamp(clientTime, serverTime time.Time) (bool, string) {
+func (s *AntiCheatService) ValidateTimestamp(clientTime, serverTime time.Time) (isValid bool, reason string) {
 	diff := serverTime.Sub(clientTime).Abs()
 
 	// Tolérance de 5 secondes
@@ -275,7 +275,10 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 }
 
 // CheckDamageIntegrity vérifie l'intégrité des calculations de dégâts
-func (s *AntiCheatService) CheckDamageIntegrity(action *models.CombatAction, actor, target *models.CombatParticipant) (bool, string) {
+func (s *AntiCheatService) CheckDamageIntegrity(
+	action *models.CombatAction,
+	actor, target *models.CombatParticipant,
+) (isValid bool, reason string) {
 	if action.DamageDealt <= 0 {
 		return true, "" // Pas de dégâts à vérifier
 	}
@@ -298,7 +301,7 @@ func (s *AntiCheatService) CheckDamageIntegrity(action *models.CombatAction, act
 }
 
 // ValidateMovement valide un mouvement de joueur
-func (s *AntiCheatService) ValidateMovement(oldPos, newPos *models.Position, timeElapsed time.Duration) (bool, string) {
+func (s *AntiCheatService) ValidateMovement(oldPos, newPos *models.Position, timeElapsed time.Duration) (isValid bool, reason string) {
 	if oldPos == nil || newPos == nil {
 		return true, "" // Pas de mouvement à valider
 	}
@@ -328,10 +331,9 @@ func (s *AntiCheatService) ValidateMovement(oldPos, newPos *models.Position, tim
 }
 
 // CalculateSuspicionScore calcule le score de suspicion global d'un joueur
-func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (float64, []string, error) {
+func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (score float64, flags []string, err error) {
 	stats := s.getOrCreatePlayerStats(actorID)
-	var flags []string
-	score := 0.0
+	score = 0.0
 
 	// Facteur 1: Activités suspicious récentes
 	suspiciousActivities := s.suspiciousLogs[actorID]
@@ -481,6 +483,7 @@ func (s *AntiCheatService) getOrCreatePlayerStats(actorID uuid.UUID) *PlayerStat
 	return stats
 }
 
+// TODO: Implémenter si nécessaire pour l'analyse des intervalles
 func (s *AntiCheatService) calculateActionIntervals(actions []*models.CombatAction) []float64 {
 	if len(actions) < config.DefaultMinActions {
 		return []float64{}
@@ -495,6 +498,7 @@ func (s *AntiCheatService) calculateActionIntervals(actions []*models.CombatActi
 	return intervals
 }
 
+// TODO: Implémenter si nécessaire pour la détection de patterns
 func (s *AntiCheatService) isPatternTooRegular(intervals []float64) bool {
 	if len(intervals) < config.DefaultMinIntervals {
 		return false

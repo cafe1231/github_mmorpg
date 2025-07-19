@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"combat/internal/config"
 	"strconv"
 	"time"
 
@@ -251,10 +252,10 @@ func AntiCheatMetrics() gin.HandlerFunc {
 		// Métriques anti-cheat spécifiques au combat
 		if suspicion := c.GetFloat64("anticheat_suspicion_score"); suspicion > 0 {
 			severity := "low"
-			if suspicion > 50 {
+			if suspicion > config.DefaultScoreThreshold {
 				severity = "medium"
 			}
-			if suspicion > 80 {
+			if suspicion > config.DefaultHighScoreThreshold {
 				severity = "high"
 			}
 

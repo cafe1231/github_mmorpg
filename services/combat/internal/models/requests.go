@@ -40,7 +40,7 @@ type LeaveCombatRequest struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-// StartCombatRequest représente une demande de démarrage de combat
+// StartCombatRequest represente une demande de demarrage de combat
 type StartCombatRequest struct {
 	ForceStart bool `json:"force_start,omitempty"`
 }

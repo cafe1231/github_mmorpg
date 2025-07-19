@@ -466,7 +466,12 @@ func (s *EffectService) DispelEffects(targetID uuid.UUID, effectType *models.Eff
 }
 
 // ApplyTemporaryEffect applique un effet temporaire (pour une action)
-func (s *EffectService) ApplyTemporaryEffect(targetID, casterID uuid.UUID, effectType models.EffectType, duration int, value int) (*models.CombatEffect, error) {
+func (s *EffectService) ApplyTemporaryEffect(
+	targetID, casterID uuid.UUID,
+	effectType models.EffectType,
+	duration int,
+	value int,
+) (*models.CombatEffect, error) {
 	template := &models.EffectTemplate{
 		ID:            fmt.Sprintf("temp_%s", effectType),
 		Name:          string(effectType),
@@ -623,7 +628,11 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 }
 
 // CreatePredefinedEffect crée un effet prédéfini
-func (s *EffectService) CreatePredefinedEffect(effectID string, targetID, casterID uuid.UUID, combatID uuid.UUID) (*models.CombatEffect, error) {
+func (s *EffectService) CreatePredefinedEffect(
+	effectID string,
+	targetID, casterID uuid.UUID,
+	combatID uuid.UUID,
+) (*models.CombatEffect, error) {
 	templates := models.GetEffectTemplates()
 	template, exists := templates[effectID]
 	if !exists {

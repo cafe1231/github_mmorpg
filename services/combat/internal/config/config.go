@@ -209,6 +209,7 @@ const (
 	DefaultTotalDamageThreshold       = 5
 	DefaultCritRateThreshold          = 0.5
 	DefaultScoreThreshold             = 30
+	DefaultHighScoreThreshold         = 80
 	DefaultRecentActivitiesThreshold  = 3
 	DefaultConsistentDamageThreshold  = 5
 	DefaultImpossibleActionsThreshold = 2

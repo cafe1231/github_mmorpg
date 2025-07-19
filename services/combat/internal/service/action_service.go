@@ -291,7 +291,7 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 	// Appliquer les effets de la compétence
 	for _, effect := range skill.Effects {
 		if rand.Float64() < effect.Probability {
-			s.applySkillEffect(actor, target, effect, result)
+			s.applySkillEffect(actor, target, &effect, result)
 		}
 	}
 
@@ -502,7 +502,11 @@ func (s *ActionService) applyHealing(target *models.CombatParticipant, healing i
 	}
 }
 
-func (s *ActionService) applySkillEffect(caster, target *models.CombatParticipant, effect models.SkillEffect, result *models.ActionResult) {
+func (s *ActionService) applySkillEffect(
+	caster, target *models.CombatParticipant,
+	effect *models.SkillEffect,
+	result *models.ActionResult,
+) {
 	// Créer un effet de combat basé sur l'effet de compétence
 	effectApp := &models.EffectApplication{
 		EffectTemplate: &models.EffectTemplate{
@@ -617,8 +621,6 @@ func (s *ActionService) applyParticipantChanges(participantID uuid.UUID, change 
 	// if participant.Mana > participant.MaxMana {
 	//     participant.Mana = participant.MaxMana
 	// }
-
-	// return s.combatRepo.UpdateParticipant(participant)
 
 	logrus.WithFields(logrus.Fields{
 		"participant_id": participantID,

@@ -677,7 +677,11 @@ func (s *CombatService) GetActiveCombatCount() (int, error) {
 
 // Helper methods
 
-func (s *CombatService) calculateCombatResult(combat *models.CombatInstance, participants []*models.CombatParticipant, req *models.EndCombatRequest) *models.CombatResult {
+func (s *CombatService) calculateCombatResult(
+	combat *models.CombatInstance,
+	participants []*models.CombatParticipant,
+	req *models.EndCombatRequest,
+) *models.CombatResult {
 	result := &models.CombatResult{
 		CombatID:     combat.ID,
 		Status:       combat.Status,
@@ -714,7 +718,11 @@ func (s *CombatService) calculateCombatResult(combat *models.CombatInstance, par
 	return result
 }
 
-func (s *CombatService) calculateRewards(combat *models.CombatInstance, participants []*models.CombatParticipant, winningTeam *int) map[uuid.UUID]*models.CombatReward {
+func (s *CombatService) calculateRewards(
+	combat *models.CombatInstance,
+	participants []*models.CombatParticipant,
+	winningTeam *int,
+) map[uuid.UUID]*models.CombatReward {
 	rewards := make(map[uuid.UUID]*models.CombatReward)
 
 	for _, p := range participants {
@@ -767,7 +775,11 @@ func (s *CombatService) createCombatSummary(combat *models.CombatInstance, parti
 	}
 }
 
-func (s *CombatService) updateParticipantStatistics(combat *models.CombatInstance, participants []*models.CombatParticipant, result *models.CombatResult) error {
+func (s *CombatService) updateParticipantStatistics(
+	combat *models.CombatInstance,
+	participants []*models.CombatParticipant,
+	result *models.CombatResult,
+) error {
 	for _, participant := range participants {
 		// Récupérer les statistiques existing
 		stats, err := s.combatRepo.GetStatistics(participant.CharacterID)
@@ -834,7 +846,11 @@ func (s *CombatService) updateParticipantStatistics(combat *models.CombatInstanc
 	return nil
 }
 
-func (s *CombatService) calculatePvPRatingChange(participant *models.CombatParticipant, allParticipants []*models.CombatParticipant, isWinner bool) int {
+func (s *CombatService) calculatePvPRatingChange(
+	participant *models.CombatParticipant,
+	allParticipants []*models.CombatParticipant,
+	isWinner bool,
+) int {
 	// Système Elo simplifié
 	k := 32.0 // Facteur K
 
@@ -961,7 +977,10 @@ func (s *CombatService) calculateHistorySummary(history []*models.CombatHistoryE
 	return summary
 }
 
-func (s *CombatService) formatStatisticsResponse(stats *models.CombatStatistics, req *models.GetStatisticsRequest) *models.StatisticsResponse {
+func (s *CombatService) formatStatisticsResponse(
+	stats *models.CombatStatistics,
+	req *models.GetStatisticsRequest,
+) *models.StatisticsResponse {
 	response := &models.StatisticsResponse{
 		CharacterID: stats.CharacterID,
 		UserID:      stats.UserID,

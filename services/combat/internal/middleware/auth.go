@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"combat/internal/config"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,8 +11,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"combat/internal/config"
 )
 
 // JWTClaims représente les claims du JWT
@@ -39,7 +38,7 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 		}
 
 		// Vérifier le format "Bearer <token>"
-		parts := strings.SplitN(authHeader, " ", 2) // DefaultAuthParts
+		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":      "Invalid authorization header format",
@@ -114,7 +113,7 @@ func OptionalAuthMiddleware(config *config.Config) gin.HandlerFunc {
 		}
 
 		// Tenter l'authentification
-		parts := strings.SplitN(authHeader, " ", 2) // DefaultAuthParts
+		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) == 2 && parts[0] == "Bearer" {
 			tokenString := parts[1]
 			if claims, err := validateJWT(tokenString, config.JWT.Secret); err == nil {

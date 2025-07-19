@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// connection à la base de données
-	db, err := database.NewConnection(cfg.Database)
+	db, err := database.NewConnection(&cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
 	}
@@ -72,7 +72,7 @@ func main() {
 	combatService := service.NewCombatService(combatRepo, actionRepo, effectRepo, actionService, effectService, antiCheat, cfg)
 	pvpService := service.NewPvPService(pvpRepo, combatRepo, cfg)
 
-	// Démarrage des routines de nettoyage
+	// Demarrage des routines de nettoyage
 	// combatService.StartCombatCleanupRoutine()
 	// effectService.StartEffectCleanupRoutine()
 	// actionService.StartCooldownCleanupRoutine()
@@ -99,7 +99,7 @@ func main() {
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
-	// Démarrage du serveur en arrière-plan
+	// Demarrage du serveur en arriere-plan
 	go func() {
 		logrus.WithFields(logrus.Fields{
 			"host": cfg.Server.Host,
@@ -142,7 +142,6 @@ func setupRoutes(
 	router.GET("/ready", healthHandler.ReadinessCheck)
 	router.GET("/live", healthHandler.LivenessCheck)
 	router.GET(cfg.Monitoring.MetricsPath, healthHandler.MetricsInfo)
-	// router.GET("/stats", healthHandler.Stats)
 
 	// Routes de debug (seulement en développement)
 	// if cfg.Server.Debug {
@@ -160,11 +159,11 @@ func setupRoutes(
 	{
 		// Routes protégées (authentification JWT requise)
 		protected := v1.Group("/")
-		// protected.Use(middleware.JWTAuth(cfg.JWT.Secret))
+
 		{
 			// Routes de combat
 			combat := protected.Group("/combat")
-			// combat.Use(middleware.HighPerformanceMode()) // Cache agressif pour les performances
+
 			{
 				// CRUD des combats
 				combat.POST("/", combatHandler.CreateCombat)
@@ -309,6 +308,7 @@ func gracefulShutdown(
 
 // Fonctions utilitaires pour les handlers
 
+// TODO: Implémenter si nécessaire pour l'extraction d'ID utilisateur
 // extractUserID récupère l'ID utilisateur depuis le contexte Gin
 func extractUserID(c *gin.Context) (string, bool) {
 	userID, exists := c.Get("user_id")
@@ -320,6 +320,7 @@ func extractUserID(c *gin.Context) (string, bool) {
 	return id, ok
 }
 
+// TODO: Implémenter si nécessaire pour l'extraction d'ID personnage
 // extractCharacterID récupère l'ID du personnage depuis les paramètres ou headers
 func extractCharacterID(c *gin.Context) (string, bool) {
 	// D'abord essayer depuis les paramètres d'URL
@@ -341,6 +342,7 @@ func extractCharacterID(c *gin.Context) (string, bool) {
 }
 
 // respondWithError envoie une réponse d'erreur standardisée
+// TODO: Implémenter si nécessaire pour les réponses d'erreur
 func respondWithError(c *gin.Context, code int, message string, details ...interface{}) {
 	response := gin.H{
 		"error":      message,
@@ -356,6 +358,7 @@ func respondWithError(c *gin.Context, code int, message string, details ...inter
 }
 
 // respondWithSuccess envoie une réponse de succès standardisée
+// TODO: Implémenter si nécessaire pour les réponses de succès
 func respondWithSuccess(c *gin.Context, data interface{}, message ...string) {
 	response := gin.H{
 		"success":   true,

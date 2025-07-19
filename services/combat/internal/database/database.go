@@ -17,7 +17,7 @@ type DB struct {
 }
 
 // NewConnection crée une nouvelle connection à la base de données
-func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
+func NewConnection(cfg *config.DatabaseConfig) (*DB, error) {
 	// connection à PostgreSQL
 	db, err := sqlx.Connect("postgres", cfg.GetDSN())
 	if err != nil {

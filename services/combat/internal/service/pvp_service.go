@@ -147,7 +147,8 @@ func (s *PvPService) GetChallenges(req *models.GetChallengesRequest) ([]*models.
 		}
 
 		// Combiner et dédupliquer
-		allChallenges := append(sent, received...)
+		var allChallenges []*models.PvPChallenge
+		allChallenges = append(sent, received...)
 		return s.deduplicateChallenges(allChallenges), nil
 	}
 }
@@ -602,6 +603,7 @@ func (s *PvPService) deduplicateChallenges(challenges []*models.PvPChallenge) []
 	return result
 }
 
+// TODO: Implémenter si nécessaire pour le calcul de changement de rating
 func (s *PvPService) calculateRatingChange(playerRating, opponentRating int, won bool) int {
 	// Système ELO simplifié
 	k := 32.0 // Facteur K

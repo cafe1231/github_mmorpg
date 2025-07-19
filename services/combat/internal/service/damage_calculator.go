@@ -38,7 +38,7 @@ type DamageCalculatorInterface interface {
 	// calculations avancés
 	CalculateElementalDamage(attacker *models.CombatParticipant, element string, baseDamage int) int
 	CalculateDamageOverTime(effect *models.CombatEffect, target *models.CombatParticipant) int
-	CalculateStatusEffectChance(caster *models.CombatParticipant, target *models.CombatParticipant, effect models.SkillEffect) float64
+	CalculateStatusEffectChance(caster *models.CombatParticipant, target *models.CombatParticipant, effect *models.SkillEffect) float64
 }
 
 // DamageCalculator implémente l'interface DamageCalculatorInterface
@@ -85,7 +85,11 @@ func NewDamageCalculator(config *config.Config) DamageCalculatorInterface {
 }
 
 // CalculateDamage calcule les dégâts totaux d'une attaque
-func (dc *DamageCalculator) CalculateDamage(attacker, defender *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) *DamageResult {
+func (dc *DamageCalculator) CalculateDamage(
+	attacker, defender *models.CombatParticipant,
+	skill *models.SkillInfo,
+	modifiers map[string]float64,
+) *DamageResult {
 	result := &DamageResult{
 		Modifiers: make(map[string]float64),
 		Elements:  make(map[string]int),
@@ -192,7 +196,11 @@ func (dc *DamageCalculator) CalculateDamage(attacker, defender *models.CombatPar
 }
 
 // CalculateHealing calcule les soins
-func (dc *DamageCalculator) CalculateHealing(caster, target *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) *HealingResult {
+func (dc *DamageCalculator) CalculateHealing(
+	caster, target *models.CombatParticipant,
+	skill *models.SkillInfo,
+	modifiers map[string]float64,
+) *HealingResult {
 	result := &HealingResult{
 		Modifiers: make(map[string]float64),
 	}
@@ -243,7 +251,11 @@ func (dc *DamageCalculator) CalculateHealing(caster, target *models.CombatPartic
 }
 
 // CalculatePhysicalDamage calcule les dégâts physiques
-func (dc *DamageCalculator) CalculatePhysicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int {
+func (dc *DamageCalculator) CalculatePhysicalDamage(
+	attacker, defender *models.CombatParticipant,
+	baseDamage int,
+	modifiers map[string]float64,
+) int {
 	// Ajouter la puissance d'attaque physique
 	damage := float64(baseDamage) + (float64(attacker.PhysicalDamage) * config.DefaultElementalPowerFire)
 
@@ -260,7 +272,11 @@ func (dc *DamageCalculator) CalculatePhysicalDamage(attacker, defender *models.C
 }
 
 // CalculateMagicalDamage calcule les dégâts magiques
-func (dc *DamageCalculator) CalculateMagicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int {
+func (dc *DamageCalculator) CalculateMagicalDamage(
+	attacker, defender *models.CombatParticipant,
+	baseDamage int,
+	modifiers map[string]float64,
+) int {
 	// Ajouter la puissance magique
 	damage := float64(baseDamage) + (float64(attacker.MagicalDamage) * config.DefaultElementalPowerFire)
 
@@ -289,7 +305,11 @@ func (dc *DamageCalculator) CalculateTrueDamage(baseDamage int, modifiers map[st
 }
 
 // CalculateCriticalChance calcule la chance de critique
-func (dc *DamageCalculator) CalculateCriticalChance(attacker *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) float64 {
+func (dc *DamageCalculator) CalculateCriticalChance(
+	attacker *models.CombatParticipant,
+	skill *models.SkillInfo,
+	modifiers map[string]float64,
+) float64 {
 	baseCritChance := attacker.CriticalChance
 
 	// Bonus de la compétence
@@ -316,7 +336,11 @@ func (dc *DamageCalculator) CalculateCriticalChance(attacker *models.CombatParti
 }
 
 // CalculateHitChance calcule la chance de toucher
-func (dc *DamageCalculator) CalculateHitChance(attacker, defender *models.CombatParticipant, skill *models.SkillInfo, modifiers map[string]float64) float64 {
+func (dc *DamageCalculator) CalculateHitChance(
+	attacker, defender *models.CombatParticipant,
+	skill *models.SkillInfo,
+	modifiers map[string]float64,
+) float64 {
 	// Chance de base selon le type d'attaque
 	baseHitChance := 0.85
 
@@ -442,7 +466,11 @@ func (dc *DamageCalculator) CalculateDamageOverTime(effect *models.CombatEffect,
 }
 
 // CalculateStatusEffectChance calcule la chance d'appliquer un effet de statut
-func (dc *DamageCalculator) CalculateStatusEffectChance(caster *models.CombatParticipant, target *models.CombatParticipant, effect models.SkillEffect) float64 {
+func (dc *DamageCalculator) CalculateStatusEffectChance(
+	caster *models.CombatParticipant,
+	target *models.CombatParticipant,
+	effect *models.SkillEffect,
+) float64 {
 	baseChance := effect.Probability
 
 	// Modifier selon la différence de puissance magique

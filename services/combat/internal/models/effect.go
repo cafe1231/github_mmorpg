@@ -245,7 +245,7 @@ func (e *CombatEffect) CanStack() bool {
 }
 
 // GetStatModifier retourne la modification de statistique
-func (e *CombatEffect) GetStatModifier() (string, int, ModifierType) {
+func (e *CombatEffect) GetStatModifier() (statName string, modifierValue int, modifierType ModifierType) {
 	if e.StatAffected == nil {
 		return "", 0, ModifierTypeFlat
 	}
