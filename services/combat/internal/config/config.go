@@ -382,6 +382,79 @@ type LoggingConfig struct {
 	Format string `mapstructure:"format"`
 }
 
+// bindEnvironmentVariables configure les mappings des variables d'environnement avec Viper
+func bindEnvironmentVariables() error {
+	envBindings := map[string]string{
+		// Server configuration
+		"server.host":          "SERVER_HOST",
+		"server.port":          "SERVER_PORT",
+		"server.environment":   "SERVER_ENVIRONMENT",
+		"server.debug":         "SERVER_DEBUG",
+		"server.read_timeout":  "SERVER_READ_TIMEOUT",
+		"server.write_timeout": "SERVER_WRITE_TIMEOUT",
+
+		// Database configuration
+		"database.host":              "DATABASE_HOST",
+		"database.port":              "DATABASE_PORT",
+		"database.name":              "DATABASE_NAME",
+		"database.user":              "DATABASE_USER",
+		"database.password":          "DATABASE_PASSWORD",
+		"database.ssl_mode":          "DATABASE_SSL_MODE",
+		"database.max_open_conns":    "DATABASE_MAX_OPEN_CONNS",
+		"database.max_idle_conns":    "DATABASE_MAX_IDLE_CONNS",
+		"database.conn_max_lifetime": "DATABASE_CONN_MAX_LIFETIME",
+
+		// JWT configuration
+		"jwt.secret":          "JWT_SECRET",
+		"jwt.expiration_time": "JWT_EXPIRATION_TIME",
+
+		// Redis configuration
+		"redis.host":        "REDIS_HOST",
+		"redis.port":        "REDIS_PORT",
+		"redis.password":    "REDIS_PASSWORD",
+		"redis.db":          "REDIS_DB",
+		"redis.max_retries": "REDIS_MAX_RETRIES",
+		"redis.pool_size":   "REDIS_POOL_SIZE",
+
+		// Services configuration
+		"services.auth_service.url":   "AUTH_SERVICE_URL",
+		"services.player_service.url": "PLAYER_SERVICE_URL",
+		"services.world_service.url":  "WORLD_SERVICE_URL",
+
+		// Combat configuration
+		"combat.max_duration":     "COMBAT_MAX_DURATION",
+		"combat.turn_timeout":     "COMBAT_TURN_TIMEOUT",
+		"combat.max_concurrent":   "COMBAT_MAX_CONCURRENT",
+		"combat.cleanup_interval": "COMBAT_CLEANUP_INTERVAL",
+
+		// Anti-cheat configuration
+		"anticheat.max_actions_per_second": "ANTICHEAT_MAX_ACTIONS_PER_SECOND",
+		"anticheat.max_damage_multiplier":  "ANTICHEAT_MAX_DAMAGE_MULTIPLIER",
+		"anticheat.validate_movement":      "ANTICHEAT_VALIDATE_MOVEMENT",
+
+		// Rate limit configuration
+		"rate_limit.requests_per_minute": "RATE_LIMIT_REQUESTS_PER_MINUTE",
+		"rate_limit.burst_size":          "RATE_LIMIT_BURST_SIZE",
+
+		// Monitoring configuration
+		"monitoring.prometheus_port": "MONITORING_PROMETHEUS_PORT",
+		"monitoring.metrics_path":    "MONITORING_METRICS_PATH",
+		"monitoring.health_path":     "MONITORING_HEALTH_PATH",
+
+		// Logging configuration
+		"logging.level":  "LOG_LEVEL",
+		"logging.format": "LOG_FORMAT",
+	}
+
+	for viperKey, envVar := range envBindings {
+		if err := viper.BindEnv(viperKey, envVar); err != nil {
+			return fmt.Errorf("failed to bind %s env: %w", viperKey, err)
+		}
+	}
+
+	return nil
+}
+
 // LoadConfig charge la configuration depuis les variables d'environnement
 func LoadConfig() (*Config, error) {
 	// Configuration par défaut
@@ -473,134 +546,8 @@ func LoadConfig() (*Config, error) {
 	viper.AutomaticEnv()
 
 	// Mapping des variables d'environnement
-	if err := viper.BindEnv("server.host", "SERVER_HOST"); err != nil {
-		return nil, fmt.Errorf("failed to bind server.host env: %w", err)
-	}
-	if err := viper.BindEnv("server.port", "SERVER_PORT"); err != nil {
-		return nil, fmt.Errorf("failed to bind server.port env: %w", err)
-	}
-	if err := viper.BindEnv("server.environment", "SERVER_ENVIRONMENT"); err != nil {
-		return nil, fmt.Errorf("failed to bind server.environment env: %w", err)
-	}
-	if err := viper.BindEnv("server.debug", "SERVER_DEBUG"); err != nil {
-		return nil, fmt.Errorf("failed to bind server.debug env: %w", err)
-	}
-	if err := viper.BindEnv("server.read_timeout", "SERVER_READ_TIMEOUT"); err != nil {
-		return nil, fmt.Errorf("failed to bind server.read_timeout env: %w", err)
-	}
-	if err := viper.BindEnv("server.write_timeout", "SERVER_WRITE_TIMEOUT"); err != nil {
-		return nil, fmt.Errorf("failed to bind server.write_timeout env: %w", err)
-	}
-
-	if err := viper.BindEnv("database.host", "DATABASE_HOST"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.host env: %w", err)
-	}
-	if err := viper.BindEnv("database.port", "DATABASE_PORT"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.port env: %w", err)
-	}
-	if err := viper.BindEnv("database.name", "DATABASE_NAME"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.name env: %w", err)
-	}
-	if err := viper.BindEnv("database.user", "DATABASE_USER"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.user env: %w", err)
-	}
-	if err := viper.BindEnv("database.password", "DATABASE_PASSWORD"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.password env: %w", err)
-	}
-	if err := viper.BindEnv("database.ssl_mode", "DATABASE_SSL_MODE"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.ssl_mode env: %w", err)
-	}
-	if err := viper.BindEnv("database.max_open_conns", "DATABASE_MAX_OPEN_CONNS"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.max_open_conns env: %w", err)
-	}
-	if err := viper.BindEnv("database.max_idle_conns", "DATABASE_MAX_IDLE_CONNS"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.max_idle_conns env: %w", err)
-	}
-	if err := viper.BindEnv("database.conn_max_lifetime", "DATABASE_CONN_MAX_LIFETIME"); err != nil {
-		return nil, fmt.Errorf("failed to bind database.conn_max_lifetime env: %w", err)
-	}
-
-	if err := viper.BindEnv("jwt.secret", "JWT_SECRET"); err != nil {
-		return nil, fmt.Errorf("failed to bind jwt.secret env: %w", err)
-	}
-	if err := viper.BindEnv("jwt.expiration_time", "JWT_EXPIRATION_TIME"); err != nil {
-		return nil, fmt.Errorf("failed to bind jwt.expiration_time env: %w", err)
-	}
-
-	if err := viper.BindEnv("redis.host", "REDIS_HOST"); err != nil {
-		return nil, fmt.Errorf("failed to bind redis.host env: %w", err)
-	}
-	if err := viper.BindEnv("redis.port", "REDIS_PORT"); err != nil {
-		return nil, fmt.Errorf("failed to bind redis.port env: %w", err)
-	}
-	if err := viper.BindEnv("redis.password", "REDIS_PASSWORD"); err != nil {
-		return nil, fmt.Errorf("failed to bind redis.password env: %w", err)
-	}
-	if err := viper.BindEnv("redis.db", "REDIS_DB"); err != nil {
-		return nil, fmt.Errorf("failed to bind redis.db env: %w", err)
-	}
-	if err := viper.BindEnv("redis.max_retries", "REDIS_MAX_RETRIES"); err != nil {
-		return nil, fmt.Errorf("failed to bind redis.max_retries env: %w", err)
-	}
-	if err := viper.BindEnv("redis.pool_size", "REDIS_POOL_SIZE"); err != nil {
-		return nil, fmt.Errorf("failed to bind redis.pool_size env: %w", err)
-	}
-
-	if err := viper.BindEnv("services.auth_service.url", "AUTH_SERVICE_URL"); err != nil {
-		return nil, fmt.Errorf("failed to bind services.auth_service.url env: %w", err)
-	}
-	if err := viper.BindEnv("services.player_service.url", "PLAYER_SERVICE_URL"); err != nil {
-		return nil, fmt.Errorf("failed to bind services.player_service.url env: %w", err)
-	}
-	if err := viper.BindEnv("services.world_service.url", "WORLD_SERVICE_URL"); err != nil {
-		return nil, fmt.Errorf("failed to bind services.world_service.url env: %w", err)
-	}
-
-	if err := viper.BindEnv("combat.max_duration", "COMBAT_MAX_DURATION"); err != nil {
-		return nil, fmt.Errorf("failed to bind combat.max_duration env: %w", err)
-	}
-	if err := viper.BindEnv("combat.turn_timeout", "COMBAT_TURN_TIMEOUT"); err != nil {
-		return nil, fmt.Errorf("failed to bind combat.turn_timeout env: %w", err)
-	}
-	if err := viper.BindEnv("combat.max_concurrent", "COMBAT_MAX_CONCURRENT"); err != nil {
-		return nil, fmt.Errorf("failed to bind combat.max_concurrent env: %w", err)
-	}
-	if err := viper.BindEnv("combat.cleanup_interval", "COMBAT_CLEANUP_INTERVAL"); err != nil {
-		return nil, fmt.Errorf("failed to bind combat.cleanup_interval env: %w", err)
-	}
-
-	if err := viper.BindEnv("anticheat.max_actions_per_second", "ANTICHEAT_MAX_ACTIONS_PER_SECOND"); err != nil {
-		return nil, fmt.Errorf("failed to bind anticheat.max_actions_per_second env: %w", err)
-	}
-	if err := viper.BindEnv("anticheat.max_damage_multiplier", "ANTICHEAT_MAX_DAMAGE_MULTIPLIER"); err != nil {
-		return nil, fmt.Errorf("failed to bind anticheat.max_damage_multiplier env: %w", err)
-	}
-	if err := viper.BindEnv("anticheat.validate_movement", "ANTICHEAT_VALIDATE_MOVEMENT"); err != nil {
-		return nil, fmt.Errorf("failed to bind anticheat.validate_movement env: %w", err)
-	}
-
-	if err := viper.BindEnv("rate_limit.requests_per_minute", "RATE_LIMIT_REQUESTS_PER_MINUTE"); err != nil {
-		return nil, fmt.Errorf("failed to bind rate_limit.requests_per_minute env: %w", err)
-	}
-	if err := viper.BindEnv("rate_limit.burst_size", "RATE_LIMIT_BURST_SIZE"); err != nil {
-		return nil, fmt.Errorf("failed to bind rate_limit.burst_size env: %w", err)
-	}
-
-	if err := viper.BindEnv("monitoring.prometheus_port", "MONITORING_PROMETHEUS_PORT"); err != nil {
-		return nil, fmt.Errorf("failed to bind monitoring.prometheus_port env: %w", err)
-	}
-	if err := viper.BindEnv("monitoring.metrics_path", "MONITORING_METRICS_PATH"); err != nil {
-		return nil, fmt.Errorf("failed to bind monitoring.metrics_path env: %w", err)
-	}
-	if err := viper.BindEnv("monitoring.health_path", "MONITORING_HEALTH_PATH"); err != nil {
-		return nil, fmt.Errorf("failed to bind monitoring.health_path env: %w", err)
-	}
-
-	if err := viper.BindEnv("logging.level", "LOG_LEVEL"); err != nil {
-		return nil, fmt.Errorf("failed to bind logging.level env: %w", err)
-	}
-	if err := viper.BindEnv("logging.format", "LOG_FORMAT"); err != nil {
-		return nil, fmt.Errorf("failed to bind logging.format env: %w", err)
+	if err := bindEnvironmentVariables(); err != nil {
+		return nil, err
 	}
 
 	// Charger le fichier de configuration s'il existe

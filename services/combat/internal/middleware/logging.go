@@ -39,6 +39,128 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
+// shouldSkipPath vérifie si le chemin doit être ignoré pour le logging
+func shouldSkipPath(path string, skipPaths []string) bool {
+	for _, skipPath := range skipPaths {
+		if strings.HasPrefix(path, skipPath) {
+			return true
+		}
+	}
+	return false
+}
+
+// captureRequestBody capture le corps de la requête si nécessaire
+func captureRequestBody(c *gin.Context, config LoggingConfig) []byte {
+	if !config.LogRequestBody || !shouldLogBody(c.Request.Method) {
+		return nil
+	}
+
+	if c.Request.Body == nil {
+		return nil
+	}
+
+	requestBody, _ := io.ReadAll(c.Request.Body)
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+	return requestBody
+}
+
+// setupResponseWriter configure le writer pour capturer la réponse
+func setupResponseWriter(c *gin.Context, config LoggingConfig) *responseWriter {
+	if !config.LogResponse {
+		return nil
+	}
+
+	writer := &responseWriter{
+		ResponseWriter: c.Writer,
+		body:           bytes.NewBufferString(""),
+	}
+	c.Writer = writer
+	return writer
+}
+
+// buildLogFields construit les champs de log de base
+func buildLogFields(c *gin.Context, duration time.Duration) logrus.Fields {
+	return logrus.Fields{
+		"method":     c.Request.Method,
+		"path":       c.Request.URL.Path,
+		"query":      c.Request.URL.RawQuery,
+		"status":     c.Writer.Status(),
+		"user_agent": c.Request.UserAgent(),
+		"client_ip":  c.ClientIP(),
+		"latency":    duration,
+		"latency_ms": duration.Milliseconds(),
+		"bytes_in":   c.Request.ContentLength,
+		"bytes_out":  c.Writer.Size(),
+		"request_id": c.GetHeader("X-Request-ID"),
+		"referer":    c.Request.Referer(),
+		"protocol":   c.Request.Proto,
+	}
+}
+
+// addUserFields ajoute les informations utilisateur aux champs de log
+func addUserFields(c *gin.Context, fields logrus.Fields) {
+	if userID := c.GetString("user_id"); userID != "" {
+		fields["user_id"] = userID
+	}
+	if characterID := c.GetString("character_id"); characterID != "" {
+		fields["character_id"] = characterID
+	}
+	if username := c.GetString("username"); username != "" {
+		fields["username"] = username
+	}
+	if role := c.GetString("user_role"); role != "" {
+		fields["user_role"] = role
+	}
+}
+
+// addBodyFields ajoute les corps de requête/réponse aux champs de log
+func addBodyFields(config LoggingConfig, requestBody []byte, writer *responseWriter, fields logrus.Fields) {
+	// Ajouter le corps de la requête si configuré
+	if config.LogRequestBody && len(requestBody) > 0 {
+		bodyStr := string(requestBody)
+		if len(bodyStr) > config.MaxBodySize {
+			bodyStr = bodyStr[:config.MaxBodySize] + "...[truncated]"
+		}
+		fields["request_body"] = bodyStr
+	}
+
+	// Ajouter la réponse si configurée
+	if config.LogResponse && writer != nil && writer.body.Len() > 0 {
+		responseStr := writer.body.String()
+		if len(responseStr) > config.MaxBodySize {
+			responseStr = responseStr[:config.MaxBodySize] + "...[truncated]"
+		}
+		fields["response_body"] = responseStr
+	}
+}
+
+// logRequestResult détermine le niveau de log et log le résultat
+func logRequestResult(c *gin.Context, fields logrus.Fields, duration time.Duration) {
+	// Ajouter les erreurs s'il y en a
+	if len(c.Errors) > 0 {
+		fields["errors"] = c.Errors.Errors()
+	}
+
+	// Déterminer le niveau de log basé sur le code de statut
+	statusCode := c.Writer.Status()
+	logEntry := logrus.WithFields(fields)
+
+	switch {
+	case statusCode >= constants.StatusInternalServerError:
+		logEntry.Error("Server error")
+	case statusCode >= constants.StatusBadRequest:
+		logEntry.Warn("Client error")
+	case statusCode >= constants.StatusRedirection:
+		logEntry.Info("Redirection")
+	default:
+		if duration > 1*time.Second {
+			logEntry.Warn("Slow request")
+		} else {
+			logEntry.Info("Request completed")
+		}
+	}
+}
+
 // StructuredLogging middleware pour un logging structuré avancé
 func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -46,30 +168,16 @@ func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 		path := c.Request.URL.Path
 
 		// Vérifier si on doit ignorer ce chemin
-		for _, skipPath := range config.SkipPaths {
-			if strings.HasPrefix(path, skipPath) {
-				c.Next()
-				return
-			}
+		if shouldSkipPath(path, config.SkipPaths) {
+			c.Next()
+			return
 		}
 
 		// Capturer le corps de la requête si nécessaire
-		var requestBody []byte
-		if config.LogRequestBody && shouldLogBody(c.Request.Method) {
-			if c.Request.Body != nil {
-				requestBody, _ = io.ReadAll(c.Request.Body)
-				c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-			}
-		}
+		requestBody := captureRequestBody(c, config)
 
 		// Wrapper pour capturer la réponse
-		writer := &responseWriter{
-			ResponseWriter: c.Writer,
-			body:           bytes.NewBufferString(""),
-		}
-		if config.LogResponse {
-			c.Writer = writer
-		}
+		writer := setupResponseWriter(c, config)
 
 		// Traiter la requête
 		c.Next()
@@ -77,78 +185,13 @@ func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 		// Calculer la durée
 		duration := time.Since(start)
 
-		// Préparer les champs de log
-		fields := logrus.Fields{
-			"method":     c.Request.Method,
-			"path":       path,
-			"query":      c.Request.URL.RawQuery,
-			"status":     c.Writer.Status(),
-			"user_agent": c.Request.UserAgent(),
-			"client_ip":  c.ClientIP(),
-			"latency":    duration,
-			"latency_ms": duration.Milliseconds(),
-			"bytes_in":   c.Request.ContentLength,
-			"bytes_out":  c.Writer.Size(),
-			"request_id": c.GetHeader("X-Request-ID"),
-			"referer":    c.Request.Referer(),
-			"protocol":   c.Request.Proto,
-		}
+		// Construire les champs de log
+		fields := buildLogFields(c, duration)
+		addUserFields(c, fields)
+		addBodyFields(config, requestBody, writer, fields)
 
-		// Ajouter les informations utilisateur si disponibles
-		if userID := c.GetString("user_id"); userID != "" {
-			fields["user_id"] = userID
-		}
-		if characterID := c.GetString("character_id"); characterID != "" {
-			fields["character_id"] = characterID
-		}
-		if username := c.GetString("username"); username != "" {
-			fields["username"] = username
-		}
-		if role := c.GetString("user_role"); role != "" {
-			fields["user_role"] = role
-		}
-
-		// Ajouter le corps de la requête si configuré
-		if config.LogRequestBody && len(requestBody) > 0 {
-			bodyStr := string(requestBody)
-			if len(bodyStr) > config.MaxBodySize {
-				bodyStr = bodyStr[:config.MaxBodySize] + "...[truncated]"
-			}
-			fields["request_body"] = bodyStr
-		}
-
-		// Ajouter la réponse si configurée
-		if config.LogResponse && writer.body.Len() > 0 {
-			responseStr := writer.body.String()
-			if len(responseStr) > config.MaxBodySize {
-				responseStr = responseStr[:config.MaxBodySize] + "...[truncated]"
-			}
-			fields["response_body"] = responseStr
-		}
-
-		// Ajouter les erreurs s'il y en a
-		if len(c.Errors) > 0 {
-			fields["errors"] = c.Errors.Errors()
-		}
-
-		// Déterminer le niveau de log basé sur le code de statut
-		statusCode := c.Writer.Status()
-		logEntry := logrus.WithFields(fields)
-
-		switch {
-		case statusCode >= constants.StatusInternalServerError:
-			logEntry.Error("Server error")
-		case statusCode >= constants.StatusBadRequest:
-			logEntry.Warn("Client error")
-		case statusCode >= constants.StatusRedirection:
-			logEntry.Info("Redirection")
-		default:
-			if duration > 1*time.Second {
-				logEntry.Warn("Slow request")
-			} else {
-				logEntry.Info("Request completed")
-			}
-		}
+		// Logger le résultat
+		logRequestResult(c, fields, duration)
 	}
 }
 

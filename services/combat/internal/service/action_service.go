@@ -103,11 +103,11 @@ func (s *ActionService) ExecuteAction(combat *models.CombatInstance, actor *mode
 	case models.ActionTypeItem:
 		err = s.executeItem(action, combat, actor, result)
 	case models.ActionTypeDefend:
-		err = s.executeDefend(action, combat, actor, result)
+		s.executeDefend(action, combat, actor, result)
 	case models.ActionTypeFlee:
 		err = s.executeFlee(action, combat, actor, result)
 	case models.ActionTypeWait:
-		err = s.executeWait(action, combat, actor, result)
+		s.executeWait(action, combat, actor, result)
 	default:
 		err = fmt.Errorf("unknown action type: %s", req.ActionType)
 	}
@@ -214,19 +214,8 @@ func (s *ActionService) executeAttack(action *models.CombatAction, combat *model
 	return nil
 }
 
-// executeSkill exécute une compétence
-func (s *ActionService) executeSkill(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
-	if action.SkillID == nil {
-		return fmt.Errorf("skill ID required")
-	}
-
-	// Récupérer les informations de la compétence
-	skillTemplates := models.GetSkillTemplates()
-	skill, exists := skillTemplates[*action.SkillID]
-	if !exists {
-		return fmt.Errorf("unknown skill: %s", *action.SkillID)
-	}
-
+// validateSkillUsage vérifie les prérequis pour utiliser une compétence
+func (s *ActionService) validateSkillUsage(actor *models.CombatParticipant, skill *models.SkillInfo, skillID string) error {
 	// Vérifier les prérequis
 	if err := s.validateSkillRequirements(actor, skill); err != nil {
 		return err
@@ -238,25 +227,39 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 	}
 
 	// Vérifier le cooldown
-	if onCooldown, remaining, _ := s.IsActionOnCooldown(actor.CharacterID, models.ActionTypeSkill, *action.SkillID); onCooldown {
+	if onCooldown, remaining, _ := s.IsActionOnCooldown(actor.CharacterID, models.ActionTypeSkill, skillID); onCooldown {
 		return fmt.Errorf("skill on cooldown for %v", remaining)
 	}
 
-	// Déterminer la cible
-	var target *models.CombatParticipant
-	if skill.TargetType != "self" && action.TargetID != nil {
-		var err error
-		target, err = s.combatRepo.GetParticipant(combat.ID, *action.TargetID)
-		if err != nil {
-			return fmt.Errorf("target not found: %w", err)
-		}
+	return nil
+}
 
-		if !target.IsAlive && skill.TargetType != "dead" {
-			return fmt.Errorf("cannot target dead participant")
-		}
-	} else {
-		target = actor // Auto-ciblage
+// determineSkillTarget détermine et valide la cible d'une compétence
+func (s *ActionService) determineSkillTarget(combat *models.CombatInstance, actor *models.CombatParticipant,
+	action *models.CombatAction, skill *models.SkillInfo) (*models.CombatParticipant, error) {
+
+	// Auto-ciblage pour les compétences sur soi ou sans cible spécifique
+	if skill.TargetType == "self" || action.TargetID == nil {
+		return actor, nil
 	}
+
+	// Récupérer la cible spécifiée
+	target, err := s.combatRepo.GetParticipant(combat.ID, *action.TargetID)
+	if err != nil {
+		return nil, fmt.Errorf("target not found: %w", err)
+	}
+
+	// Vérifier si la cible est valide selon le type de compétence
+	if !target.IsAlive && skill.TargetType != "dead" {
+		return nil, fmt.Errorf("cannot target dead participant")
+	}
+
+	return target, nil
+}
+
+// processSkillHitAndCrit calcule les chances de toucher et de critique
+func (s *ActionService) processSkillHitAndCrit(actor, target *models.CombatParticipant,
+	skill *models.SkillInfo, action *models.CombatAction) (bool, error) {
 
 	// Calculer la chance de toucher
 	hitChance := models.CalculateHitChance(actor, target, skill)
@@ -265,23 +268,29 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 	if !hit {
 		action.IsMiss = true
 		action.ManaUsed = skill.ManaCost / config.DefaultArmorDivisor // Coût réduit en cas d'échec
-		return nil
+		return false, nil
 	}
 
 	// Calculer la chance de critique
 	critChance := models.CalculateCriticalChance(actor, skill)
 	action.IsCritical = utils.SecureRandFloat64() < critChance
 
-	// Consommer la mana
 	action.ManaUsed = skill.ManaCost
+	return true, nil
+}
 
-	// Calculer et appliquer les effets
+// applySkillEffectsAndDamage applique les effets de la compétence
+func (s *ActionService) applySkillEffectsAndDamage(actor, target *models.CombatParticipant,
+	skill *models.SkillInfo, action *models.CombatAction, result *models.ActionResult) {
+
+	// Appliquer les dégâts
 	if skill.BaseDamage > 0 {
 		damage := action.CalculateDamage(actor, target, skill)
 		action.DamageDealt = damage
 		s.applyDamage(target, damage, result)
 	}
 
+	// Appliquer les soins
 	if skill.BaseHealing > 0 {
 		healing := action.CalculateHealing(actor, skill)
 		action.HealingDone = healing
@@ -295,10 +304,15 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 			s.applySkillEffect(actor, target, effect, result)
 		}
 	}
+}
+
+// finishSkillExecution finalise l'exécution de la compétence (cooldown et mana)
+func (s *ActionService) finishSkillExecution(actor *models.CombatParticipant, skill *models.SkillInfo,
+	action *models.CombatAction, result *models.ActionResult, skillID string) error {
 
 	// Définir le cooldown
 	if skill.Cooldown > 0 {
-		if err := s.SetActionCooldown(actor.CharacterID, models.ActionTypeSkill, *action.SkillID,
+		if err := s.SetActionCooldown(actor.CharacterID, models.ActionTypeSkill, skillID,
 			time.Duration(skill.Cooldown)*time.Second); err != nil {
 			logrus.WithError(err).Error("Failed to set action cooldown")
 		}
@@ -313,6 +327,47 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 	change.ManaChange = -action.ManaUsed
 
 	return nil
+}
+
+// executeSkill exécute une compétence
+func (s *ActionService) executeSkill(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
+	if action.SkillID == nil {
+		return fmt.Errorf("skill ID required")
+	}
+
+	skillID := *action.SkillID
+
+	// Récupérer les informations de la compétence
+	skillTemplates := models.GetSkillTemplates()
+	skill, exists := skillTemplates[skillID]
+	if !exists {
+		return fmt.Errorf("unknown skill: %s", skillID)
+	}
+
+	// Valider l'utilisation de la compétence
+	if err := s.validateSkillUsage(actor, skill, skillID); err != nil {
+		return err
+	}
+
+	// Déterminer la cible
+	target, err := s.determineSkillTarget(combat, actor, action, skill)
+	if err != nil {
+		return err
+	}
+
+	// Traiter les chances de toucher et de critique
+	hit, err := s.processSkillHitAndCrit(actor, target, skill, action)
+	if err != nil {
+		return err
+	}
+
+	// Si la compétence a touché, appliquer les effets
+	if hit {
+		s.applySkillEffectsAndDamage(actor, target, skill, action, result)
+	}
+
+	// Finaliser l'exécution
+	return s.finishSkillExecution(actor, skill, action, result, skillID)
 }
 
 // executeItem utilize un objet
@@ -344,7 +399,7 @@ func (s *ActionService) executeItem(action *models.CombatAction, _ *models.Comba
 // executeDefend exécute une action de défense
 func (s *ActionService) executeDefend(_ *models.CombatAction, _ *models.CombatInstance,
 	actor *models.CombatParticipant, result *models.ActionResult,
-) error {
+) {
 	// Appliquer un effet de défense temporaire
 	defenseEffect := &models.EffectApplication{
 		EffectTemplate: &models.EffectTemplate{
@@ -370,8 +425,6 @@ func (s *ActionService) executeDefend(_ *models.CombatAction, _ *models.CombatIn
 	result.Logs = append(result.Logs, &models.CombatLog{
 		Message: fmt.Sprintf("%s se défend", actor.Character.Name),
 	})
-
-	return nil
 }
 
 // executeFlee tente de fuir le combat
@@ -414,7 +467,7 @@ func (s *ActionService) executeFlee(_ *models.CombatAction, combat *models.Comba
 // executeWait attend et récupère de la mana
 func (s *ActionService) executeWait(action *models.CombatAction, _ *models.CombatInstance,
 	actor *models.CombatParticipant, result *models.ActionResult,
-) error {
+) {
 	// Récupérer un pourcentage de mana
 	// Récupération de mana (10% de la mana max)
 	manaRecovery := int(float64(actor.MaxMana) * config.DefaultManaRecoveryPercent)
@@ -433,8 +486,6 @@ func (s *ActionService) executeWait(action *models.CombatAction, _ *models.Comba
 	result.Logs = append(result.Logs, &models.CombatLog{
 		Message: fmt.Sprintf("%s attend et récupère %d points de mana", actor.Character.Name, manaRecovery),
 	})
-
-	return nil
 }
 
 // Helper methods
@@ -594,40 +645,21 @@ func (s *ActionService) validateSkillRequirements(_ *models.CombatParticipant, s
 }
 
 func (s *ActionService) applyParticipantChanges(participantID uuid.UUID, change *models.ParticipantChange) error {
-	// Récupérer le participant actuel
-	// Note: Nous aurions besoin du combat ID ici, mais pour simplifier on va faire une recherche
-	// Dans une vraie implémentation, il faudrait passer le combat ID ou restructurer
+	// Récupérer le participant actuel - nécessite le combat ID
+	// Cette fonction est appelée dans un contexte où nous n'avons pas le combat ID disponible
+	// Pour l'instant, nous retournons une erreur non implémentée
+	if change.HealthChange == 0 && change.ManaChange == 0 {
+		return nil // Aucun changement à appliquer
+	}
 
 	// TODO: Implémenter la mise à jour réelle du participant
-	// participant, err := s.combatRepo.GetParticipant(combatID, participantID)
-	// if err != nil {
-	//     return err
-	// }
-
-	// Appliquer les changements
-	// participant.Health += change.HealthChange
-	// participant.Mana += change.ManaChange
-
-	// Vérifier les limites
-	// if participant.Health < 0 {
-	//     participant.Health = 0
-	//     participant.IsAlive = false
-	// }
-	// if participant.Health > participant.MaxHealth {
-	//     participant.Health = participant.MaxHealth
-	// }
-	// if participant.Mana < 0 {
-	//     participant.Mana = 0
-	// }
-	// if participant.Mana > participant.MaxMana {
-	//     participant.Mana = participant.MaxMana
-	// }
-
+	// Il faudrait refactoriser l'architecture pour passer le combat ID ou
+	// restructurer cette logique pour qu'elle soit appelée avec plus de contexte
 	logrus.WithFields(logrus.Fields{
 		"participant_id": participantID,
 		"health_change":  change.HealthChange,
 		"mana_change":    change.ManaChange,
-	}).Debug("Applied participant changes")
+	}).Debug("applyParticipantChanges not fully implemented - changes ignored")
 
 	return nil
 }

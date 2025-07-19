@@ -53,119 +53,86 @@ func NewEffectService(
 	}
 }
 
-// ApplyEffect applique un effet sur une cible
-func (s *EffectService) ApplyEffect(req *models.ApplyEffectRequest) (*models.EffectResult, error) {
+// validateEffectRequest valide et récupère le template d'effet
+func (s *EffectService) validateEffectRequest(req *models.ApplyEffectRequest) (*models.EffectTemplate, *models.EffectResult) {
 	// Validation de la demande
 	if err := req.Validate(); err != nil {
-		return &models.EffectResult{
+		return nil, &models.EffectResult{
 			Success: false,
 			Error:   err.Error(),
-		}, nil
+		}
 	}
 
 	// Récupérer le modèle d'effet
 	effectTemplates := models.GetEffectTemplates()
 	template, exists := effectTemplates[req.EffectID]
 	if !exists {
-		return &models.EffectResult{
+		return nil, &models.EffectResult{
 			Success: false,
 			Error:   fmt.Sprintf("Unknown effect: %s", req.EffectID),
+		}
+	}
+
+	return template, nil
+}
+
+// handleExistingEffect gère un effet existant (stack ou refresh)
+func (s *EffectService) handleExistingEffect(existingEffect *models.CombatEffect, template *models.EffectTemplate,
+	application *models.EffectApplication) (*models.EffectResult, error) {
+
+	if existingEffect.CanStack() {
+		// Empiler l'effet
+		stackedEffect, err := s.StackEffect(existingEffect, models.CreateEffectFromTemplate(template, application))
+		if err != nil {
+			return &models.EffectResult{
+				Success: false,
+				Error:   fmt.Sprintf("Failed to stack effect: %v", err),
+			}, nil
+		}
+
+		if err := s.effectRepo.Update(stackedEffect); err != nil {
+			return &models.EffectResult{
+				Success: false,
+				Error:   fmt.Sprintf("Failed to update stacked effect: %v", err),
+			}, nil
+		}
+
+		return &models.EffectResult{
+			Success:        true,
+			Effect:         stackedEffect,
+			ExistingEffect: existingEffect,
+			Action:         "stacked",
+			Message:        fmt.Sprintf("Effect %s stacked (x%d)", template.Name, stackedEffect.CurrentStacks),
 		}, nil
 	}
 
-	// Créer l'application d'effet
-	duration := 0
-	if req.Duration != nil {
-		duration = *req.Duration
+	// Rafraîchir l'effet existing
+	existingEffect.RemainingTurns = template.BaseDuration
+	if application.Duration > 0 {
+		existingEffect.RemainingTurns = application.Duration
 	}
-	stacks := 1
-	if req.Stacks != nil {
-		stacks = *req.Stacks
-	}
-	application := &models.EffectApplication{
-		EffectTemplate: template,
-		TargetID:       req.TargetID,
-		CasterID:       req.CasterID,
-		Duration:       duration,
-		Stacks:         stacks,
-		CustomModifier: req.CustomValue,
-		Metadata:       req.Metadata,
-	}
+	existingEffect.UpdatedAt = time.Now()
 
-	// Vérifier si un effet similaire existe déjà
-	existingEffects, err := s.effectRepo.GetActiveByTarget(req.TargetID)
-	if err != nil {
+	if err := s.effectRepo.Update(existingEffect); err != nil {
 		return &models.EffectResult{
 			Success: false,
-			Error:   fmt.Sprintf("Failed to check existing effects: %v", err),
+			Error:   fmt.Sprintf("Failed to refresh effect: %v", err),
 		}, nil
 	}
 
-	var existingEffect *models.CombatEffect
-	for _, effect := range existingEffects {
-		if effect.EffectName == template.Name && effect.IsActive {
-			existingEffect = effect
-			break
-		}
-	}
+	return &models.EffectResult{
+		Success:        true,
+		Effect:         existingEffect,
+		ExistingEffect: existingEffect,
+		Action:         "refreshed",
+		Message:        fmt.Sprintf("Effect %s refreshed", template.Name),
+	}, nil
+}
 
-	// Si l'effet existe déjà
-	if existingEffect != nil {
-		if existingEffect.CanStack() {
-			// Empiler l'effet
-			stackedEffect, err := s.StackEffect(existingEffect, models.CreateEffectFromTemplate(template, application))
-			if err != nil {
-				return &models.EffectResult{
-					Success: false,
-					Error:   fmt.Sprintf("Failed to stack effect: %v", err),
-				}, nil
-			}
-
-			if err := s.effectRepo.Update(stackedEffect); err != nil {
-				return &models.EffectResult{
-					Success: false,
-					Error:   fmt.Sprintf("Failed to update stacked effect: %v", err),
-				}, nil
-			}
-
-			return &models.EffectResult{
-				Success:        true,
-				Effect:         stackedEffect,
-				ExistingEffect: existingEffect,
-				Action:         "stacked",
-				Message:        fmt.Sprintf("Effect %s stacked (x%d)", template.Name, stackedEffect.CurrentStacks),
-			}, nil
-		} else {
-			// Rafraîchir l'effet existing
-			existingEffect.RemainingTurns = template.BaseDuration
-			if application.Duration > 0 {
-				existingEffect.RemainingTurns = application.Duration
-			}
-			existingEffect.UpdatedAt = time.Now()
-
-			if err := s.effectRepo.Update(existingEffect); err != nil {
-				return &models.EffectResult{
-					Success: false,
-					Error:   fmt.Sprintf("Failed to refresh effect: %v", err),
-				}, nil
-			}
-
-			return &models.EffectResult{
-				Success:        true,
-				Effect:         existingEffect,
-				ExistingEffect: existingEffect,
-				Action:         "refreshed",
-				Message:        fmt.Sprintf("Effect %s refreshed", template.Name),
-			}, nil
-		}
-	}
-
+// createNewEffect crée un nouvel effet
+func (s *EffectService) createNewEffect(template *models.EffectTemplate, application *models.EffectApplication) (*models.EffectResult, error) {
 	// Créer un nouvel effet
 	newEffect := models.CreateEffectFromTemplate(template, application)
-
-	// TODO: Récupérer le combat ID depuis le participant
-	// Pour l'instant, on va devoir le passer différemment ou le récupérer
-	// newEffect.CombatID = ...
 
 	if err := s.effectRepo.Create(newEffect); err != nil {
 		return &models.EffectResult{
@@ -188,6 +155,67 @@ func (s *EffectService) ApplyEffect(req *models.ApplyEffectRequest) (*models.Eff
 		Action:  "applied",
 		Message: fmt.Sprintf("Effect %s applied", template.Name),
 	}, nil
+}
+
+// findExistingEffect trouve un effet existant du même type sur la cible
+func (s *EffectService) findExistingEffect(targetID uuid.UUID, template *models.EffectTemplate) (*models.CombatEffect, error) {
+	existingEffects, err := s.effectRepo.GetActiveByTarget(targetID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing effects: %v", err)
+	}
+
+	for _, effect := range existingEffects {
+		if effect.EffectName == template.Name && effect.IsActive {
+			return effect, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// ApplyEffect applique un effet sur une cible
+func (s *EffectService) ApplyEffect(req *models.ApplyEffectRequest) (*models.EffectResult, error) {
+	// Valider et récupérer le template
+	template, errResult := s.validateEffectRequest(req)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	// Créer l'application d'effet
+	duration := 0
+	if req.Duration != nil {
+		duration = *req.Duration
+	}
+	stacks := 1
+	if req.Stacks != nil {
+		stacks = *req.Stacks
+	}
+	application := &models.EffectApplication{
+		EffectTemplate: template,
+		TargetID:       req.TargetID,
+		CasterID:       req.CasterID,
+		Duration:       duration,
+		Stacks:         stacks,
+		CustomModifier: req.CustomValue,
+		Metadata:       req.Metadata,
+	}
+
+	// Vérifier si un effet similaire existe déjà
+	existingEffect, err := s.findExistingEffect(req.TargetID, template)
+	if err != nil {
+		return &models.EffectResult{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	// Si l'effet existe déjà, le gérer
+	if existingEffect != nil {
+		return s.handleExistingEffect(existingEffect, template, application)
+	}
+
+	// Créer un nouvel effet
+	return s.createNewEffect(template, application)
 }
 
 // RemoveEffect supprime un effet
@@ -231,13 +259,33 @@ func (s *EffectService) GetActiveEffects(targetID uuid.UUID) ([]*models.CombatEf
 	return s.effectRepo.GetActiveByTarget(targetID)
 }
 
-// ProcessEffects traite tous les effets d'un participant pour un tour
-func (s *EffectService) ProcessEffects(participant *models.CombatParticipant) error {
-	effects, err := s.effectRepo.GetActiveByTarget(participant.CharacterID)
-	if err != nil {
-		return fmt.Errorf("failed to get participant effects: %w", err)
+// applyEffectToParticipant applique les résultats d'un effet à un participant
+func (s *EffectService) applyEffectToParticipant(participant *models.CombatParticipant, result *models.EffectProcessResult) (int, int) {
+	damage := 0
+	healing := 0
+
+	if result.DamageDealt > 0 {
+		damage = result.DamageDealt
+		participant.Health -= damage
+		if participant.Health < 0 {
+			participant.Health = 0
+			participant.IsAlive = false
+		}
 	}
 
+	if result.HealingDone > 0 {
+		healing = result.HealingDone
+		participant.Health += healing
+		if participant.Health > participant.MaxHealth {
+			participant.Health = participant.MaxHealth
+		}
+	}
+
+	return damage, healing
+}
+
+// processEffectResults traite les résultats des effets pour un participant
+func (s *EffectService) processEffectResults(effects []*models.CombatEffect, participant *models.CombatParticipant) (int, int, []uuid.UUID, error) {
 	var totalDamage, totalHealing int
 	var expiredEffects []uuid.UUID
 
@@ -248,23 +296,10 @@ func (s *EffectService) ProcessEffects(participant *models.CombatParticipant) er
 
 		result := effect.ProcessTurn()
 
-		// Appliquer les résultats
-		if result.DamageDealt > 0 {
-			totalDamage += result.DamageDealt
-			participant.Health -= result.DamageDealt
-			if participant.Health < 0 {
-				participant.Health = 0
-				participant.IsAlive = false
-			}
-		}
-
-		if result.HealingDone > 0 {
-			totalHealing += result.HealingDone
-			participant.Health += result.HealingDone
-			if participant.Health > participant.MaxHealth {
-				participant.Health = participant.MaxHealth
-			}
-		}
+		// Appliquer les résultats au participant
+		damage, healing := s.applyEffectToParticipant(participant, result)
+		totalDamage += damage
+		totalHealing += healing
 
 		// Marquer les effets expirés pour suppression
 		if result.Expired {
@@ -288,14 +323,20 @@ func (s *EffectService) ProcessEffects(participant *models.CombatParticipant) er
 		}
 	}
 
-	// Supprimer les effets expirés
+	return totalDamage, totalHealing, expiredEffects, nil
+}
+
+// cleanupExpiredEffects supprime les effets expirés
+func (s *EffectService) cleanupExpiredEffects(expiredEffects []uuid.UUID) {
 	for _, effectID := range expiredEffects {
 		if err := s.effectRepo.Delete(effectID); err != nil {
 			logrus.WithError(err).WithField("effect_id", effectID).Error("Failed to delete expired effect")
 		}
 	}
+}
 
-	// Mettre à jour le participant si nécessaire
+// updateParticipantAfterEffects met à jour le participant après application des effets
+func (s *EffectService) updateParticipantAfterEffects(participant *models.CombatParticipant, totalDamage, totalHealing int, expiredCount int) error {
 	if totalDamage > 0 || totalHealing > 0 {
 		if err := s.combatRepo.UpdateParticipant(participant); err != nil {
 			return fmt.Errorf("failed to update participant: %w", err)
@@ -305,11 +346,31 @@ func (s *EffectService) ProcessEffects(participant *models.CombatParticipant) er
 			"participant_id":  participant.CharacterID,
 			"total_damage":    totalDamage,
 			"total_healing":   totalHealing,
-			"expired_effects": len(expiredEffects),
+			"expired_effects": expiredCount,
 		}).Debug("Processed participant effects")
 	}
 
 	return nil
+}
+
+// ProcessEffects traite tous les effets d'un participant pour un tour
+func (s *EffectService) ProcessEffects(participant *models.CombatParticipant) error {
+	effects, err := s.effectRepo.GetActiveByTarget(participant.CharacterID)
+	if err != nil {
+		return fmt.Errorf("failed to get participant effects: %w", err)
+	}
+
+	// Traiter les résultats des effets
+	totalDamage, totalHealing, expiredEffects, err := s.processEffectResults(effects, participant)
+	if err != nil {
+		return err
+	}
+
+	// Nettoyer les effets expirés
+	s.cleanupExpiredEffects(expiredEffects)
+
+	// Mettre à jour le participant
+	return s.updateParticipantAfterEffects(participant, totalDamage, totalHealing, len(expiredEffects))
 }
 
 // ProcessEffectTurn traite un effet pour un tour

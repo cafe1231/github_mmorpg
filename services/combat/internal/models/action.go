@@ -613,39 +613,60 @@ func CalculateHitChance(actor, target *CombatParticipant, skill *SkillInfo) floa
 	return hitChance
 }
 
+// getAttackDescription retourne la description d'une attaque
+func (ca *CombatAction) getAttackDescription() string {
+	if ca.IsMiss {
+		return "rate son attaque"
+	}
+	if ca.IsBlocked {
+		return "voit son attaque bloquée"
+	}
+	if ca.IsCritical {
+		return fmt.Sprintf("effectue une attaque critique (%d dégâts)", ca.DamageDealt)
+	}
+	return fmt.Sprintf("attaque (%d dégâts)", ca.DamageDealt)
+}
+
+// getSkillDescription retourne la description d'une compétence
+func (ca *CombatAction) getSkillDescription() string {
+	skillName := "une compétence"
+	if ca.Skill != nil {
+		skillName = ca.Skill.Name
+	}
+
+	if ca.DamageDealt > 0 && ca.HealingDone > 0 {
+		return fmt.Sprintf("utilize %s (%d dégâts, %d soins)", skillName, ca.DamageDealt, ca.HealingDone)
+	}
+
+	if ca.DamageDealt > 0 {
+		return fmt.Sprintf("utilize %s (%d dégâts)", skillName, ca.DamageDealt)
+	}
+
+	if ca.HealingDone > 0 {
+		return fmt.Sprintf("utilize %s (%d soins)", skillName, ca.HealingDone)
+	}
+
+	return fmt.Sprintf("utilize %s", skillName)
+}
+
+// getItemDescription retourne la description d'un objet
+func (ca *CombatAction) getItemDescription() string {
+	itemName := "un objet"
+	if ca.Item != nil {
+		itemName = ca.Item.Name
+	}
+	return fmt.Sprintf("utilize %s", itemName)
+}
+
 // GetDescription retourne une description textuelle de l'action
 func (ca *CombatAction) GetDescription() string {
 	switch ca.ActionType {
 	case ActionTypeAttack:
-		if ca.IsMiss {
-			return "rate son attaque"
-		}
-		if ca.IsBlocked {
-			return "voit son attaque bloquée"
-		}
-		if ca.IsCritical {
-			return fmt.Sprintf("effectue une attaque critique (%d dégâts)", ca.DamageDealt)
-		}
-		return fmt.Sprintf("attaque (%d dégâts)", ca.DamageDealt)
+		return ca.getAttackDescription()
 	case ActionTypeSkill:
-		skillName := "une compétence"
-		if ca.Skill != nil {
-			skillName = ca.Skill.Name
-		}
-		if ca.DamageDealt > 0 && ca.HealingDone > 0 {
-			return fmt.Sprintf("utilize %s (%d dégâts, %d soins)", skillName, ca.DamageDealt, ca.HealingDone)
-		} else if ca.DamageDealt > 0 {
-			return fmt.Sprintf("utilize %s (%d dégâts)", skillName, ca.DamageDealt)
-		} else if ca.HealingDone > 0 {
-			return fmt.Sprintf("utilize %s (%d soins)", skillName, ca.HealingDone)
-		}
-		return fmt.Sprintf("utilize %s", skillName)
+		return ca.getSkillDescription()
 	case ActionTypeItem:
-		itemName := "un objet"
-		if ca.Item != nil {
-			itemName = ca.Item.Name
-		}
-		return fmt.Sprintf("utilize %s", itemName)
+		return ca.getItemDescription()
 	case ActionTypeDefend:
 		return "se défend"
 	case ActionTypeFlee:

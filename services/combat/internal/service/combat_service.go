@@ -840,6 +840,8 @@ func (s *CombatService) updateParticipantStatistics(
 		// Sauvegarder les statistiques
 		if err := s.combatRepo.UpdateStatistics(stats); err != nil {
 			logrus.WithError(err).WithField("character_id", participant.CharacterID).Error("Failed to update statistics")
+			// Retourner l'erreur au lieu de seulement la logger
+			return fmt.Errorf("failed to update statistics for character %s: %w", participant.CharacterID, err)
 		}
 	}
 
