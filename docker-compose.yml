@@ -128,8 +128,8 @@ services:
       - GUILD_DB_PASSWORD=auth_password
       - GUILD_DB_NAME=guild_db
       - GUILD_DB_SSL_MODE=disable
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8086
+      - GUILD_SERVER_HOST=0.0.0.0
+      - GUILD_SERVER_PORT=8086
     depends_on:
       - guild_db
     networks:

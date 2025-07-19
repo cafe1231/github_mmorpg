@@ -11,11 +11,9 @@ import (
 
 	"github.com/dan-2/github_mmorpg/services/guild/internal/config"
 	"github.com/dan-2/github_mmorpg/services/guild/internal/handlers"
-	"github.com/dan-2/github_mmorpg/services/guild/internal/models"
 	"github.com/dan-2/github_mmorpg/services/guild/internal/repository"
 	"github.com/dan-2/github_mmorpg/services/guild/internal/service"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -74,6 +72,7 @@ func setupDatabase(cfg *config.Config) (*sql.DB, error) {
 // setupRouter configure le routeur Gin
 func setupRouter(
 	guildHandler *handlers.GuildHandler,
+	guildMemberHandler *handlers.GuildMemberHandler,
 ) *gin.Engine {
 	router := gin.Default()
 
@@ -129,7 +128,16 @@ func setupRouter(
 			guilds.GET("/:id/stats", guildHandler.GetGuildStats)
 		}
 
-		// TODO: Ajouter les autres routes (membres, invitations, etc.)
+		// Routes des membres de guilde (séparées pour éviter les conflits)
+		members := v1.Group("/guild-members")
+		{
+			members.POST("/:guild_id/join", guildMemberHandler.JoinGuild)
+			members.GET("/:guild_id", guildMemberHandler.GetMembers)
+			members.GET("/:guild_id/:player_id", guildMemberHandler.GetMember)
+			members.PUT("/:guild_id/:player_id/role", guildMemberHandler.UpdateMemberRole)
+			members.DELETE("/:guild_id/:player_id", guildMemberHandler.KickMember)
+			members.DELETE("/:guild_id/leave", guildMemberHandler.LeaveGuild)
+		}
 	}
 
 	return router
@@ -178,19 +186,22 @@ func main() {
 			// Repositories
 			repository.NewGuildRepository,
 			repository.NewGuildMemberRepository,
+			repository.NewGuildLogRepository,
 			// TODO: Ajouter les autres repositories
 			// Services
 			func(db *sql.DB) service.GuildPermissionService {
-				// TODO: Implémenter le service de permissions
-				return &mockPermissionService{}
+				return service.NewGuildPermissionService(db)
 			},
 			func(db *sql.DB) service.GuildLogService {
-				// TODO: Implémenter le service de logs
-				return &mockLogService{}
+				return service.NewGuildLogService(db)
+			},
+			func(db *sql.DB) service.GuildMemberService {
+				return service.NewGuildMemberService(db)
 			},
 			service.NewGuildService,
 			// Handlers
 			handlers.NewGuildHandler,
+			handlers.NewGuildMemberHandler,
 			// Router
 			setupRouter,
 		),
@@ -204,40 +215,4 @@ func main() {
 
 	// Attendre l'interruption
 	<-app.Done()
-}
-
-// Services mock pour les dépendances non encore implémentées
-type mockPermissionService struct{}
-
-func (m *mockPermissionService) GetPermissions(ctx context.Context, guildID, playerID uuid.UUID) (*models.GuildPermissionResponse, error) {
-	return &models.GuildPermissionResponse{
-		CanInvitePlayers:      true,
-		CanKickMembers:        true,
-		CanPromoteMembers:     true,
-		CanDemoteMembers:      true,
-		CanManageBank:         true,
-		CanDeclareWar:         true,
-		CanCreateAlliance:     true,
-		CanManageApplications: true,
-		CanViewLogs:           true,
-		CanEditGuildInfo:      true,
-	}, nil
-}
-
-func (m *mockPermissionService) HasPermission(ctx context.Context, guildID, playerID uuid.UUID, permission string) (bool, error) {
-	return true, nil
-}
-
-type mockLogService struct{}
-
-func (m *mockLogService) AddLog(ctx context.Context, guildID, playerID uuid.UUID, action, details string) error {
-	return nil
-}
-
-func (m *mockLogService) GetLogs(ctx context.Context, guildID uuid.UUID, action *string, page, limit int) ([]*models.GuildLogResponse, int, error) {
-	return []*models.GuildLogResponse{}, 0, nil
-}
-
-func (m *mockLogService) CleanOldLogs(ctx context.Context, days int) error {
-	return nil
 }

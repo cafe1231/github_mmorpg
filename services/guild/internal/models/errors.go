@@ -1,30 +1,21 @@
 package models
 
-// GuildError représente une erreur de guilde
-type GuildError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-}
+import "errors"
 
-// Error implémente l'interface error
-func (e *GuildError) Error() string {
-	return e.Message
-}
-
-// Erreurs communes
+// Erreurs spécifiques aux guildes
 var (
-	ErrGuildNotFound           = &GuildError{Code: "GUILD_NOT_FOUND", Message: "Guilde non trouvée"}
-	ErrGuildAlreadyExists      = &GuildError{Code: "GUILD_ALREADY_EXISTS", Message: "Une guilde avec ce nom existe déjà"}
-	ErrMemberNotFound          = &GuildError{Code: "MEMBER_NOT_FOUND", Message: "Membre non trouvé"}
-	ErrAlreadyInGuild          = &GuildError{Code: "ALREADY_IN_GUILD", Message: "Le joueur est déjà dans une guilde"}
-	ErrNotInGuild              = &GuildError{Code: "NOT_IN_GUILD", Message: "Le joueur n'est pas dans cette guilde"}
-	ErrInsufficientPermissions = &GuildError{Code: "INSUFFICIENT_PERMISSIONS", Message: "Permissions insuffisantes"}
-	ErrGuildFull               = &GuildError{Code: "GUILD_FULL", Message: "La guilde est pleine"}
-	ErrInvitationNotFound      = &GuildError{Code: "INVITATION_NOT_FOUND", Message: "Invitation non trouvée"}
-	ErrInvitationExpired       = &GuildError{Code: "INVITATION_EXPIRED", Message: "L'invitation a expiré"}
-	ErrApplicationNotFound     = &GuildError{Code: "APPLICATION_NOT_FOUND", Message: "Candidature non trouvée"}
-	ErrBankTransactionFailed   = &GuildError{Code: "BANK_TRANSACTION_FAILED", Message: "Transaction bancaire échouée"}
-	ErrInsufficientFunds       = &GuildError{Code: "INSUFFICIENT_FUNDS", Message: "Fonds insuffisants"}
-	ErrWarAlreadyExists        = &GuildError{Code: "WAR_ALREADY_EXISTS", Message: "Une guerre existe déjà entre ces guildes"}
-	ErrAllianceAlreadyExists   = &GuildError{Code: "ALLIANCE_ALREADY_EXISTS", Message: "Une alliance existe déjà entre ces guildes"}
+	ErrGuildNotFound           = errors.New("guilde non trouvée")
+	ErrGuildAlreadyExists      = errors.New("une guilde avec ce nom ou tag existe déjà")
+	ErrAlreadyInGuild          = errors.New("le joueur est déjà dans une guilde")
+	ErrNotInGuild              = errors.New("le joueur n'est pas dans cette guilde")
+	ErrGuildFull               = errors.New("la guilde est pleine")
+	ErrInsufficientPermissions = errors.New("permissions insuffisantes")
+	ErrInvalidRole             = errors.New("rôle invalide")
+	ErrMemberNotFound          = errors.New("membre non trouvé")
+	ErrInvitationNotFound      = errors.New("invitation non trouvée")
+	ErrApplicationNotFound     = errors.New("candidature non trouvée")
+	ErrWarNotFound             = errors.New("guerre non trouvée")
+	ErrAllianceNotFound        = errors.New("alliance non trouvée")
+	ErrBankTransactionFailed   = errors.New("transaction bancaire échouée")
+	ErrInsufficientFunds       = errors.New("fonds insuffisants")
 )
