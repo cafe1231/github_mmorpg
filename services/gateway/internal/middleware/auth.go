@@ -11,6 +11,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Constantes pour les rôles utilisateur
+const (
+	RoleAdmin     = "admin"
+	RoleModerator = "moderator"
+	RoleUser      = "user"
+)
+
 // JWTClaims reprÃ©sente les claims du JWT
 type JWTClaims struct {
 	UserID   uuid.UUID `json:"user_id"`
@@ -69,7 +76,6 @@ func JWTAuth(jwtSecret string) gin.HandlerFunc {
 			}
 			return []byte(jwtSecret), nil
 		})
-
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"error":      err.Error(),
@@ -277,16 +283,16 @@ func GetUserRoleFromContext(c *gin.Context) (string, bool) {
 	return role, ok
 }
 
-// IsAdmin vÃ©rifie si l'utilisateur connectÃ© est un administrateur
+// IsAdmin vérifie si l'utilisateur connecté est un administrateur
 func IsAdmin(c *gin.Context) bool {
 	role, exists := GetUserRoleFromContext(c)
-	return exists && role == "admin"
+	return exists && role == RoleAdmin
 }
 
-// IsModerator vÃ©rifie si l'utilisateur connectÃ© est un modÃ©rateur ou admin
+// IsModerator vérifie si l'utilisateur connecté est un modérateur ou admin
 func IsModerator(c *gin.Context) bool {
 	role, exists := GetUserRoleFromContext(c)
-	return exists && (role == "moderator" || role == "admin")
+	return exists && (role == RoleModerator || role == RoleAdmin)
 }
 
 // RequireOwnership vÃ©rifie que l'utilisateur est propriÃ©taire d'une ressource
@@ -305,7 +311,7 @@ func RequireOwnership(getResourceOwnerID func(*gin.Context) (uuid.UUID, error)) 
 		userRole, _ := GetUserRoleFromContext(c)
 
 		// Admin a tous les droits
-		if userRole == "admin" {
+		if userRole == RoleAdmin {
 			c.Next()
 			return
 		}

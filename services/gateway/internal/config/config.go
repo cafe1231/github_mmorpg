@@ -9,6 +9,38 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Constantes pour les valeurs par défaut
+const (
+	// Ports par défaut
+	DefaultGatewayPort    = 8080
+	DefaultPrometheusPort = 9090
+
+	// Timeouts par défaut (en secondes)
+	DefaultServerTimeout      = 30
+	DefaultJWTExpiration      = 24 // heures
+	DefaultServiceTimeout     = 10
+	DefaultCombatTimeout      = 3
+	DefaultWorldTimeout       = 5
+	DefaultChatTimeout        = 5
+	DefaultAnalyticsTimeout   = 15
+	DefaultNATSConnectTimeout = 10
+	DefaultNATSReconnectDelay = 2
+
+	// Rate Limiting par défaut
+	DefaultRPM             = 1000
+	DefaultBurstSize       = 100
+	DefaultCleanupInterval = 5 // minutes
+
+	// Retry et Health
+	DefaultRetries          = 3
+	DefaultLightRetries     = 2
+	DefaultSingleRetry      = 1
+	DefaultNATSMaxReconnect = 10
+
+	// JWT
+	MinJWTSecretLength = 32
+)
+
 // Config représente la configuration du Gateway
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
@@ -83,66 +115,66 @@ func LoadConfig() (*Config, error) {
 	// Configuration par défaut - LOCALHOST pour développement
 	config := &Config{
 		Server: ServerConfig{
-			Port:         8080,
+			Port:         DefaultGatewayPort,
 			Host:         "0.0.0.0",
 			Environment:  "development",
 			Debug:        true,
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 30 * time.Second,
+			ReadTimeout:  DefaultServerTimeout * time.Second,
+			WriteTimeout: DefaultServerTimeout * time.Second,
 		},
 		JWT: JWTConfig{
 			Secret:         "your-super-secret-jwt-key-change-in-production-minimum-64-characters",
-			ExpirationTime: 24 * time.Hour,
+			ExpirationTime: DefaultJWTExpiration * time.Hour,
 		},
 		Services: ServicesConfig{
 			Auth: ServiceEndpoint{
 				URL:     "http://localhost:8081", // Changé de auth-service vers localhost
-				Timeout: 10 * time.Second,
-				Retries: 3,
+				Timeout: DefaultServiceTimeout * time.Second,
+				Retries: DefaultRetries,
 			},
 			Player: ServiceEndpoint{
 				URL:     "http://localhost:8082", // Changé de player-service vers localhost
-				Timeout: 10 * time.Second,
-				Retries: 3,
+				Timeout: DefaultServiceTimeout * time.Second,
+				Retries: DefaultRetries,
 			},
 			World: ServiceEndpoint{
 				URL:     "http://localhost:8083", // Changé de world-service vers localhost
-				Timeout: 5 * time.Second,
-				Retries: 2,
+				Timeout: DefaultWorldTimeout * time.Second,
+				Retries: DefaultLightRetries,
 			},
 			Combat: ServiceEndpoint{
 				URL:     "http://localhost:8084", // Changé de combat-service vers localhost
-				Timeout: 3 * time.Second,
-				Retries: 1,
+				Timeout: DefaultCombatTimeout * time.Second,
+				Retries: DefaultSingleRetry,
 			},
 			Inventory: ServiceEndpoint{
 				URL:     "http://localhost:8085", // Changé de inventory-service vers localhost
-				Timeout: 10 * time.Second,
-				Retries: 3,
+				Timeout: DefaultServiceTimeout * time.Second,
+				Retries: DefaultRetries,
 			},
 			Guild: ServiceEndpoint{
 				URL:     "http://localhost:8086", // Changé de guild-service vers localhost
-				Timeout: 10 * time.Second,
-				Retries: 3,
+				Timeout: DefaultServiceTimeout * time.Second,
+				Retries: DefaultRetries,
 			},
 			Chat: ServiceEndpoint{
 				URL:     "http://localhost:8087", // Changé de chat-service vers localhost
-				Timeout: 5 * time.Second,
-				Retries: 2,
+				Timeout: DefaultChatTimeout * time.Second,
+				Retries: DefaultLightRetries,
 			},
 			Analytics: ServiceEndpoint{
 				URL:     "http://localhost:8088", // Changé de analytics-service vers localhost
-				Timeout: 15 * time.Second,
-				Retries: 1,
+				Timeout: DefaultAnalyticsTimeout * time.Second,
+				Retries: DefaultSingleRetry,
 			},
 		},
 		RateLimit: RateLimitConfig{
-			RequestsPerMinute: 1000,
-			BurstSize:         100,
-			CleanupInterval:   5 * time.Minute,
+			RequestsPerMinute: DefaultRPM,
+			BurstSize:         DefaultBurstSize,
+			CleanupInterval:   DefaultCleanupInterval * time.Minute,
 		},
 		Monitoring: MonitoringConfig{
-			PrometheusPort: 9090,
+			PrometheusPort: DefaultPrometheusPort,
 			MetricsPath:    "/metrics",
 			HealthPath:     "/health",
 		},
@@ -150,9 +182,9 @@ func LoadConfig() (*Config, error) {
 			URL:                  "nats://localhost:4222", // Changé de nats vers localhost
 			ClusterID:            "mmorpg-cluster",
 			ClientID:             "gateway-service",
-			ConnectTimeout:       10 * time.Second,
-			ReconnectDelay:       2 * time.Second,
-			MaxReconnectAttempts: 10,
+			ConnectTimeout:       DefaultNATSConnectTimeout * time.Second,
+			ReconnectDelay:       DefaultNATSReconnectDelay * time.Second,
+			MaxReconnectAttempts: DefaultNATSMaxReconnect,
 		},
 	}
 
@@ -188,7 +220,15 @@ func LoadConfig() (*Config, error) {
 
 // loadFromEnv charge la configuration depuis les variables d'environnement
 func loadFromEnv(config *Config) {
-	// Server
+	loadServerConfigFromEnv(config)
+	loadJWTConfigFromEnv(config)
+	loadServicesConfigFromEnv(config)
+	loadNATSConfigFromEnv(config)
+	loadRateLimitConfigFromEnv(config)
+}
+
+// loadServerConfigFromEnv charge la configuration du serveur
+func loadServerConfigFromEnv(config *Config) {
 	if port := os.Getenv("GATEWAY_PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
 			config.Server.Port = p
@@ -203,12 +243,17 @@ func loadFromEnv(config *Config) {
 	if debug := os.Getenv("DEBUG"); debug != "" {
 		config.Server.Debug = debug == "true"
 	}
+}
 
-	// JWT
+// loadJWTConfigFromEnv charge la configuration JWT
+func loadJWTConfigFromEnv(config *Config) {
 	if secret := os.Getenv("JWT_SECRET"); secret != "" {
 		config.JWT.Secret = secret
 	}
+}
 
+// loadServicesConfigFromEnv charge la configuration des services
+func loadServicesConfigFromEnv(config *Config) {
 	// Services URLs - Support des deux formats (Docker et localhost)
 	if authURL := os.Getenv("AUTH_SERVICE_URL"); authURL != "" {
 		config.Services.Auth.URL = authURL
@@ -234,13 +279,17 @@ func loadFromEnv(config *Config) {
 	if analyticsURL := os.Getenv("ANALYTICS_SERVICE_URL"); analyticsURL != "" {
 		config.Services.Analytics.URL = analyticsURL
 	}
+}
 
-	// NATS
+// loadNATSConfigFromEnv charge la configuration NATS
+func loadNATSConfigFromEnv(config *Config) {
 	if natsURL := os.Getenv("NATS_URL"); natsURL != "" {
 		config.NATS.URL = natsURL
 	}
+}
 
-	// Rate Limiting
+// loadRateLimitConfigFromEnv charge la configuration du rate limiting
+func loadRateLimitConfigFromEnv(config *Config) {
 	if rpm := os.Getenv("RATE_LIMIT_RPM"); rpm != "" {
 		if r, err := strconv.Atoi(rpm); err == nil {
 			config.RateLimit.RequestsPerMinute = r
@@ -256,8 +305,8 @@ func validateConfig(config *Config) error {
 	}
 
 	// Validation JWT
-	if len(config.JWT.Secret) < 32 {
-		return fmt.Errorf("JWT secret must be at least 32 characters long")
+	if len(config.JWT.Secret) < MinJWTSecretLength {
+		return fmt.Errorf("JWT secret must be at least %d characters long", MinJWTSecretLength)
 	}
 
 	// Validation des services

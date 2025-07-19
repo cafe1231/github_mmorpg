@@ -1,8 +1,11 @@
 package gateway
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"gateway/internal/config"
+	"gateway/internal/proxy"
 	"net/http"
 	"sync"
 	"time"
@@ -11,9 +14,24 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
+)
 
-	"gateway/internal/config"
-	"gateway/internal/proxy"
+// Constantes pour les statutes de santé et environnements
+const (
+	StatusHealthy   = "healthy"
+	StatusUnhealthy = "unhealthy"
+	StatusUnknown   = "unknown"
+	EnvProduction   = "production"
+
+	// Configuration WebSocket
+	WebSocketReadBufferSize  = 1024
+	WebSocketWriteBufferSize = 1024
+
+	// Monitoring et Health Check
+	HealthCheckInterval      = 30 // secondes
+	ServiceHealthTimeout     = 5  // secondes
+	MaxServiceErrors         = 5
+	MaxCriticalServiceErrors = 3
 )
 
 // Server reprÃ©sente le serveur Gateway
@@ -32,7 +50,7 @@ type Server struct {
 type ServiceHealth struct {
 	Name         string    `json:"name"`
 	URL          string    `json:"url"`
-	Status       string    `json:"status"` // "healthy", "unhealthy", "unknown"
+	Status       string    `json:"status"` // StatusHealthy, StatusUnhealthy, StatusUnknown
 	LastCheck    time.Time `json:"last_check"`
 	ResponseTime int64     `json:"response_time_ms"`
 	ErrorCount   int       `json:"error_count"`
@@ -46,7 +64,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create service proxy: %w", err)
 	}
 
-	// Connexion Ã  NATS
+	// connection Ã  NATS
 	natsConn, err := connectToNATS(cfg.NATS)
 	if err != nil {
 		logrus.Warn("Failed to connect to NATS, continuing without messaging: ", err)
@@ -54,12 +72,12 @@ func NewServer(cfg *config.Config) (*Server, error) {
 
 	// Configuration du WebSocket upgrader
 	upgrader := websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
+		ReadBufferSize:  WebSocketReadBufferSize,
+		WriteBufferSize: WebSocketWriteBufferSize,
 		CheckOrigin: func(r *http.Request) bool {
 			// En production, vÃ©rifier l'origine
-			if cfg.Server.Environment == "production" {
-				// Ajouter ici la logique de vÃ©rification d'origine
+			if cfg.Server.Environment == EnvProduction {
+				// Ajouter ici la logique de vérification d'origine
 				return true // Temporaire
 			}
 			return true
@@ -75,7 +93,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		serviceHealth: make(map[string]ServiceHealth),
 	}
 
-	// Initialiser le monitoring des services
+	// initializer le monitoring des services
 	server.initServiceHealthMonitoring()
 
 	logrus.Info("Gateway server initialized successfully")
@@ -122,16 +140,16 @@ func (s *Server) HealthCheck(c *gin.Context) {
 	healthStatus := s.getOverallHealth()
 
 	// VÃ©rifier le statut depuis la map
-	if status, ok := healthStatus["status"].(string); ok && status == "healthy" {
+	if status, ok := healthStatus["status"].(string); ok && status == StatusHealthy {
 		c.JSON(http.StatusOK, healthStatus)
 	} else {
 		c.JSON(http.StatusServiceUnavailable, healthStatus)
 	}
 }
 
-// HandleWebSocket gÃ¨re les connexions WebSocket
+// HandleWebSocket gÃ¨re les connections WebSocket
 func (s *Server) HandleWebSocket(c *gin.Context) {
-	// Upgrade de la connexion HTTP vers WebSocket
+	// Upgrade de la connection HTTP vers WebSocket
 	conn, err := s.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to upgrade WebSocket connection")
@@ -153,7 +171,7 @@ func (s *Server) HandleWebSocket(c *gin.Context) {
 		"message": "Connected to MMORPG Gateway",
 		"time":    time.Now().Unix(),
 	}
-	conn.WriteJSON(welcomeMsg)
+	s.sendWebSocketMessage(conn, welcomeMsg)
 
 	// GÃ©rer les messages du client
 	for {
@@ -168,7 +186,7 @@ func (s *Server) HandleWebSocket(c *gin.Context) {
 		s.handleWebSocketMessage(conn, message)
 	}
 
-	// Nettoyer lors de la dÃ©connexion
+	// Nettoyer lors de la dÃ©connection
 	s.wsMutex.Lock()
 	delete(s.wsClients, conn)
 	clientCount = len(s.wsClients)
@@ -243,7 +261,7 @@ func (s *Server) ServiceStatus(c *gin.Context) {
 func (s *Server) Close() error {
 	var errors []error
 
-	// Fermer les connexions WebSocket
+	// Fermer les connections WebSocket
 	s.wsMutex.Lock()
 	for conn := range s.wsClients {
 		conn.Close()
@@ -251,7 +269,7 @@ func (s *Server) Close() error {
 	s.wsClients = make(map[*websocket.Conn]bool)
 	s.wsMutex.Unlock()
 
-	// Fermer la connexion NATS
+	// Fermer la connection NATS
 	if s.natsConn != nil {
 		s.natsConn.Close()
 	}
@@ -307,7 +325,7 @@ func (s *Server) isServiceHealthy(serviceName string) bool {
 		return true // Si pas de donnÃ©es, on assume que c'est sain
 	}
 
-	return health.Status == "healthy"
+	return health.Status == StatusHealthy
 }
 
 // incrementServiceError incrÃ©mente le compteur d'erreurs d'un service
@@ -317,8 +335,8 @@ func (s *Server) incrementServiceError(serviceName string) {
 
 	if health, exists := s.serviceHealth[serviceName]; exists {
 		health.ErrorCount++
-		if health.ErrorCount > 5 {
-			health.Status = "unhealthy"
+		if health.ErrorCount > MaxServiceErrors {
+			health.Status = StatusUnhealthy
 		}
 		s.serviceHealth[serviceName] = health
 	}
@@ -333,17 +351,17 @@ func (s *Server) getOverallHealth() map[string]interface{} {
 	healthyServices := 0
 
 	for _, health := range s.serviceHealth {
-		if health.Status == "healthy" {
+		if health.Status == StatusHealthy {
 			healthyServices++
 		}
 	}
 
-	status := "healthy"
+	status := StatusHealthy
 	if totalServices > 0 && float64(healthyServices)/float64(totalServices) < 0.8 {
 		status = "degraded"
 	}
 	if healthyServices == 0 && totalServices > 0 {
-		status = "unhealthy"
+		status = StatusUnhealthy
 	}
 
 	return map[string]interface{}{
@@ -356,11 +374,23 @@ func (s *Server) getOverallHealth() map[string]interface{} {
 	}
 }
 
+// sendWebSocketMessage envoie un message WebSocket avec gestion d'erreur
+func (s *Server) sendWebSocketMessage(conn *websocket.Conn, message map[string]interface{}) {
+	if err := conn.WriteJSON(message); err != nil {
+		logrus.WithError(err).Debug("Failed to send WebSocket message")
+		// Fermer la connection si l'écriture échoue
+		s.wsMutex.Lock()
+		delete(s.wsClients, conn)
+		s.wsMutex.Unlock()
+		conn.Close()
+	}
+}
+
 // handleWebSocketMessage traite les messages WebSocket
 func (s *Server) handleWebSocketMessage(conn *websocket.Conn, message map[string]interface{}) {
 	messageType, ok := message["type"].(string)
 	if !ok {
-		conn.WriteJSON(map[string]interface{}{
+		s.sendWebSocketMessage(conn, map[string]interface{}{
 			"type":  "error",
 			"error": "Message type required",
 		})
@@ -369,7 +399,7 @@ func (s *Server) handleWebSocketMessage(conn *websocket.Conn, message map[string
 
 	switch messageType {
 	case "ping":
-		conn.WriteJSON(map[string]interface{}{
+		s.sendWebSocketMessage(conn, map[string]interface{}{
 			"type": "pong",
 			"time": time.Now().Unix(),
 		})
@@ -380,7 +410,7 @@ func (s *Server) handleWebSocketMessage(conn *websocket.Conn, message map[string
 		// Relayer vers le service de chat via NATS
 		s.handleChatMessage(message)
 	default:
-		conn.WriteJSON(map[string]interface{}{
+		s.sendWebSocketMessage(conn, map[string]interface{}{
 			"type":  "error",
 			"error": "Unknown message type",
 		})
@@ -391,7 +421,7 @@ func (s *Server) handleWebSocketMessage(conn *websocket.Conn, message map[string
 func (s *Server) handleJoinChannel(conn *websocket.Conn, message map[string]interface{}) {
 	channel, ok := message["channel"].(string)
 	if !ok {
-		conn.WriteJSON(map[string]interface{}{
+		s.sendWebSocketMessage(conn, map[string]interface{}{
 			"type":  "error",
 			"error": "Channel name required",
 		})
@@ -399,7 +429,7 @@ func (s *Server) handleJoinChannel(conn *websocket.Conn, message map[string]inte
 	}
 
 	// Envoyer confirmation
-	conn.WriteJSON(map[string]interface{}{
+	s.sendWebSocketMessage(conn, map[string]interface{}{
 		"type":    "channel_joined",
 		"channel": channel,
 		"time":    time.Now().Unix(),
@@ -427,7 +457,7 @@ func (s *Server) handleChatMessage(message map[string]interface{}) {
 	}
 }
 
-// connectToNATS Ã©tablit la connexion NATS
+// connectToNATS Ã©tablit la connection NATS
 func connectToNATS(cfg config.NATSConfig) (*nats.Conn, error) {
 	opts := []nats.Option{
 		nats.Name(cfg.ClientID),
@@ -451,7 +481,7 @@ func connectToNATS(cfg config.NATSConfig) (*nats.Conn, error) {
 	return nc, nil
 }
 
-// initServiceHealthMonitoring initialise le monitoring des services
+// initServiceHealthMonitoring initialize le monitoring des services
 func (s *Server) initServiceHealthMonitoring() {
 	services := map[string]config.ServiceEndpoint{
 		"auth":      s.config.Services.Auth,
@@ -464,7 +494,7 @@ func (s *Server) initServiceHealthMonitoring() {
 		"analytics": s.config.Services.Analytics,
 	}
 
-	// Initialiser l'Ã©tat de santÃ©
+	// initializer l'Ã©tat de santÃ©
 	s.healthMutex.Lock()
 	for name, endpoint := range services {
 		s.serviceHealth[name] = ServiceHealth{
@@ -482,16 +512,13 @@ func (s *Server) initServiceHealthMonitoring() {
 	go s.monitorServicesHealth()
 }
 
-// monitorServicesHealth surveille pÃ©riodiquement la santÃ© des services
+// monitorServicesHealth surveille périodiquement la santé des services
 func (s *Server) monitorServicesHealth() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(HealthCheckInterval * time.Second)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			s.checkAllServicesHealth()
-		}
+	for range ticker.C {
+		s.checkAllServicesHealth()
 	}
 }
 
@@ -505,35 +532,49 @@ func (s *Server) checkAllServicesHealth() {
 	s.healthMutex.RUnlock()
 
 	for name, health := range services {
-		go s.checkServiceHealth(name, health)
+		go s.checkServiceHealth(name, &health)
 	}
 }
 
-// checkServiceHealth vÃ©rifie la santÃ© d'un service spÃ©cifique
-func (s *Server) checkServiceHealth(name string, health ServiceHealth) {
+// checkServiceHealth vérifie la santé d'un service spécifique
+func (s *Server) checkServiceHealth(name string, health *ServiceHealth) {
 	start := time.Now()
 
+	// Créer un contexte avec timeout
+	ctx, cancel := context.WithTimeout(context.Background(), ServiceHealthTimeout*time.Second)
+	defer cancel()
+
 	// Faire un ping simple au service
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(health.URL + "/health")
+	client := &http.Client{Timeout: ServiceHealthTimeout * time.Second}
+	req, err := http.NewRequestWithContext(ctx, "GET", health.URL+"/health", http.NoBody)
+	if err != nil {
+		responseTime := time.Since(start).Milliseconds()
+		s.updateHealthStatus(name, health, err, nil, responseTime)
+		return
+	}
 
+	resp, err := client.Do(req)
 	responseTime := time.Since(start).Milliseconds()
+	s.updateHealthStatus(name, health, err, resp, responseTime)
+}
 
+// updateHealthStatus met à jour le statut de santé d'un service
+func (s *Server) updateHealthStatus(name string, health *ServiceHealth, err error, resp *http.Response, responseTime int64) {
 	s.healthMutex.Lock()
 	defer s.healthMutex.Unlock()
 
-	updatedHealth := health
+	updatedHealth := *health
 	updatedHealth.LastCheck = time.Now()
 	updatedHealth.ResponseTime = responseTime
 
 	if err != nil || resp.StatusCode != http.StatusOK {
 		updatedHealth.ErrorCount++
-		if updatedHealth.ErrorCount > 3 {
-			updatedHealth.Status = "unhealthy"
+		if updatedHealth.ErrorCount > MaxCriticalServiceErrors {
+			updatedHealth.Status = StatusUnhealthy
 		}
 	} else {
 		updatedHealth.ErrorCount = 0
-		updatedHealth.Status = "healthy"
+		updatedHealth.Status = StatusHealthy
 	}
 
 	if resp != nil {

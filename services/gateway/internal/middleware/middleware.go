@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"gateway/internal/config"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,8 +14,22 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
+)
 
-	"gateway/internal/config"
+// Constantes de configuration middleware
+const (
+	HighPerformanceTimeout  = 3 // secondes
+	CircuitBreakerThreshold = 5
+	CircuitBreakerTimeout   = 30 // secondes
+	SecurityCleanupInterval = 10 // minutes
+	MaxLimitersCount        = 10000
+	ServerErrorStatusCode   = 500
+
+	// Configuration CORS et sécurité
+	CORSMaxAge           = 12 // heures
+	RateLimitRetryAfter  = 60 // secondes
+	SuspiciousThreshold  = 10
+	LimitersCleanupRatio = 2
 )
 
 // MÃ©triques Prometheus
@@ -52,7 +67,8 @@ var (
 	)
 )
 
-func init() {
+// InitMetrics initialize les métriques Prometheus
+func InitMetrics() {
 	prometheus.MustRegister(requestsTotal)
 	prometheus.MustRegister(requestDuration)
 	prometheus.MustRegister(activeConnections)
@@ -125,7 +141,7 @@ func CORS() gin.HandlerFunc {
 			"X-Rate-Limit-Remaining",
 		},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
+		MaxAge:           CORSMaxAge * time.Hour,
 	}
 
 	return cors.New(config)
@@ -183,8 +199,21 @@ func (rl *RateLimiter) CleanupOldLimiters() {
 	rl.mutex.Lock()
 	defer rl.mutex.Unlock()
 
-	// En production, implÃ©menter une logique de nettoyage basÃ©e sur le temps
-	// Pour simplifier, on garde tous les limiteurs pour l'instant
+	// Nettoyage simple : limiter le nombre total de limiteurs pour éviter la fuite mémoire
+
+	if len(rl.limiters) > MaxLimitersCount {
+		// Supprimer la moitié des limiteurs (strategy simple)
+		count := 0
+		target := len(rl.limiters) / LimitersCleanupRatio
+
+		for ip := range rl.limiters {
+			if count >= target {
+				break
+			}
+			delete(rl.limiters, ip)
+			count++
+		}
+	}
 }
 
 // RateLimit middleware avec diffÃ©rents niveaux pour gaming
@@ -195,11 +224,8 @@ func RateLimit(cfg config.RateLimitConfig) gin.HandlerFunc {
 	go func() {
 		ticker := time.NewTicker(cfg.CleanupInterval)
 		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				limiter.CleanupOldLimiters()
-			}
+		for range ticker.C {
+			limiter.CleanupOldLimiters()
 		}
 	}()
 
@@ -230,7 +256,7 @@ func RateLimit(cfg config.RateLimitConfig) gin.HandlerFunc {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "Rate limit exceeded",
 				"message":     "Too many requests, please slow down",
-				"retry_after": 60,
+				"retry_after": RateLimitRetryAfter,
 				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()
@@ -290,7 +316,7 @@ func HighPerformanceMode() gin.HandlerFunc {
 		c.Header("X-Priority", "high")
 
 		// Timeout rÃ©duit pour les opÃ©rations critiques
-		c.Set("timeout", 3*time.Second)
+		c.Set("timeout", HighPerformanceTimeout*time.Second)
 
 		c.Next()
 	}
@@ -463,7 +489,7 @@ func (cb *CircuitBreaker) OnFailure() {
 
 // CircuitBreakerMiddleware crÃ©e un middleware circuit breaker
 func CircuitBreakerMiddleware(serviceName string) gin.HandlerFunc {
-	breaker := NewCircuitBreaker(5, 30*time.Second)
+	breaker := NewCircuitBreaker(CircuitBreakerThreshold, CircuitBreakerTimeout*time.Second)
 
 	return func(c *gin.Context) {
 		if !breaker.CanExecute() {
@@ -487,7 +513,7 @@ func CircuitBreakerMiddleware(serviceName string) gin.HandlerFunc {
 		c.Next()
 
 		// VÃ©rifier le statut de la rÃ©ponse
-		if c.Writer.Status() >= 500 {
+		if c.Writer.Status() >= ServerErrorStatusCode {
 			breaker.OnFailure()
 		} else {
 			breaker.OnSuccess()
@@ -529,15 +555,12 @@ func AntiCheat() gin.HandlerFunc {
 
 	// Nettoyage pÃ©riodique
 	go func() {
-		ticker := time.NewTicker(10 * time.Minute)
+		ticker := time.NewTicker(SecurityCleanupInterval * time.Minute)
 		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				mutex.Lock()
-				suspiciousIPs = make(map[string]int) // Reset
-				mutex.Unlock()
-			}
+		for range ticker.C {
+			mutex.Lock()
+			suspiciousIPs = make(map[string]int) // Reset
+			mutex.Unlock()
 		}
 	}()
 
@@ -559,7 +582,7 @@ func AntiCheat() gin.HandlerFunc {
 				"request_id":       c.GetHeader("X-Request-ID"),
 			}).Warn("Request without User-Agent detected")
 
-			if suspiciousCount > 10 {
+			if suspiciousCount > SuspiciousThreshold {
 				c.JSON(http.StatusTooManyRequests, gin.H{
 					"error":      "Suspicious activity detected",
 					"message":    "Please use a valid game client",

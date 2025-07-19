@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"runtime"
@@ -8,6 +9,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+)
+
+// Constantes pour les status de service
+const (
+	StatusUp      = "up"
+	StatusDown    = "down"
+	StatusUnknown = "unknown"
+
+	// Codes de statut HTTP
+	HTTPStatusOK = 200
+
+	// Timeouts
+	HealthCheckTimeout = 1 // seconde
 )
 
 var (
@@ -57,14 +71,30 @@ func (h *GatewayHandler) Status(c *gin.Context) {
 func (h *GatewayHandler) ServicesList(c *gin.Context) {
 	statuses := make([]ServiceStatus, 0, len(h.Services))
 	for name, url := range h.Services {
-		status := "unknown"
-		client := http.Client{Timeout: 1 * time.Second}
-		resp, err := client.Get(url + "/health")
-		if err == nil && resp.StatusCode == 200 {
-			status = "up"
+		var status string
+
+		// Créer un contexte avec timeout
+		ctx, cancel := context.WithTimeout(context.Background(), HealthCheckTimeout*time.Second)
+
+		client := http.Client{Timeout: HealthCheckTimeout * time.Second}
+		req, err := http.NewRequestWithContext(ctx, "GET", url+"/health", http.NoBody)
+		if err != nil {
+			status = StatusDown
 		} else {
-			status = "down"
+			resp, err := client.Do(req)
+			if err == nil {
+				// Fermer immédiatement pour éviter les fuites de ressources
+				resp.Body.Close()
+				if resp.StatusCode == HTTPStatusOK {
+					status = StatusUp
+				} else {
+					status = StatusDown
+				}
+			} else {
+				status = StatusDown
+			}
 		}
+		cancel() // Libérer immédiatement le contexte
 		statuses = append(statuses, ServiceStatus{Name: name, URL: url, Status: status})
 	}
 	c.JSON(http.StatusOK, statuses)
@@ -95,13 +125,28 @@ func (h *GatewayHandler) Info(c *gin.Context) {
 func (h *GatewayHandler) HealthAll(c *gin.Context) {
 	results := make(map[string]string)
 	for name, url := range h.Services {
-		client := http.Client{Timeout: 1 * time.Second}
-		resp, err := client.Get(url + "/health")
-		if err == nil && resp.StatusCode == 200 {
-			results[name] = "up"
+		// Créer un contexte avec timeout
+		ctx, cancel := context.WithTimeout(context.Background(), HealthCheckTimeout*time.Second)
+
+		client := http.Client{Timeout: HealthCheckTimeout * time.Second}
+		req, err := http.NewRequestWithContext(ctx, "GET", url+"/health", http.NoBody)
+		if err != nil {
+			results[name] = StatusDown
 		} else {
-			results[name] = "down"
+			resp, err := client.Do(req)
+			if err == nil {
+				// Fermer immédiatement pour éviter les fuites de ressources
+				resp.Body.Close()
+				if resp.StatusCode == HTTPStatusOK {
+					results[name] = StatusUp
+				} else {
+					results[name] = StatusDown
+				}
+			} else {
+				results[name] = StatusDown
+			}
 		}
+		cancel() // Libérer immédiatement le contexte
 	}
 	c.JSON(http.StatusOK, results)
 }

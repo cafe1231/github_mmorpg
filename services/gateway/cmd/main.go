@@ -3,6 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"gateway/internal/config"
+	"gateway/internal/gateway"
+	"gateway/internal/handlers"
+	"gateway/internal/middleware"
+	"gateway/internal/monitoring"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,12 +16,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+)
 
-	"gateway/internal/config"
-	"gateway/internal/gateway"
-	"gateway/internal/handlers"
-	"gateway/internal/middleware"
-	"gateway/internal/monitoring"
+// Constantes d'environnement
+const (
+	EnvProduction   = "production"
+	ShutdownTimeout = 30 // secondes
 )
 
 func main() {
@@ -30,7 +35,7 @@ func main() {
 	}
 
 	// Configuration du mode Gin
-	if cfg.Server.Environment == "production" {
+	if cfg.Server.Environment == EnvProduction {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -42,6 +47,9 @@ func main() {
 
 	// Initialisation du monitoring
 	monitoring.Init(cfg.Monitoring.PrometheusPort)
+
+	// Initialisation des métriques middleware
+	middleware.InitMetrics()
 
 	// Définition des services connus (nom -> URL)
 	services := map[string]string{
@@ -71,7 +79,7 @@ func main() {
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
-	// Démarrage du serveur en arrière-plan
+	// Démarriage du serveur en arrière-plan
 	go func() {
 		logrus.WithFields(logrus.Fields{
 			"host": cfg.Server.Host,
@@ -255,14 +263,14 @@ func setupRoutes(gatewayServer *gateway.Server, cfg *config.Config, gatewayHandl
 	return router
 }
 
-// initLogger initialise le logger global
+// initLogger initialize le logger global
 func initLogger() {
 	logrus.SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339,
 	})
 
 	// Niveau de log selon l'environnement
-	if os.Getenv("ENVIRONMENT") == "production" {
+	if os.Getenv("ENVIRONMENT") == EnvProduction {
 		logrus.SetLevel(logrus.InfoLevel)
 	} else {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -282,7 +290,7 @@ func gracefulShutdown(server *http.Server, gatewayServer *gateway.Server) {
 	logrus.Info("🛑 Gateway Service shutting down...")
 
 	// Timeout pour l'arrêt gracieux
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), ShutdownTimeout*time.Second)
 	defer cancel()
 
 	// Arrêter le serveur HTTP
@@ -290,7 +298,7 @@ func gracefulShutdown(server *http.Server, gatewayServer *gateway.Server) {
 		logrus.Error("Gateway forced to shutdown:", err)
 	}
 
-	// Fermer les connexions du gateway (NATS, services, etc.)
+	// Fermer les connections du gateway (NATS, services, etc.)
 	if err := gatewayServer.Close(); err != nil {
 		logrus.Error("Error closing gateway server:", err)
 	}

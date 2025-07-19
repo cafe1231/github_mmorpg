@@ -3,6 +3,7 @@ package proxy
 import (
 	"bytes"
 	"fmt"
+	"gateway/internal/config"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,8 +12,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+)
 
-	"gateway/internal/config"
+// Constantes pour le proxy
+const (
+	DefaultProxyTimeout    = 30 // secondes
+	DefaultMaxIdleConns    = 100
+	DefaultMaxIdlePerHost  = 10
+	DefaultIdleConnTimeout = 90  // secondes
+	DefaultRetryDelay      = 500 // millisecondes
+	ServerErrorThreshold   = 500 // codes d'erreur >= 500
 )
 
 // ServiceProxy gère le proxy vers les microservices
@@ -25,11 +34,11 @@ type ServiceProxy struct {
 func NewServiceProxy(cfg *config.Config) (*ServiceProxy, error) {
 	// Client HTTP optimisé pour les microservices
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: DefaultProxyTimeout * time.Second,
 		Transport: &http.Transport{
-			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 10,
-			IdleConnTimeout:     90 * time.Second,
+			MaxIdleConns:        DefaultMaxIdleConns,
+			MaxIdleConnsPerHost: DefaultMaxIdlePerHost,
+			IdleConnTimeout:     DefaultIdleConnTimeout * time.Second,
 		},
 	}
 
@@ -125,7 +134,7 @@ func (sp *ServiceProxy) Forward(c *gin.Context, endpoint config.ServiceEndpoint)
 	return nil
 }
 
-// transformPath transforme le path de la requête pour le service de destination
+// transformPath transforms le path de la requête pour le service de destination
 func (sp *ServiceProxy) transformPath(originalPath string) string {
 	// Mapping des préfixes Gateway vers les paths des services
 	pathMappings := map[string]string{
@@ -137,7 +146,7 @@ func (sp *ServiceProxy) transformPath(originalPath string) string {
 		"/api/v1/validate/": "/api/v1/validate/", // /api/v1/validate/token -> /api/v1/validate/token
 	}
 
-	// Chercher le mapping correspondant (plus spécifique en premier)
+	// Chercher le mapping correspondent (plus spécifique en premier)
 	for prefix, replacement := range pathMappings {
 		if strings.HasPrefix(originalPath, prefix) {
 			// Pour les mappings exacts (health, metrics)
@@ -222,21 +231,21 @@ func (sp *ServiceProxy) executeWithRetry(req *http.Request, maxRetries int, time
 		if err != nil {
 			lastErr = err
 
-			// Attendre avant de retry (backoff exponentiel)
+			// Attendre avant de retry (backoff exponential)
 			if attempt < maxRetries {
-				waitTime := time.Duration(attempt+1) * 500 * time.Millisecond
+				waitTime := time.Duration(attempt+1) * DefaultRetryDelay * time.Millisecond
 				time.Sleep(waitTime)
 			}
 			continue
 		}
 
 		// Vérifier si la réponse indique une erreur de service
-		if resp.StatusCode >= 500 {
+		if resp.StatusCode >= ServerErrorThreshold {
 			resp.Body.Close()
 			lastErr = fmt.Errorf("service returned status %d", resp.StatusCode)
 
 			if attempt < maxRetries {
-				waitTime := time.Duration(attempt+1) * 500 * time.Millisecond
+				waitTime := time.Duration(attempt+1) * DefaultRetryDelay * time.Millisecond
 				time.Sleep(waitTime)
 			}
 			continue
@@ -310,7 +319,7 @@ func (sp *ServiceProxy) copyResponseHeaders(resp *http.Response, c *gin.Context)
 
 // Close ferme le proxy proprement
 func (sp *ServiceProxy) Close() error {
-	// Fermer les connexions idle
+	// Fermer les connections idle
 	if transport, ok := sp.client.Transport.(*http.Transport); ok {
 		transport.CloseIdleConnections()
 	}
