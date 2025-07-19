@@ -208,7 +208,7 @@ func (h *HealthHandler) checkDatabase() HealthCheck {
 
 	// Vérifier si on a trop de connections ouvertes
 	status := "healthy"
-	if stats["open_connections"].(int) > 20 {
+	if stats["open_connections"].(int) > config.DefaultMaxConnections {
 		status = "degraded"
 	}
 
@@ -233,8 +233,8 @@ func (h *HealthHandler) checkMemory() HealthCheck {
 	message := "Memory usage normal"
 
 	// Convertir en MB pour les seuils
-	allocMB := memUsage["alloc"].(uint64) / 1024 / 1024
-	sysMB := memUsage["sys"].(uint64) / 1024 / 1024
+	allocMB := memUsage["alloc"].(uint64) / config.DefaultMemoryMB
+	sysMB := memUsage["sys"].(uint64) / config.DefaultMemoryMB
 
 	if allocMB > 512 || sysMB > 1024 {
 		status = "degraded"
@@ -275,10 +275,10 @@ func (h *HealthHandler) getMemoryUsage() map[string]interface{} {
 	// Note: Dans un vrai projet, vous utiliseriez runtime.MemStats
 	// Pour simplifier, on retourne des valeurs simulées
 	return map[string]interface{}{
-		"alloc":       uint64(50 * 1024 * 1024),  // 50MB
-		"total_alloc": uint64(100 * 1024 * 1024), // 100MB
-		"sys":         uint64(200 * 1024 * 1024), // 200MB
-		"num_gc":      uint32(10),
-		"goroutines":  100,
+		"alloc":       uint64(config.DefaultAllocMB * config.DefaultMemoryMB),      // 50MB
+		"total_alloc": uint64(config.DefaultTotalAllocMB * config.DefaultMemoryMB), // 100MB
+		"sys":         uint64(config.DefaultSysMB * config.DefaultMemoryMB),        // 200MB
+		"num_gc":      uint32(config.DefaultNumGC),
+		"goroutines":  config.DefaultGoroutines,
 	}
 }

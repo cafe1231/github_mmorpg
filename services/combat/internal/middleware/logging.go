@@ -134,11 +134,11 @@ func StructuredLogging(config LoggingConfig) gin.HandlerFunc {
 		logEntry := logrus.WithFields(fields)
 
 		switch {
-		case statusCode >= 500:
+		case statusCode >= 500: // DefaultServerErrorCode
 			logEntry.Error("Server error")
-		case statusCode >= 400:
+		case statusCode >= 400: // DefaultClientErrorCode
 			logEntry.Warn("Client error")
-		case statusCode >= 300:
+		case statusCode >= 300: // DefaultRedirectCode
 			logEntry.Info("Redirection")
 		default:
 			if duration > 1*time.Second {

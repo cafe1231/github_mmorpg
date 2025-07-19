@@ -232,7 +232,7 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 		}
 	}
 
-	if highDamageActions > 3 {
+	if highDamageActions > config.DefaultHighDamageThreshold {
 		result.Flags = append(result.Flags, "excessive_damage")
 		s.RecordSuspiciousActivity(actorID, "excessive_damage", map[string]interface{}{
 			"high_damage_actions":  highDamageActions,
@@ -252,9 +252,9 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 		}
 	}
 
-	if totalDamageActions > 5 {
+	if totalDamageActions > config.DefaultTotalDamageThreshold {
 		critRate := float64(criticalActions) / float64(totalDamageActions)
-		if critRate > 0.5 { // Plus de 50% de critiques est suspect
+		if critRate > config.DefaultCritRateThreshold { // Plus de 50% de critiques est suspect
 			result.Score += 15
 			result.Flags = append(result.Flags, "high_critical_rate")
 
@@ -267,7 +267,7 @@ func (s *AntiCheatService) DetectSuspiciousPatterns(actorID uuid.UUID) (*models.
 	}
 
 	// Déterminer si c'est suspect
-	if result.Score > 30 {
+	if result.Score > config.DefaultScoreThreshold {
 		result.Suspicious = true
 	}
 
@@ -343,19 +343,19 @@ func (s *AntiCheatService) CalculateSuspicionScore(actorID uuid.UUID) (float64, 
 		}
 	}
 
-	if recentActivities > 3 {
+	if recentActivities > config.DefaultRecentActivitiesThreshold {
 		flags = append(flags, "multiple_recent_infractions")
 		score += 15
 	}
 
 	// Facteur 2: Consistency des performances
-	if stats.ConsistentHighDamage > 5 {
+	if stats.ConsistentHighDamage > config.DefaultConsistentDamageThreshold {
 		flags = append(flags, "consistent_high_performance")
 		score += 10
 	}
 
 	// Facteur 3: Actions impossibles
-	if stats.ImpossibleActions > 2 {
+	if stats.ImpossibleActions > config.DefaultImpossibleActionsThreshold {
 		flags = append(flags, "impossible_actions")
 		score += 20
 	}
@@ -395,7 +395,7 @@ func (s *AntiCheatService) RecordSuspiciousActivity(actorID uuid.UUID, activityT
 	s.suspiciousLogs[actorID] = append(s.suspiciousLogs[actorID], activity)
 
 	// Garder seulement les 50 dernières activités
-	if len(s.suspiciousLogs[actorID]) > 50 {
+	if len(s.suspiciousLogs[actorID]) > config.DefaultSuspiciousLogsLimit {
 		s.suspiciousLogs[actorID] = s.suspiciousLogs[actorID][1:]
 	}
 
@@ -409,11 +409,11 @@ func (s *AntiCheatService) RecordSuspiciousActivity(actorID uuid.UUID, activityT
 
 // ApplyAntiCheatMeasures applique des mesures correctives
 func (s *AntiCheatService) ApplyAntiCheatMeasures(actorID uuid.UUID, score float64, flags []string) string {
-	if score < 30 {
+	if score < config.DefaultScoreThreshold {
 		return "allow"
 	}
 
-	if score < 50 {
+	if score < config.DefaultScoreThreshold*1.67 { // 50
 		// Avertissement léger
 		s.RecordSuspiciousActivity(actorID, "warning_issued", map[string]interface{}{
 			"score": score,
@@ -422,7 +422,7 @@ func (s *AntiCheatService) ApplyAntiCheatMeasures(actorID uuid.UUID, score float
 		return "warn"
 	}
 
-	if score < 80 {
+	if score < config.DefaultScoreThreshold*2.67 { // 80
 		// Surveillance renforcée
 		s.RecordSuspiciousActivity(actorID, "enhanced_monitoring", map[string]interface{}{
 			"score": score,
@@ -618,7 +618,9 @@ func (s *AntiCheatService) UpdatePlayerStats(actorID uuid.UUID, action *models.C
 		if stats.AverageDamage == 0 {
 			stats.AverageDamage = float64(action.DamageDealt)
 		} else {
-			stats.AverageDamage = (stats.AverageDamage * config.DefaultAverageDamageMultiplier) + (float64(action.DamageDealt) * config.DefaultAverageDamageMultiplier2)
+			damageMultiplier := config.DefaultAverageDamageMultiplier
+			damageMultiplier2 := config.DefaultAverageDamageMultiplier2
+			stats.AverageDamage = (stats.AverageDamage * damageMultiplier) + (float64(action.DamageDealt) * damageMultiplier2)
 		}
 
 		// Vérifier si les dégâts sont anormalement élevés

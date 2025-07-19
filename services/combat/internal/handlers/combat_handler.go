@@ -561,8 +561,8 @@ func (h *CombatHandler) GetCombatHistory(c *gin.Context) {
 		}
 	}
 
-	req.WinsOnly = c.Query("wins_only") == "true"
-	req.LossesOnly = c.Query("losses_only") == "true"
+	req.WinsOnly = c.Query("wins_only") == QueryValueTrue
+	req.LossesOnly = c.Query("losses_only") == QueryValueTrue
 
 	result, err := h.combatService.GetCombatHistory(req)
 	if err != nil {

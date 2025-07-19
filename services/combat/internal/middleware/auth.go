@@ -39,7 +39,7 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 		}
 
 		// Vérifier le format "Bearer <token>"
-		parts := strings.SplitN(authHeader, " ", 2)
+		parts := strings.SplitN(authHeader, " ", 2) // DefaultAuthParts
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":      "Invalid authorization header format",
@@ -114,7 +114,7 @@ func OptionalAuthMiddleware(config *config.Config) gin.HandlerFunc {
 		}
 
 		// Tenter l'authentification
-		parts := strings.SplitN(authHeader, " ", 2)
+		parts := strings.SplitN(authHeader, " ", 2) // DefaultAuthParts
 		if len(parts) == 2 && parts[0] == "Bearer" {
 			tokenString := parts[1]
 			if claims, err := validateJWT(tokenString, config.JWT.Secret); err == nil {
@@ -318,7 +318,7 @@ func RateLimitByUser(requestsPerMinute int) gin.HandlerFunc {
 				"error":       "Rate limit exceeded",
 				"limit":       requestsPerMinute,
 				"window":      "1 minute",
-				"retry_after": 60,
+				"retry_after": config.DefaultRetryAfterSeconds,
 				"request_id":  c.GetHeader("X-Request-ID"),
 			})
 			c.Abort()

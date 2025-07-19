@@ -200,11 +200,39 @@ const (
 	DefaultPercentageMultiplier = 100
 
 	// Constantes pour les calculs de variance
-	DefaultVarianceDivisor      = 100
-	DefaultVarianceBase         = 0.85
-	DefaultVarianceRange        = 0.3
-	DefaultHealingVarianceBase  = 0.9
-	DefaultHealingVarianceRange = 0.2
+	DefaultVarianceDivisor            = 100
+	DefaultVarianceBase               = 0.85
+	DefaultAuthParts                  = 2
+	DefaultMinuteSeconds              = 60
+	DefaultCleanupInterval            = 5
+	DefaultHighDamageThreshold        = 3
+	DefaultTotalDamageThreshold       = 5
+	DefaultCritRateThreshold          = 0.5
+	DefaultScoreThreshold             = 30
+	DefaultRecentActivitiesThreshold  = 3
+	DefaultConsistentDamageThreshold  = 5
+	DefaultImpossibleActionsThreshold = 2
+	DefaultSuspiciousLogsLimit        = 50
+	DefaultMemoryMB                   = 1024 * 1024
+	DefaultAllocMB                    = 50
+	DefaultTotalAllocMB               = 100
+	DefaultSysMB                      = 200
+	DefaultNumGC                      = 10
+	DefaultGoroutines                 = 100
+	DefaultMaxConnections             = 20
+	DefaultDatabaseTimeout            = 5
+	DefaultShutdownTimeout            = 30
+	DefaultBurstRatio                 = 4
+	DefaultSecurityBurst              = 3
+	DefaultCombatBurstRatio           = 6
+	DefaultLoadPenaltyFactor          = 0.2
+	DefaultRetryAfterSeconds          = 60
+	DefaultServerErrorCode            = 500
+	DefaultClientErrorCode            = 400
+	DefaultRedirectCode               = 300
+	DefaultVarianceRange              = 0.3
+	DefaultHealingVarianceBase        = 0.9
+	DefaultHealingVarianceRange       = 0.2
 
 	// Constantes pour l'algorithme Elo
 	DefaultEloK       = 32.0

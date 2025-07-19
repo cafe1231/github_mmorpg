@@ -41,9 +41,9 @@ type MemoryRateLimiter struct {
 func NewMemoryRateLimiter(requestsPerMinute int, burst int) *MemoryRateLimiter {
 	rl := &MemoryRateLimiter{
 		limiters: make(map[string]*rate.Limiter),
-		rate:     rate.Limit(requestsPerMinute) / 60, // Convertir en requêtes par seconde
+		rate:     rate.Limit(requestsPerMinute) / config.DefaultMinuteSeconds, // Convertir en requêtes par seconde
 		burst:    burst,
-		cleanup:  5 * time.Minute,
+		cleanup:  config.DefaultCleanupInterval * time.Minute,
 	}
 
 	// Démarrer le nettoyage périodique
@@ -167,7 +167,7 @@ func RateLimit(config config.RateLimitConfig) gin.HandlerFunc {
 
 // CombatRateLimit rate limiting spécifique aux actions de combat
 func CombatRateLimit(actionsPerMinute int) gin.HandlerFunc {
-	limiter := NewMemoryRateLimiter(actionsPerMinute, actionsPerMinute/4) // Burst = 25% du taux
+	limiter := NewMemoryRateLimiter(actionsPerMinute, actionsPerMinute/config.DefaultBurstRatio) // Burst = 25% du taux
 
 	return func(c *gin.Context) {
 		// Utiliser l'ID du personnage comme clé pour les actions de combat
@@ -208,7 +208,7 @@ func CombatRateLimit(actionsPerMinute int) gin.HandlerFunc {
 
 // AuthRateLimit rate limiting pour les tentatives d'authentification
 func AuthRateLimit(attemptsPerMinute int) gin.HandlerFunc {
-	limiter := NewMemoryRateLimiter(attemptsPerMinute, 3) // Burst très bas pour la sécurité
+	limiter := NewMemoryRateLimiter(attemptsPerMinute, config.DefaultSecurityBurst) // Burst très bas pour la sécurité
 
 	return func(c *gin.Context) {
 		key := fmt.Sprintf("auth:%s", c.ClientIP())
@@ -242,7 +242,7 @@ func AuthRateLimit(attemptsPerMinute int) gin.HandlerFunc {
 
 // PvPRateLimit rate limiting pour les actions PvP
 func PvPRateLimit(actionsPerMinute int) gin.HandlerFunc {
-	limiter := NewMemoryRateLimiter(actionsPerMinute, actionsPerMinute/6) // Burst = ~17% du taux
+	limiter := NewMemoryRateLimiter(actionsPerMinute, actionsPerMinute/config.DefaultCombatBurstRatio) // Burst = ~17% du taux
 
 	return func(c *gin.Context) {
 		characterID := c.GetString("character_id")
@@ -313,7 +313,7 @@ func (arl *AdaptiveRateLimit) Middleware() gin.HandlerFunc {
 		// Ajuster le rate limiting basé sur la charge
 		penalty := 1.0
 		if load > arl.maxLoad*0.8 { // Commencer à pénaliser à 80% de la charge max
-			penalty = 1.0 + ((load - arl.maxLoad*0.8) / (arl.maxLoad * 0.2))
+			penalty = 1.0 + ((load - arl.maxLoad*0.8) / (arl.maxLoad * config.DefaultLoadPenaltyFactor))
 		}
 
 		key := getClientKey(c)

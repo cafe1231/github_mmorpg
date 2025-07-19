@@ -92,13 +92,13 @@ var (
 		[]string{"action_type"},
 	)
 
-	combatParticipants = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "combat_participants_total",
-			Help: "Total number of participants in active combats",
-		},
-		[]string{"combat_type"},
-	)
+	// combatParticipants = promauto.NewGaugeVec(
+	// 	prometheus.GaugeOpts{
+	// 		Name: "combat_participants_total",
+	// 		Help: "Total number of participants in active combats",
+	// 	},
+	// 	[]string{"combat_type"},
+	// )
 
 	// Métriques d'erreurs et anti-cheat
 	antiCheatDetections = promauto.NewCounterVec(

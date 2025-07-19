@@ -55,7 +55,7 @@ func (db *DB) Close() error {
 
 // Health vérifie l'état de la base de données
 func (db *DB) Health() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultDatabaseTimeout*time.Second)
 	defer cancel()
 
 	return db.PingContext(ctx)

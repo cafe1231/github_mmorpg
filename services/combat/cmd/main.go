@@ -283,7 +283,7 @@ func gracefulShutdown(
 	logrus.Info("⚔️  Combat Service is shutting down...")
 
 	// Timeout pour l'arrêt gracieux
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultShutdownTimeout*time.Second)
 	defer cancel()
 
 	// Arrêter les nouvelles connections

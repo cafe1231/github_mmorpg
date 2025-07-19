@@ -244,7 +244,7 @@ func CreateHealthCheck(status, message string, details interface{}, err error) *
 			check.Status = "unhealthy"
 		}
 	} else if status == "" {
-		check.Status = "healthy"
+		check.Status = HealthStatusHealthy
 	}
 
 	return check
