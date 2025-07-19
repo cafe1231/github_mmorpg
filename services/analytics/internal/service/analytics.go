@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/dan-2/github_mmorpg/services/analytics/internal/models"
 	"github.com/dan-2/github_mmorpg/services/analytics/internal/repository"
-	"github.com/google/uuid"
 )
 
 type analyticsService struct {

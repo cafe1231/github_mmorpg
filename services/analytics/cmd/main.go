@@ -9,16 +9,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/dan-2/github_mmorpg/services/analytics/internal/config"
-	"github.com/dan-2/github_mmorpg/services/analytics/internal/handlers"
-	"github.com/dan-2/github_mmorpg/services/analytics/internal/repository"
-	"github.com/dan-2/github_mmorpg/services/analytics/internal/service"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
+
+	"github.com/dan-2/github_mmorpg/services/analytics/internal/config"
+	"github.com/dan-2/github_mmorpg/services/analytics/internal/handlers"
+	"github.com/dan-2/github_mmorpg/services/analytics/internal/repository"
+	"github.com/dan-2/github_mmorpg/services/analytics/internal/service"
 )
 
 // Metrics

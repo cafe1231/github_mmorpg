@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/dan-2/github_mmorpg/services/analytics/internal/models"
 	"github.com/google/uuid"
+
+	"github.com/dan-2/github_mmorpg/services/analytics/internal/models"
 )
 
 type AnalyticsService interface {

@@ -5,10 +5,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dan-2/github_mmorpg/services/analytics/internal/models"
-	"github.com/dan-2/github_mmorpg/services/analytics/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"github.com/dan-2/github_mmorpg/services/analytics/internal/models"
+	"github.com/dan-2/github_mmorpg/services/analytics/internal/service"
 )
 
 type AnalyticsHandler struct {
