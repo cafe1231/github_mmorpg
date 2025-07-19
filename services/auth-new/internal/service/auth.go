@@ -1,7 +1,6 @@
 package service
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -166,7 +165,9 @@ func (s *AuthService) Login(req models.LoginRequest, ipAddress, userAgent string
 	// Mettre à jour la dernière connexion
 	user.LastLoginAt = &session.CreatedAt
 	user.LastLoginIP = ipAddress
-	s.userRepo.Update(user)
+	if err := s.userRepo.Update(user); err != nil {
+		logrus.WithError(err).Error("Failed to update user last login info")
+	}
 
 	// Log de la connexion réussie
 	s.logLoginAttempt(&user.ID, req.Username, ipAddress, userAgent, true, "success")
@@ -712,15 +713,6 @@ func (s *AuthService) hashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// generateRandomToken génère un token aléatoire sécurisé
-func (s *AuthService) generateRandomToken(length int) (string, error) {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
 // extractDeviceInfo extrait les informations de l'appareil depuis le User-Agent
 func (s *AuthService) extractDeviceInfo(userAgent string) string {
 	// Simplification pour l'exemple - en production, utiliser une librairie dédiée
@@ -756,7 +748,9 @@ func (s *AuthService) incrementFailedAttempts(user *models.User) {
 		}).Warn("User account locked due to failed login attempts")
 	}
 
-	s.userRepo.Update(user)
+	if err := s.userRepo.Update(user); err != nil {
+		logrus.WithError(err).Error("Failed to update user failed attempts")
+	}
 }
 
 // resetFailedAttempts remet à zéro le compteur d'échecs
@@ -764,7 +758,9 @@ func (s *AuthService) resetFailedAttempts(user *models.User) {
 	if user.LoginAttempts > 0 || user.LockedUntil != nil {
 		user.LoginAttempts = 0
 		user.LockedUntil = nil
-		s.userRepo.Update(user)
+		if err := s.userRepo.Update(user); err != nil {
+			logrus.WithError(err).Error("Failed to reset user failed attempts")
+		}
 	}
 }
 

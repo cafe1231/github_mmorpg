@@ -241,28 +241,6 @@ SELECT
     COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE AND success = false) as failures_today
 FROM login_attempts;`
 
-// Migration 12: Données de test (optionnel, seulement en développement)
-const insertTestData = `
--- Insérer un utilisateur admin par défaut (seulement si aucun admin n'existe)
-INSERT INTO users (
-    id, username, email, password_hash, first_name, last_name, 
-    role, status, email_verified, email_verified_at
-)
-SELECT 
-    gen_random_uuid(),
-    'admin',
-    'admin@mmo-game.local',
-    '$2a$12$LQv3c1yqBOFcgRJ0VYHTAOEc/IU6cVB8WOjLpRPBjr8KfBR.9l.9O', -- password: admin123
-    'System',
-    'Administrator',
-    'admin',
-    'active',
-    true,
-    CURRENT_TIMESTAMP
-WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE role = 'admin'
-);`
-
 // GetAllMigrations retourne toutes les migrations dans l'ordre
 func GetAllMigrations() []string {
 	return []string{
