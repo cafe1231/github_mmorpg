@@ -71,8 +71,8 @@ services:
       - WORLD_DB_PASSWORD=auth_password
       - WORLD_DB_NAME=world_db
       - WORLD_DB_SSL_MODE=disable
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8083
+      - WORLD_SERVER_HOST=0.0.0.0
+      - WORLD_SERVER_PORT=8083
     depends_on:
       - world_db
     networks:
@@ -109,8 +109,8 @@ services:
       - INVENTORY_DB_PASSWORD=auth_password
       - INVENTORY_DB_NAME=inventory_db
       - INVENTORY_DB_SSL_MODE=disable
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8084
+      - INVENTORY_SERVER_HOST=0.0.0.0
+      - INVENTORY_SERVER_PORT=8084
     depends_on:
       - inventory_db
     networks:

@@ -136,6 +136,16 @@ func Load() (*Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("INVENTORY")
 
+	// Mapping explicite des variables d'environnement
+	viper.BindEnv("server.host", "INVENTORY_SERVER_HOST")
+	viper.BindEnv("server.port", "INVENTORY_SERVER_PORT")
+	viper.BindEnv("database.host", "INVENTORY_DB_HOST")
+	viper.BindEnv("database.port", "INVENTORY_DB_PORT")
+	viper.BindEnv("database.name", "INVENTORY_DB_NAME")
+	viper.BindEnv("database.user", "INVENTORY_DB_USER")
+	viper.BindEnv("database.password", "INVENTORY_DB_PASSWORD")
+	viper.BindEnv("database.ssl_mode", "INVENTORY_DB_SSL_MODE")
+
 	// Lecture du fichier de configuration (optionnel)
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
