@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"auth/internal/config"
 	"context"
 	"fmt"
 	"net/http"
@@ -11,8 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
-
-	"auth/internal/config"
 )
 
 // Logger middleware de logging
@@ -54,7 +53,7 @@ func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		// Liste des origines autorisées (à configurer selon l'environnement)
+		// Liste des origins autorisées (à configurer selon l'environnement)
 		allowedOrigins := []string{
 			"http://localhost:3000",
 			"http://localhost:3001",
@@ -125,7 +124,9 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 
 		// Content Security Policy (à adapter selon vos besoins)
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self';")
+		cspPolicy := "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+			"img-src 'self' data: https:; font-src 'self';"
+		c.Header("Content-Security-Policy", cspPolicy)
 
 		// HSTS (uniquement en HTTPS)
 		if c.Request.TLS != nil {
@@ -165,7 +166,7 @@ func GlobalRateLimit(config config.RateLimit) gin.HandlerFunc {
 }
 
 // AuthRateLimit middleware de limitation spécifique pour l'authentification
-func AuthRateLimit(rateLimitConfig config.RateLimitConfig) gin.HandlerFunc {
+func AuthRateLimit(rateLimitConfig *config.RateLimitConfig) gin.HandlerFunc {
 	// Limiteurs par type d'opération
 	loginLimiter := rate.NewLimiter(
 		rate.Every(rateLimitConfig.LoginAttempts.Window/time.Duration(rateLimitConfig.LoginAttempts.Requests)),

@@ -74,31 +74,31 @@ type JWTClaims struct {
 }
 
 // Implémentation de l'interface jwt.Claims pour jwt/v5
-func (c JWTClaims) GetExpirationTime() (*jwt.NumericDate, error) {
+func (c *JWTClaims) GetExpirationTime() (*jwt.NumericDate, error) {
 	return c.RegisteredClaims.ExpiresAt, nil
 }
 
-func (c JWTClaims) GetIssuedAt() (*jwt.NumericDate, error) {
+func (c *JWTClaims) GetIssuedAt() (*jwt.NumericDate, error) {
 	return c.RegisteredClaims.IssuedAt, nil
 }
 
-func (c JWTClaims) GetNotBefore() (*jwt.NumericDate, error) {
+func (c *JWTClaims) GetNotBefore() (*jwt.NumericDate, error) {
 	return c.RegisteredClaims.NotBefore, nil
 }
 
-func (c JWTClaims) GetIssuer() (string, error) {
+func (c *JWTClaims) GetIssuer() (string, error) {
 	return c.RegisteredClaims.Issuer, nil
 }
 
-func (c JWTClaims) GetSubject() (string, error) {
+func (c *JWTClaims) GetSubject() (string, error) {
 	return c.RegisteredClaims.Subject, nil
 }
 
-func (c JWTClaims) GetAudience() (jwt.ClaimStrings, error) {
+func (c *JWTClaims) GetAudience() (jwt.ClaimStrings, error) {
 	return c.RegisteredClaims.Audience, nil
 }
 
-// Constants pour les rôles et statuts
+// Constants pour les rôles et statutes
 const (
 	// Rôles utilisateur
 	RolePlayer    = "player"
@@ -106,7 +106,7 @@ const (
 	RoleAdmin     = "admin"
 	RoleSuperUser = "superuser"
 
-	// Statuts utilisateur
+	// Statutes utilisateur
 	StatusActive    = "active"
 	StatusSuspended = "suspended"
 	StatusBanned    = "banned"

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"chat/internal/models"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -9,8 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"chat/internal/models"
 )
 
 type messageRepository struct {
@@ -50,7 +49,6 @@ func (r *messageRepository) Create(ctx context.Context, message *models.Message)
 		message.IsDeleted, message.DeletedAt, message.IsModerated, message.ModReason,
 		message.ReplyToID, message.CreatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create message: %w", err)
 	}
@@ -85,7 +83,6 @@ func (r *messageRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		&message.IsDeleted, &message.DeletedAt, &message.IsModerated, &message.ModReason,
 		&message.ReplyToID, &message.CreatedAt,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -183,7 +180,11 @@ func (r *messageRepository) SoftDelete(ctx context.Context, id uuid.UUID, reason
 }
 
 // GetChannelMessages récupère les messages d'un channel
-func (r *messageRepository) GetChannelMessages(ctx context.Context, channelID uuid.UUID, req *models.GetMessagesRequest) ([]*models.Message, error) {
+func (r *messageRepository) GetChannelMessages(
+	ctx context.Context,
+	channelID uuid.UUID,
+	req *models.GetMessagesRequest,
+) ([]*models.Message, error) {
 	query := `
 		SELECT 
 			id, channel_id, user_id, content, type, mentions, attachments, reactions,
@@ -336,7 +337,12 @@ func (r *messageRepository) Search(ctx context.Context, req *models.SearchMessag
 }
 
 // SearchInChannel recherche des messages dans un channel spécifique
-func (r *messageRepository) SearchInChannel(ctx context.Context, channelID uuid.UUID, query string, limit, offset int) ([]*models.Message, error) {
+func (r *messageRepository) SearchInChannel(
+	ctx context.Context,
+	channelID uuid.UUID,
+	query string,
+	limit, offset int,
+) ([]*models.Message, error) {
 	searchQuery := `
 		SELECT 
 			id, channel_id, user_id, content, type, mentions, attachments, reactions,
@@ -359,12 +365,12 @@ func (r *messageRepository) SearchInChannel(ctx context.Context, channelID uuid.
 }
 
 // Implémentations simplifiées pour les autres méthodes de l'interface
-func (r *messageRepository) AddReaction(ctx context.Context, messageID uuid.UUID, userID uuid.UUID, emoji string) error {
+func (r *messageRepository) AddReaction(ctx context.Context, messageID, userID uuid.UUID, emoji string) error {
 	// Implementation simplifiée - à compléter plus tard
 	return nil
 }
 
-func (r *messageRepository) RemoveReaction(ctx context.Context, messageID uuid.UUID, userID uuid.UUID, emoji string) error {
+func (r *messageRepository) RemoveReaction(ctx context.Context, messageID, userID uuid.UUID, emoji string) error {
 	// Implementation simplifiée - à compléter plus tard
 	return nil
 }
@@ -421,7 +427,6 @@ func (r *messageRepository) scanMessages(rows *sql.Rows) ([]*models.Message, err
 			&message.IsDeleted, &message.DeletedAt, &message.IsModerated, &message.ModReason,
 			&message.ReplyToID, &message.CreatedAt,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan message: %w", err)
 		}

@@ -12,7 +12,7 @@ type HealthResponse struct {
 	Checks    map[string]interface{} `json:"checks"`
 }
 
-// HealthCheck représente un contrôle de santé individuel
+// HealthCheck représente un contrôle de santé individual
 type HealthCheck struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message,omitempty"`

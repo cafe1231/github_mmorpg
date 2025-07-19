@@ -2,6 +2,12 @@
 package main
 
 import (
+	"auth/internal/config"
+	"auth/internal/database"
+	"auth/internal/handlers"
+	"auth/internal/middleware"
+	"auth/internal/repository"
+	"auth/internal/service"
 	"context"
 	"fmt"
 	"net/http"
@@ -12,13 +18,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+)
 
-	"auth/internal/config"
-	"auth/internal/database"
-	"auth/internal/handlers"
-	"auth/internal/middleware"
-	"auth/internal/repository"
-	"auth/internal/service"
+// Constantes
+const (
+	DefaultShutdownTO     = 30 // Timeout d'arrêt en secondes
+	DefaultSessionCleanup = 30 // Intervalle de nettoyage des sessions en minutes
 )
 
 // Version du service (à définir lors du build)
@@ -45,8 +50,8 @@ func main() {
 		logrus.Fatal("Failed to load config: ", err)
 	}
 
-	// Connexion à la base de données
-	db, err := database.NewConnection(cfg.Database)
+	// Connection à la base de données
+	db, err := database.NewConnection(&cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
 	}
@@ -61,8 +66,8 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
 
-	// Démarrage du nettoyage périodique des sessions
-	sessionRepo.ScheduleCleanup(30 * time.Minute)
+	// Démarriage du nettoyage périodique des sessions
+	sessionRepo.ScheduleCleanup(DefaultSessionCleanup * time.Minute)
 
 	// Initialisation des services
 	authService := service.NewAuthService(userRepo, sessionRepo, cfg)
@@ -87,7 +92,7 @@ func main() {
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
-	// Démarrage du serveur en arrière-plan
+	// Démarriage du serveur en arrière-plan
 	go func() {
 		logrus.WithFields(logrus.Fields{
 			"host": cfg.Server.Host,
@@ -154,9 +159,9 @@ func setupRoutes(
 		auth := v1.Group("/auth")
 		{
 			// Rate limiting spécialisé pour l'auth
-			auth.Use(middleware.AuthRateLimit(cfg.RateLimit))
+			auth.Use(middleware.AuthRateLimit(&cfg.RateLimit))
 
-			// Inscription et connexion
+			// Inscription et connection
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
@@ -219,7 +224,7 @@ func setupRoutes(
 				admin.POST("/users", authHandler.CreateUser)
 				admin.DELETE("/users/:id", authHandler.DeleteUser)
 
-				// Gestion des statuts
+				// Gestion des statutes
 				admin.POST("/users/:id/suspend", authHandler.SuspendUser)
 				admin.POST("/users/:id/activate", authHandler.ActivateUser)
 				admin.POST("/users/:id/ban", authHandler.BanUser)
@@ -255,7 +260,7 @@ func gracefulShutdown(server *http.Server) {
 
 	logrus.Info("🔐 Shutting down Auth Service...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTO*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {

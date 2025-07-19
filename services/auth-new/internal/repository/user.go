@@ -1,13 +1,12 @@
 package repository
 
 import (
+	"auth/internal/models"
 	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-
-	"auth/internal/models"
 )
 
 // UserRepository implémente l'interface UserRepositoryInterface
@@ -44,7 +43,6 @@ func (r *UserRepository) Create(user *models.User) error {
 		user.CreatedAt,
 		user.UpdatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
@@ -161,7 +159,6 @@ func (r *UserRepository) Update(user *models.User) error {
 		user.TwoFactorSecret,
 		user.TwoFactorEnabled,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}

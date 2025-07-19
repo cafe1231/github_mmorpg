@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"auth/internal/config"
+	"auth/internal/models"
+	"auth/internal/service"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,10 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"auth/internal/config"
-	"auth/internal/models"
-	"auth/internal/service"
 )
 
 // AuthHandler gère les requêtes HTTP d'authentification
@@ -38,7 +37,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.Register(req)
+	user, err := h.authService.Register(&req)
 	if err != nil {
 		status := http.StatusBadRequest
 		if err.Error() == "username already exists" || err.Error() == "email already exists" {
@@ -155,7 +154,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	})
 }
 
-// ResetPassword réinitialise le mot de passe avec un token
+// ResetPassword réinitialize le mot de passe avec un token
 func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req models.ResetPasswordRequest
 

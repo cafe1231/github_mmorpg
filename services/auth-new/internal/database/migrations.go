@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
     UNIQUE(provider, provider_user_id)
 );`
 
-// Migration 4: Table des tentatives de connexion
+// Migration 4: Table des tentatives de connection
 const createLoginAttemptsTable = `
 CREATE TABLE IF NOT EXISTS login_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -229,7 +229,7 @@ SELECT
     COUNT(*) FILTER (WHERE last_login_at >= CURRENT_DATE - INTERVAL '7 days') as active_week
 FROM users;
 
--- Vue pour les statistiques de connexion
+-- Vue pour les statistiques de connection
 CREATE OR REPLACE VIEW login_statistics AS
 SELECT 
     COUNT(*) as total_attempts,

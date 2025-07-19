@@ -1,16 +1,19 @@
 package service
 
 import (
+	"chat/internal/config"
+	"chat/internal/models"
+	"chat/internal/repository"
 	"context"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+)
 
-	"chat/internal/config"
-	"chat/internal/models"
-	"chat/internal/repository"
+const (
+	DefaultLogContentLen = 50
 )
 
 type chatService struct {
@@ -73,7 +76,7 @@ func (s *chatService) CreateChannel(ctx context.Context, req *models.CreateChann
 	}
 
 	// Valeurs par défaut pour les settings
-	if channel.Settings.AllowEmotes == false && channel.Settings.AllowLinks == false {
+	if !channel.Settings.AllowEmotes && !channel.Settings.AllowLinks {
 		channel.Settings = models.ChannelSettings{
 			AllowEmotes:    true,
 			AllowLinks:     true,
@@ -126,11 +129,15 @@ func (s *chatService) GetChannel(ctx context.Context, channelID uuid.UUID) (*mod
 }
 
 // SendMessage envoie un message dans un channel
-func (s *chatService) SendMessage(ctx context.Context, channelID, userID uuid.UUID, req *models.SendMessageRequest) (*models.Message, error) {
+func (s *chatService) SendMessage(
+	ctx context.Context,
+	channelID, userID uuid.UUID,
+	req *models.SendMessageRequest,
+) (*models.Message, error) {
 	logrus.WithFields(logrus.Fields{
 		"channel_id": channelID,
 		"user_id":    userID,
-		"content":    req.Content[:min(50, len(req.Content))], // Log première partie seulement
+		"content":    req.Content[:minInt(DefaultLogContentLen, len(req.Content))], // Log première partie seulement
 	}).Info("Sending message")
 
 	// Vérifier que l'utilisateur est membre du channel
@@ -189,7 +196,12 @@ func (s *chatService) SendMessage(ctx context.Context, channelID, userID uuid.UU
 }
 
 // GetMessages récupère les messages d'un channel
-func (s *chatService) GetMessages(ctx context.Context, channelID uuid.UUID, req *models.GetMessagesRequest, userID uuid.UUID) ([]*models.Message, error) {
+func (s *chatService) GetMessages(
+	ctx context.Context,
+	channelID uuid.UUID,
+	req *models.GetMessagesRequest,
+	userID uuid.UUID,
+) ([]*models.Message, error) {
 	// Vérifier que l'utilisateur est membre du channel
 	isMember, err := s.channelRepo.IsMember(ctx, channelID, userID)
 	if err != nil {
@@ -312,12 +324,17 @@ func (s *chatService) LeaveChannel(ctx context.Context, channelID, userID uuid.U
 }
 
 // Implémentations simplifiées pour les autres méthodes de l'interface
-func (s *chatService) UpdateChannel(ctx context.Context, channelID uuid.UUID, req *models.UpdateChannelRequest, userID uuid.UUID) (*models.Channel, error) {
+func (s *chatService) UpdateChannel(
+	ctx context.Context,
+	channelID uuid.UUID,
+	req *models.UpdateChannelRequest,
+	userID uuid.UUID,
+) (*models.Channel, error) {
 	// TODO: Implémenter
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (s *chatService) DeleteChannel(ctx context.Context, channelID uuid.UUID, userID uuid.UUID) error {
+func (s *chatService) DeleteChannel(ctx context.Context, channelID, userID uuid.UUID) error {
 	// TODO: Implémenter
 	return fmt.Errorf("not implemented")
 }
@@ -342,16 +359,30 @@ func (s *chatService) KickUser(ctx context.Context, channelID, kickerID, targetI
 	return fmt.Errorf("not implemented")
 }
 
-func (s *chatService) GetChannelMembers(ctx context.Context, channelID uuid.UUID, limit, offset int, requesterID uuid.UUID) ([]*models.ChannelMember, error) {
+func (s *chatService) GetChannelMembers(
+	ctx context.Context,
+	channelID uuid.UUID,
+	limit, offset int,
+	requesterID uuid.UUID,
+) ([]*models.ChannelMember, error) {
 	return s.channelRepo.GetMembers(ctx, channelID, limit, offset)
 }
 
-func (s *chatService) UpdateMember(ctx context.Context, channelID, userID uuid.UUID, req *models.UpdateMemberRequest, requesterID uuid.UUID) error {
+func (s *chatService) UpdateMember(
+	ctx context.Context,
+	channelID, userID uuid.UUID,
+	req *models.UpdateMemberRequest,
+	requesterID uuid.UUID,
+) error {
 	// TODO: Implémenter
 	return fmt.Errorf("not implemented")
 }
 
-func (s *chatService) EditMessage(ctx context.Context, messageID, userID uuid.UUID, req *models.EditMessageRequest) (*models.Message, error) {
+func (s *chatService) EditMessage(
+	ctx context.Context,
+	messageID, userID uuid.UUID,
+	req *models.EditMessageRequest,
+) (*models.Message, error) {
 	// TODO: Implémenter
 	return nil, fmt.Errorf("not implemented")
 }
@@ -386,13 +417,18 @@ func (s *chatService) ModerateMessage(ctx context.Context, messageID, moderatorI
 	return fmt.Errorf("not implemented")
 }
 
-func (s *chatService) GetModerationLogs(ctx context.Context, channelID uuid.UUID, limit, offset int, requesterID uuid.UUID) ([]*models.ModerationLog, error) {
+func (s *chatService) GetModerationLogs(
+	ctx context.Context,
+	channelID uuid.UUID,
+	limit, offset int,
+	requesterID uuid.UUID,
+) ([]*models.ModerationLog, error) {
 	// TODO: Implémenter
 	return []*models.ModerationLog{}, nil
 }
 
 // Fonction utilitaire
-func min(a, b int) int {
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

@@ -1,10 +1,9 @@
 package service
 
 import (
+	"chat/internal/models"
 	"context"
 	"time"
-
-	"chat/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -15,7 +14,7 @@ type ChatService interface {
 	CreateChannel(ctx context.Context, req *models.CreateChannelRequest, ownerID uuid.UUID) (*models.Channel, error)
 	GetChannel(ctx context.Context, channelID uuid.UUID) (*models.Channel, error)
 	UpdateChannel(ctx context.Context, channelID uuid.UUID, req *models.UpdateChannelRequest, userID uuid.UUID) (*models.Channel, error)
-	DeleteChannel(ctx context.Context, channelID uuid.UUID, userID uuid.UUID) error
+	DeleteChannel(ctx context.Context, channelID, userID uuid.UUID) error
 	GetChannels(ctx context.Context, req *models.GetChannelsRequest, userID uuid.UUID) ([]*models.Channel, error)
 	SearchChannels(ctx context.Context, query string, limit, offset int, userID uuid.UUID) ([]*models.Channel, error)
 
@@ -81,7 +80,7 @@ type NotificationService interface {
 	// Notifications de messages
 	NotifyNewMessage(ctx context.Context, message *models.Message, mentions []uuid.UUID) error
 	NotifyMessageEdit(ctx context.Context, message *models.Message) error
-	NotifyMessageDelete(ctx context.Context, messageID uuid.UUID, channelID uuid.UUID) error
+	NotifyMessageDelete(ctx context.Context, messageID, channelID uuid.UUID) error
 
 	// Notifications de channels
 	NotifyChannelJoin(ctx context.Context, channelID, userID uuid.UUID) error

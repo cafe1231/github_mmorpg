@@ -1,6 +1,11 @@
 package main
 
 import (
+	"chat/internal/config"
+	"chat/internal/database"
+	"chat/internal/handlers"
+	"chat/internal/repository"
+	"chat/internal/service"
 	"context"
 	"fmt"
 	"net/http"
@@ -11,12 +16,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+)
 
-	"chat/internal/config"
-	"chat/internal/database"
-	"chat/internal/handlers"
-	"chat/internal/repository"
-	"chat/internal/service"
+const (
+	DefaultShutdownTO = 30
 )
 
 // Version du service (à définir lors du build)
@@ -44,7 +47,7 @@ func main() {
 	}
 
 	// connection à la base de données
-	db, err := database.NewConnection(cfg.Database)
+	db, err := database.NewConnection(&cfg.Database)
 	if err != nil {
 		logrus.Fatal("Failed to connect to database: ", err)
 	}
@@ -83,7 +86,7 @@ func main() {
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
-	// Démarrage du serveur en arrière-plan
+	// Startup du serveur en arrière-plan
 	go func() {
 		logrus.WithFields(logrus.Fields{
 			"host": cfg.Server.Host,
@@ -189,7 +192,7 @@ func gracefulShutdown(server *http.Server) {
 	logrus.WithField("signal", sig.String()).Info("Received shutdown signal")
 
 	// Timeout pour l'arrêt gracieux
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTO*time.Second)
 	defer cancel()
 
 	// Arrêt du serveur HTTP

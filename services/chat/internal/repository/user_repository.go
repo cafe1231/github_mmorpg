@@ -1,10 +1,9 @@
 package repository
 
 import (
+	"chat/internal/models"
 	"context"
 	"database/sql"
-
-	"chat/internal/models"
 
 	"github.com/google/uuid"
 )

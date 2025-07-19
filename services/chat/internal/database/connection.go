@@ -1,6 +1,7 @@
 package database
 
 import (
+	"chat/internal/config"
 	"context"
 	"database/sql"
 	"fmt"
@@ -8,8 +9,10 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
+)
 
-	"chat/internal/config"
+const (
+	DefaultDBTimeout = 5
 )
 
 // DB structure pour encapsuler la connection
@@ -18,7 +21,7 @@ type DB struct {
 }
 
 // NewConnection crée une nouvelle connection à la base de données
-func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
+func NewConnection(cfg *config.DatabaseConfig) (*DB, error) {
 	logrus.Info("Connecting to PostgreSQL database...")
 
 	db, err := sql.Open("postgres", cfg.GetDatabaseURL())
@@ -55,7 +58,7 @@ func (db *DB) Close() error {
 
 // HealthCheck vérifie la santé de la connection
 func (db *DB) HealthCheck() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultDBTimeout*time.Second)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {

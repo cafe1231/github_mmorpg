@@ -3,12 +3,16 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	DefaultMigrationParts = 2
 )
 
 // Migration représente une migration de base de données
@@ -116,7 +120,7 @@ func runMigration(db *sql.DB, migration Migration) error {
 // loadMigrationsFromFiles charge les migrations depuis le dossier migrations/
 func loadMigrationsFromFiles() ([]Migration, error) {
 	migrationsDir := "migrations"
-	files, err := ioutil.ReadDir(migrationsDir)
+	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		// Si le dossier n'existe pas, retourner une liste vide
 		return []Migration{}, nil
@@ -131,7 +135,7 @@ func loadMigrationsFromFiles() ([]Migration, error) {
 
 		// Parser le nom du fichier (format: 001_name.up.sql ou 001_name.down.sql)
 		parts := strings.Split(file.Name(), "_")
-		if len(parts) < 2 {
+		if len(parts) < DefaultMigrationParts {
 			continue
 		}
 
@@ -140,7 +144,7 @@ func loadMigrationsFromFiles() ([]Migration, error) {
 			continue
 		}
 
-		content, err := ioutil.ReadFile(filepath.Join(migrationsDir, file.Name()))
+		content, err := os.ReadFile(filepath.Join(migrationsDir, file.Name()))
 		if err != nil {
 			return nil, err
 		}

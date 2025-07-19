@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Requêtes d'authentification
@@ -19,7 +20,7 @@ type RegisterRequest struct {
 	AcceptTerms     bool   `json:"accept_terms" binding:"required"`
 }
 
-// LoginRequest représente une demande de connexion
+// LoginRequest représente une demande de connection
 type LoginRequest struct {
 	Username      string `json:"username" binding:"required"`
 	Password      string `json:"password" binding:"required"`
@@ -66,7 +67,7 @@ type ResetPasswordRequest struct {
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
-// OAuthLoginRequest représente une demande de connexion OAuth
+// OAuthLoginRequest représente une demande de connection OAuth
 type OAuthLoginRequest struct {
 	Provider string `json:"provider" binding:"required"`
 	Code     string `json:"code" binding:"required"`
@@ -79,7 +80,7 @@ type TwoFactorSetup struct {
 	QRCode string `json:"qr_code"`
 }
 
-// LoginAttempt représente une tentative de connexion
+// LoginAttempt représente une tentative de connection
 type LoginAttempt struct {
 	ID        uuid.UUID  `json:"id" db:"id"`
 	UserID    *uuid.UUID `json:"user_id" db:"user_id"`
@@ -105,7 +106,7 @@ type AuditLog struct {
 
 // Réponses
 
-// LoginResponse représente la réponse d'une connexion réussie
+// LoginResponse représente la réponse d'une connection réussie
 type LoginResponse struct {
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`

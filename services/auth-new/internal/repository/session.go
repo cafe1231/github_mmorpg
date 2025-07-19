@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"auth/internal/models"
 	"database/sql"
 	"fmt"
 	"time"
@@ -8,8 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
-
-	"auth/internal/models"
 )
 
 // SessionRepository implémente SessionRepositoryInterface
@@ -45,7 +44,6 @@ func (r *SessionRepository) Create(session *models.UserSession) error {
 		session.LastActivity,
 		session.IsActive,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
@@ -101,7 +99,6 @@ func (r *SessionRepository) Update(session *models.UserSession) error {
 		session.LastActivity,
 		session.IsActive,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to update session: %w", err)
 	}
@@ -276,12 +273,9 @@ func (r *SessionRepository) ScheduleCleanup(interval time.Duration) {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				if err := r.CleanExpiredSessions(); err != nil {
-					logrus.WithError(err).Error("Failed to clean expired sessions")
-				}
+		for range ticker.C {
+			if err := r.CleanExpiredSessions(); err != nil {
+				logrus.WithError(err).Error("Failed to clean expired sessions")
 			}
 		}
 	}()

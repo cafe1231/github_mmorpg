@@ -2,13 +2,14 @@ package service
 
 import (
 	"auth/internal/models"
+
 	"github.com/google/uuid"
 )
 
 // AuthServiceInterface définit toutes les méthodes requises pour le service d'authentification
 type AuthServiceInterface interface {
 	// Authentification de base
-	Register(req models.RegisterRequest) (*models.User, error)
+	Register(req *models.RegisterRequest) (*models.User, error)
 	Login(req models.LoginRequest, ipAddress, userAgent string) (*models.LoginResponse, error)
 	RefreshToken(req models.RefreshTokenRequest) (*models.LoginResponse, error)
 	Logout(userID uuid.UUID, sessionID uuid.UUID) error
@@ -22,7 +23,7 @@ type AuthServiceInterface interface {
 	// Gestion des utilisateurs (Admin)
 	ListUsers(limit, offset int, filters map[string]interface{}) ([]*models.User, int64, error)
 	GetUser(userID uuid.UUID) (*models.User, error)
-	UpdateUser(userID uuid.UUID, req models.UpdateUserRequest) (*models.User, error)
+	UpdateUser(userID uuid.UUID, req *models.UpdateUserRequest) (*models.User, error)
 	SuspendUser(userID uuid.UUID, reason string) error
 	ActivateUser(userID uuid.UUID) error
 

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"auth/internal/config"
 	"context"
 	"fmt"
 	"time"
@@ -8,13 +9,13 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
-
-	"auth/internal/config"
 )
 
-// NewConnection crée une nouvelle connexion à la base de données
-func NewConnection(cfg config.DatabaseConfig) (*sqlx.DB, error) {
-	// Construction de l'URL de connexion
+const DefaultConnectionTO = 10
+
+// NewConnection crée une nouvelle connection à la base de données
+func NewConnection(cfg *config.DatabaseConfig) (*sqlx.DB, error) {
+	// Construction de l'URL de connection
 	dsn := cfg.GetDatabaseURL()
 
 	logrus.WithFields(logrus.Fields{
@@ -24,19 +25,19 @@ func NewConnection(cfg config.DatabaseConfig) (*sqlx.DB, error) {
 		"username": cfg.Username,
 	}).Info("Connecting to PostgreSQL database...")
 
-	// Connexion à la base de données
+	// Connection à la base de données
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Configuration de la pool de connexions
+	// Configuration de la pool de connections
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(cfg.MaxLifetime)
 
-	// Test de la connexion
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Test de la connection
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultConnectionTO*time.Second)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {

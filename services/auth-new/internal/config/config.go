@@ -10,6 +10,37 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Constantes par défaut pour éviter les magic numbers
+const (
+	DefaultServerPort        = 8081
+	DefaultServerTimeout     = 30
+	DefaultDatabasePort      = 5432
+	DefaultMaxOpenConns      = 25
+	DefaultMaxIdleConns      = 10
+	DefaultMaxLifetimeMin    = 5
+	DefaultAccessTokenMin    = 15
+	DefaultEmailVerifHours   = 24
+	DefaultBCryptCost        = 12
+	DefaultMaxLoginAttempts  = 5
+	DefaultLockoutMin        = 15
+	DefaultPasswordMinLength = 8
+	DefaultSessionHours      = 24
+	DefaultSMTPPort          = 587
+	DefaultRateLimitReqs     = 5
+	DefaultRateLimitWindow   = 15
+	DefaultRateLimitBurst    = 2
+	DefaultLoginReqs         = 3
+	DefaultGeneralReqs       = 5
+	DefaultAPIReqs           = 100
+	DefaultAPIBurst          = 20
+	DefaultPrometheusPort    = 9091
+	DefaultRedisPort         = 6379
+	DefaultJWTSecretMin      = 32
+	DefaultPasswordMin       = 6
+	DefaultConnectionTO      = 10
+	DefaultShutdownTO        = 30
+)
+
 // Config représente la configuration complète du service Auth
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
@@ -137,8 +168,8 @@ type RedisConfig struct {
 	Enabled  bool   `mapstructure:"enabled"`
 }
 
-// GetDatabaseURL construit l'URL de connexion PostgreSQL
-func (d DatabaseConfig) GetDatabaseURL() string {
+// GetDatabaseURL construit l'URL de connection PostgreSQL
+func (d *DatabaseConfig) GetDatabaseURL() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		d.Host, d.Port, d.Username, d.Password, d.Name, d.SSLMode,
@@ -155,49 +186,49 @@ func LoadConfig() (*Config, error) {
 	// Configuration par défaut
 	config := &Config{
 		Server: ServerConfig{
-			Port:         8081,
+			Port:         DefaultServerPort,
 			Host:         "0.0.0.0",
 			Environment:  "development",
 			Debug:        true,
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 30 * time.Second,
+			ReadTimeout:  DefaultServerTimeout * time.Second,
+			WriteTimeout: DefaultServerTimeout * time.Second,
 		},
 		Database: DatabaseConfig{
 			Host:         "localhost",
-			Port:         5432,
+			Port:         DefaultDatabasePort,
 			Name:         "auth_db",
 			Username:     "auth_user",
 			Password:     "auth_password",
 			SSLMode:      "disable",
-			MaxOpenConns: 25,
-			MaxIdleConns: 10,
-			MaxLifetime:  5 * time.Minute,
+			MaxOpenConns: DefaultMaxOpenConns,
+			MaxIdleConns: DefaultMaxIdleConns,
+			MaxLifetime:  DefaultMaxLifetimeMin * time.Minute,
 		},
 		JWT: JWTConfig{
 			Secret:                      "your-super-secret-jwt-key-change-in-production-minimum-64-characters",
 			Issuer:                      "mmo-auth-service",
-			AccessTokenExpiration:       15 * time.Minute,
-			RefreshTokenExpiration:      7 * 24 * time.Hour, // 7 jours
-			EmailVerificationExpiration: 24 * time.Hour,
+			AccessTokenExpiration:       DefaultAccessTokenMin * time.Minute,
+			RefreshTokenExpiration:      7 * DefaultEmailVerifHours * time.Hour, // 7 jours
+			EmailVerificationExpiration: DefaultEmailVerifHours * time.Hour,
 			PasswordResetExpiration:     1 * time.Hour,
 		},
 		Security: SecurityConfig{
-			BCryptCost:             12,
-			MaxLoginAttempts:       5,
-			LockoutDuration:        15 * time.Minute,
-			PasswordMinLength:      8,
+			BCryptCost:             DefaultBCryptCost,
+			MaxLoginAttempts:       DefaultMaxLoginAttempts,
+			LockoutDuration:        DefaultLockoutMin * time.Minute,
+			PasswordMinLength:      DefaultPasswordMinLength,
 			PasswordRequireUpper:   true,
 			PasswordRequireLower:   true,
 			PasswordRequireNumber:  true,
 			PasswordRequireDigit:   true, // Même valeur que Number
 			PasswordRequireSymbol:  true,
 			PasswordRequireSpecial: true, // Même valeur que Symbol
-			SessionTimeout:         24 * time.Hour,
+			SessionTimeout:         DefaultSessionHours * time.Hour,
 			TwoFactorRequired:      false,
 		},
 		Email: EmailConfig{
 			SMTPHost: "localhost",
-			SMTPPort: 587,
+			SMTPPort: DefaultSMTPPort,
 			UseTLS:   true,
 			UseSSL:   false,
 		},
@@ -217,41 +248,41 @@ func LoadConfig() (*Config, error) {
 		},
 		RateLimit: RateLimitConfig{
 			LoginAttempts: RateLimit{
-				Requests: 5,
-				Window:   15 * time.Minute,
-				Burst:    2,
+				Requests: DefaultRateLimitReqs,
+				Window:   DefaultRateLimitWindow * time.Minute,
+				Burst:    DefaultRateLimitBurst,
 			},
 			Registration: RateLimit{
-				Requests: 3,
+				Requests: DefaultLoginReqs,
 				Window:   1 * time.Hour,
 				Burst:    1,
 			},
 			PasswordReset: RateLimit{
-				Requests: 3,
+				Requests: DefaultLoginReqs,
 				Window:   1 * time.Hour,
 				Burst:    1,
 			},
 			EmailVerification: RateLimit{
-				Requests: 5,
+				Requests: DefaultGeneralReqs,
 				Window:   1 * time.Hour,
-				Burst:    2,
+				Burst:    DefaultRateLimitBurst,
 			},
 			Global: RateLimit{
-				Requests: 100,
+				Requests: DefaultAPIReqs,
 				Window:   1 * time.Minute,
-				Burst:    20,
+				Burst:    DefaultAPIBurst,
 			},
 		},
 		Monitoring: MonitoringConfig{
 			Enabled:        true,
-			PrometheusPort: 9091,
+			PrometheusPort: DefaultPrometheusPort,
 			MetricsPath:    "/metrics",
 			HealthPath:     "/health",
 			LogLevel:       "info",
 		},
 		Redis: RedisConfig{
 			Host:     "localhost",
-			Port:     6379,
+			Port:     DefaultRedisPort,
 			Database: 0,
 			Enabled:  false,
 		},
@@ -292,7 +323,16 @@ func LoadConfig() (*Config, error) {
 
 // loadFromEnv charge les variables d'environnement
 func loadFromEnv(config *Config) {
-	// Server
+	loadServerEnv(config)
+	loadDatabaseEnv(config)
+	loadJWTEnv(config)
+	loadEmailEnv(config)
+	loadOAuthEnv(config)
+	loadRedisEnv(config)
+}
+
+// loadServerEnv charge la configuration serveur depuis les variables d'environnement
+func loadServerEnv(config *Config) {
 	if port := os.Getenv("AUTH_SERVER_PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
 			config.Server.Port = p
@@ -307,8 +347,10 @@ func loadFromEnv(config *Config) {
 	if debug := os.Getenv("AUTH_DEBUG"); debug != "" {
 		config.Server.Debug = debug == "true"
 	}
+}
 
-	// Database
+// loadDatabaseEnv charge la configuration base de données depuis les variables d'environnement
+func loadDatabaseEnv(config *Config) {
 	if dbHost := os.Getenv("AUTH_DB_HOST"); dbHost != "" {
 		config.Database.Host = dbHost
 	}
@@ -326,13 +368,17 @@ func loadFromEnv(config *Config) {
 	if dbPass := os.Getenv("AUTH_DB_PASSWORD"); dbPass != "" {
 		config.Database.Password = dbPass
 	}
+}
 
-	// JWT
+// loadJWTEnv charge la configuration JWT depuis les variables d'environnement
+func loadJWTEnv(config *Config) {
 	if jwtSecret := os.Getenv("AUTH_JWT_SECRET"); jwtSecret != "" {
 		config.JWT.Secret = jwtSecret
 	}
+}
 
-	// Email
+// loadEmailEnv charge la configuration email depuis les variables d'environnement
+func loadEmailEnv(config *Config) {
 	if smtpHost := os.Getenv("AUTH_SMTP_HOST"); smtpHost != "" {
 		config.Email.SMTPHost = smtpHost
 	}
@@ -342,8 +388,10 @@ func loadFromEnv(config *Config) {
 	if smtpPass := os.Getenv("AUTH_SMTP_PASSWORD"); smtpPass != "" {
 		config.Email.SMTPPassword = smtpPass
 	}
+}
 
-	// OAuth
+// loadOAuthEnv charge la configuration OAuth depuis les variables d'environnement
+func loadOAuthEnv(config *Config) {
 	if googleClientID := os.Getenv("AUTH_GOOGLE_CLIENT_ID"); googleClientID != "" {
 		config.OAuth.Google.ClientID = googleClientID
 		config.OAuth.Google.Enabled = true
@@ -351,8 +399,10 @@ func loadFromEnv(config *Config) {
 	if googleClientSecret := os.Getenv("AUTH_GOOGLE_CLIENT_SECRET"); googleClientSecret != "" {
 		config.OAuth.Google.ClientSecret = googleClientSecret
 	}
+}
 
-	// Redis
+// loadRedisEnv charge la configuration Redis depuis les variables d'environnement
+func loadRedisEnv(config *Config) {
 	if redisHost := os.Getenv("AUTH_REDIS_HOST"); redisHost != "" {
 		config.Redis.Host = redisHost
 		config.Redis.Enabled = true
@@ -367,7 +417,7 @@ func validateConfig(config *Config) error {
 	}
 
 	// Validation JWT
-	if len(config.JWT.Secret) < 32 {
+	if len(config.JWT.Secret) < DefaultJWTSecretMin {
 		return fmt.Errorf("JWT secret must be at least 32 characters long")
 	}
 
@@ -397,7 +447,7 @@ func validateConfig(config *Config) error {
 		return fmt.Errorf("bcrypt cost must be between 4 and 15")
 	}
 
-	if config.Security.PasswordMinLength < 6 {
+	if config.Security.PasswordMinLength < DefaultPasswordMin {
 		return fmt.Errorf("password minimum length must be at least 6")
 	}
 

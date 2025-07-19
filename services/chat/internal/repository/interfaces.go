@@ -1,10 +1,9 @@
 package repository
 
 import (
+	"chat/internal/models"
 	"context"
 	"time"
-
-	"chat/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -56,8 +55,8 @@ type MessageRepository interface {
 	SearchInChannel(ctx context.Context, channelID uuid.UUID, query string, limit, offset int) ([]*models.Message, error)
 
 	// Réactions
-	AddReaction(ctx context.Context, messageID uuid.UUID, userID uuid.UUID, emoji string) error
-	RemoveReaction(ctx context.Context, messageID uuid.UUID, userID uuid.UUID, emoji string) error
+	AddReaction(ctx context.Context, messageID, userID uuid.UUID, emoji string) error
+	RemoveReaction(ctx context.Context, messageID, userID uuid.UUID, emoji string) error
 	GetReactions(ctx context.Context, messageID uuid.UUID) ([]models.Reaction, error)
 
 	// Mentions

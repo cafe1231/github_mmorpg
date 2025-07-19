@@ -1,11 +1,10 @@
 package repository
 
 import (
+	"chat/internal/models"
 	"context"
 	"database/sql"
 	"time"
-
-	"chat/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -43,7 +42,11 @@ func (r *moderationRepository) GetUserLogs(ctx context.Context, userID uuid.UUID
 }
 
 // GetModeratorLogs récupère les logs d'un modérateur
-func (r *moderationRepository) GetModeratorLogs(ctx context.Context, moderatorID uuid.UUID, limit, offset int) ([]*models.ModerationLog, error) {
+func (r *moderationRepository) GetModeratorLogs(
+	ctx context.Context,
+	moderatorID uuid.UUID,
+	limit, offset int,
+) ([]*models.ModerationLog, error) {
 	// Implementation simplifiée - à compléter plus tard
 	return []*models.ModerationLog{}, nil
 }
@@ -61,7 +64,12 @@ func (r *moderationRepository) IsUserBanned(ctx context.Context, channelID, user
 }
 
 // MuteUser mute un utilisateur
-func (r *moderationRepository) MuteUser(ctx context.Context, channelID, userID, moderatorID uuid.UUID, duration time.Duration, reason string) error {
+func (r *moderationRepository) MuteUser(
+	ctx context.Context,
+	channelID, userID, moderatorID uuid.UUID,
+	duration time.Duration,
+	reason string,
+) error {
 	// Implementation simplifiée - à compléter plus tard
 	return nil
 }

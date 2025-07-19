@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"chat/internal/models"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -9,8 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"chat/internal/models"
 )
 
 type channelRepository struct {
@@ -53,7 +52,6 @@ func (r *channelRepository) Create(ctx context.Context, channel *models.Channel)
 		channel.MaxMembers, channel.ZoneID, channel.GuildID, channel.PartyID,
 		settingsJSON, channel.IsActive, channel.CreatedAt, channel.UpdatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create channel: %w", err)
 	}
@@ -90,7 +88,6 @@ func (r *channelRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		&settingsJSON, &channel.IsActive, &channel.CreatedAt, &channel.UpdatedAt,
 		&channel.MemberCount,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -126,7 +123,6 @@ func (r *channelRepository) Update(ctx context.Context, channel *models.Channel)
 		channel.ID, channel.Name, channel.Description, channel.IsModerated,
 		channel.IsPrivate, channel.MaxMembers, settingsJSON, channel.UpdatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to update channel: %w", err)
 	}
@@ -314,7 +310,6 @@ func (r *channelRepository) AddMember(ctx context.Context, member *models.Channe
 		member.Role, member.CanModerate, member.CanInvite, member.IsOnline,
 		member.IsMuted, member.MutedUntil, member.JoinedAt, member.LastSeenAt, true,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to add member: %w", err)
 	}
@@ -400,7 +395,6 @@ func (r *channelRepository) GetMember(ctx context.Context, channelID, userID uui
 		&member.Role, &member.CanModerate, &member.CanInvite, &member.IsOnline,
 		&member.IsMuted, &member.MutedUntil, &member.JoinedAt, &member.LastSeenAt,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -427,7 +421,6 @@ func (r *channelRepository) UpdateMember(ctx context.Context, member *models.Cha
 		member.CanModerate, member.CanInvite, member.IsOnline, member.IsMuted,
 		member.MutedUntil, member.LastSeenAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to update member: %w", err)
 	}
@@ -489,7 +482,6 @@ func (r *channelRepository) GetChannelStats(ctx context.Context, channelID uuid.
 	err := r.db.QueryRowContext(ctx, query, channelID).Scan(
 		&memberCount, &onlineCount, &messageCount, &lastMessageAt,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get channel stats: %w", err)
 	}
@@ -522,7 +514,6 @@ func (r *channelRepository) scanChannels(rows *sql.Rows) ([]*models.Channel, err
 			&settingsJSON, &channel.IsActive, &channel.CreatedAt, &channel.UpdatedAt,
 			&channel.MemberCount,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan channel: %w", err)
 		}

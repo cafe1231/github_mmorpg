@@ -1,15 +1,14 @@
 package handlers
 
 import (
+	"chat/internal/models"
+	"chat/internal/service"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"chat/internal/models"
-	"chat/internal/service"
 )
 
 type ChatHandler struct {

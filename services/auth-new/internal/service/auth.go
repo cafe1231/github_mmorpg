@@ -1,6 +1,9 @@
 package service
 
 import (
+	"auth/internal/config"
+	"auth/internal/models"
+	"auth/internal/repository"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -12,10 +15,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-
-	"auth/internal/config"
-	"auth/internal/models"
-	"auth/internal/repository"
 )
 
 // AuthService gère l'authentification des utilisateurs
@@ -26,7 +25,11 @@ type AuthService struct {
 }
 
 // NewAuthService crée un nouveau service d'authentification
-func NewAuthService(userRepo repository.UserRepositoryInterface, sessionRepo repository.SessionRepositoryInterface, config *config.Config) *AuthService {
+func NewAuthService(
+	userRepo repository.UserRepositoryInterface,
+	sessionRepo repository.SessionRepositoryInterface,
+	config *config.Config,
+) *AuthService {
 	return &AuthService{
 		userRepo:    userRepo,
 		sessionRepo: sessionRepo,
@@ -35,7 +38,7 @@ func NewAuthService(userRepo repository.UserRepositoryInterface, sessionRepo rep
 }
 
 // Register inscrit un nouvel utilisateur
-func (s *AuthService) Register(req models.RegisterRequest) (*models.User, error) {
+func (s *AuthService) Register(req *models.RegisterRequest) (*models.User, error) {
 	// Validation des données
 	if err := s.validateRegistration(req); err != nil {
 		return nil, err
@@ -162,14 +165,14 @@ func (s *AuthService) Login(req models.LoginRequest, ipAddress, userAgent string
 	// Réinitialiser les tentatives échouées
 	s.resetFailedAttempts(user)
 
-	// Mettre à jour la dernière connexion
+	// Mettre à jour la dernière connection
 	user.LastLoginAt = &session.CreatedAt
 	user.LastLoginIP = ipAddress
 	if err := s.userRepo.Update(user); err != nil {
 		logrus.WithError(err).Error("Failed to update user last login info")
 	}
 
-	// Log de la connexion réussie
+	// Log de la connection réussie
 	s.logLoginAttempt(&user.ID, req.Username, ipAddress, userAgent, true, "success")
 
 	logrus.WithFields(logrus.Fields{
@@ -366,7 +369,7 @@ func (s *AuthService) GetUser(userID uuid.UUID) (*models.User, error) {
 }
 
 // UpdateUser met à jour un utilisateur (admin uniquement)
-func (s *AuthService) UpdateUser(userID uuid.UUID, req models.UpdateUserRequest) (*models.User, error) {
+func (s *AuthService) UpdateUser(userID uuid.UUID, req *models.UpdateUserRequest) (*models.User, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -485,7 +488,7 @@ func (s *AuthService) GetTwoFactorQR(userID uuid.UUID) (string, error) {
 	return "", fmt.Errorf("two-factor authentication not implemented yet")
 }
 
-// GetLoginAttempts récupère les tentatives de connexion
+// GetLoginAttempts récupère les tentatives de connection
 func (s *AuthService) GetLoginAttempts(limit, offset int, filters map[string]interface{}) ([]*models.LoginAttempt, int64, error) {
 	return []*models.LoginAttempt{}, 0, fmt.Errorf("login attempts audit not implemented yet")
 }
@@ -510,7 +513,7 @@ func (s *AuthService) ForgotPassword(email string) error {
 	return fmt.Errorf("password recovery not implemented yet")
 }
 
-// ResetPassword réinitialise le mot de passe avec un token
+// ResetPassword réinitialize le mot de passe avec un token
 func (s *AuthService) ResetPassword(token, newPassword string) error {
 	return fmt.Errorf("password reset not implemented yet")
 }
@@ -534,7 +537,7 @@ func (s *AuthService) Close() error {
 // Méthodes privées
 
 // validateRegistration valide les données d'inscription
-func (s *AuthService) validateRegistration(req models.RegisterRequest) error {
+func (s *AuthService) validateRegistration(req *models.RegisterRequest) error {
 	// Validation du nom d'utilisateur
 	if len(req.Username) < 3 || len(req.Username) > 30 {
 		return fmt.Errorf("username must be between 3 and 30 characters")
@@ -547,7 +550,7 @@ func (s *AuthService) validateRegistration(req models.RegisterRequest) error {
 	}
 
 	// Validation de l'email
-	emailRegex := regexp.MustCompile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(req.Email) {
 		return fmt.Errorf("invalid email format")
 	}
@@ -599,14 +602,14 @@ func (s *AuthService) validatePassword(password string) error {
 	}
 
 	if s.config.Security.PasswordRequireDigit {
-		hasDigit := regexp.MustCompile("[0-9]").MatchString(password)
+		hasDigit := regexp.MustCompile(`\d`).MatchString(password)
 		if !hasDigit {
 			return fmt.Errorf("password must contain at least one digit")
 		}
 	}
 
 	if s.config.Security.PasswordRequireSpecial {
-		hasSpecial := regexp.MustCompile("[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]").MatchString(password)
+		hasSpecial := regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]`).MatchString(password)
 		if !hasSpecial {
 			return fmt.Errorf("password must contain at least one special character")
 		}
@@ -630,7 +633,7 @@ func (s *AuthService) verifyPassword(password, hash string) error {
 }
 
 // generateTokens génère les tokens JWT (access et refresh)
-func (s *AuthService) generateTokens(user *models.User) (string, string, time.Time, error) {
+func (s *AuthService) generateTokens(user *models.User) (accessTokenStr, refreshTokenStr string, expiresAt time.Time, err error) {
 	now := time.Now()
 	accessExpiry := now.Add(s.config.JWT.AccessTokenExpiration)
 	refreshExpiry := now.Add(s.config.JWT.RefreshTokenExpiration)
@@ -695,7 +698,6 @@ func (s *AuthService) validateToken(tokenString string) (*models.JWTClaims, erro
 		}
 		return []byte(s.config.JWT.Secret), nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -731,7 +733,7 @@ func (s *AuthService) extractDeviceInfo(userAgent string) string {
 	return "Unknown Device"
 }
 
-// incrementFailedAttempts incrémente le compteur d'échecs de connexion
+// incrementFailedAttempts incrémente le compteur d'échecs de connection
 func (s *AuthService) incrementFailedAttempts(user *models.User) {
 	user.LoginAttempts++
 
@@ -764,7 +766,7 @@ func (s *AuthService) resetFailedAttempts(user *models.User) {
 	}
 }
 
-// logLoginAttempt enregistre une tentative de connexion
+// logLoginAttempt enregistre une tentative de connection
 func (s *AuthService) logLoginAttempt(userID *uuid.UUID, username, ipAddress, userAgent string, success bool, reason string) {
 	// En production, utiliser une table d'audit dédiée
 	logrus.WithFields(logrus.Fields{

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"auth/internal/models"
+
 	"github.com/google/uuid"
 )
 

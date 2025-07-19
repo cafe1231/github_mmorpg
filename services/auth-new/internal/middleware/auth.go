@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"auth/internal/models"
 	"errors"
 	"net/http"
 	"strings"
@@ -9,8 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"auth/internal/models"
 )
 
 // JWTAuth middleware d'authentification JWT
@@ -46,7 +45,6 @@ func JWTAuth(jwtSecret string) gin.HandlerFunc {
 			}
 			return []byte(jwtSecret), nil
 		})
-
 		if err != nil {
 			logrus.WithError(err).WithField("request_id", c.GetHeader("X-Request-ID")).Warn("JWT validation failed")
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -357,23 +355,23 @@ func RequireOwnership() gin.HandlerFunc {
 }
 
 // ExtractUserInfo helper pour extraire les informations utilisateur du contexte
-func ExtractUserInfo(c *gin.Context) (uuid.UUID, string, string, error) {
-	userID, exists := c.Get("user_id")
+func ExtractUserInfo(c *gin.Context) (userID uuid.UUID, username, role string, err error) {
+	userIDValue, exists := c.Get("user_id")
 	if !exists {
 		return uuid.Nil, "", "", errors.New("user ID not found in context")
 	}
 
-	username, exists := c.Get("username")
+	usernameValue, exists := c.Get("username")
 	if !exists {
 		return uuid.Nil, "", "", errors.New("username not found in context")
 	}
 
-	role, exists := c.Get("user_role")
+	roleValue, exists := c.Get("user_role")
 	if !exists {
 		return uuid.Nil, "", "", errors.New("user role not found in context")
 	}
 
-	return userID.(uuid.UUID), username.(string), role.(string), nil
+	return userIDValue.(uuid.UUID), usernameValue.(string), roleValue.(string), nil
 }
 
 // IsAuthenticated helper pour vérifier si l'utilisateur est authentifié

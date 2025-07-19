@@ -1,15 +1,21 @@
 package handlers
 
 import (
+	"auth/internal/config"
+	"auth/internal/models"
 	"net/http"
 	"runtime"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+)
 
-	"auth/internal/config"
-	"auth/internal/models"
+// Constantes pour les métriques système
+const (
+	GCHistoryMask = 255         // Masque pour l'historique GC (256-1)
+	GCHistorySize = 256         // Taille de l'historique GC
+	BytesToMB     = 1024 * 1024 // Conversion bytes vers MB
 )
 
 var startTime = time.Now()
@@ -76,7 +82,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		Details: models.SystemHealth{
 			Goroutines:  runtime.NumGoroutine(),
 			GCCycles:    m.NumGC,
-			MemoryUsage: float64(m.Alloc) / 1024 / 1024, // MB
+			MemoryUsage: float64(m.Alloc) / BytesToMB, // MB
 		},
 	}
 
@@ -170,7 +176,7 @@ func (h *HealthHandler) Metrics(c *gin.Context) {
 			"gc_cycles_total":    m.NumGC,
 		},
 		Performance: map[string]interface{}{
-			"gc_pause_ns": m.PauseNs[(m.NumGC+255)%256],
+			"gc_pause_ns": m.PauseNs[(m.NumGC+GCHistoryMask)%GCHistorySize],
 		},
 	}
 
@@ -179,7 +185,7 @@ func (h *HealthHandler) Metrics(c *gin.Context) {
 
 // bToMb converts bytes to megabytes
 func bToMb(b uint64) uint64 {
-	return b / 1024 / 1024
+	return b / BytesToMB
 }
 
 // Stats endpoint pour les statistiques détaillées

@@ -9,6 +9,34 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Configuration constants
+const (
+	DefaultServerPort     = 8087
+	DefaultDBPort         = 5432
+	DefaultTimeout        = 30
+	DefaultMaxOpenConns   = 25
+	DefaultMaxIdleConns   = 10
+	DefaultDBMaxLifetime  = 5
+	DefaultMaxMessageLen  = 500
+	DefaultRetentionDays  = 30
+	DefaultMaxChannels    = 10
+	DefaultAntiSpamMax    = 10
+	DefaultBufferSize     = 1024
+	DefaultHandshakeTO    = 10
+	DefaultPongWait       = 60
+	DefaultPingPeriod     = 54
+	DefaultWriteWait      = 10
+	DefaultMaxMsgSize     = 512
+	DefaultMsgsPerMin     = 60
+	DefaultBurstSize      = 10
+	DefaultCleanupInt     = 5
+	DefaultPrometheusPort = 9087
+	DefaultJWTMinLength   = 32
+	DefaultDBTimeout      = 5
+	DefaultLogContentLen  = 50
+	DefaultShutdownTO     = 30
+)
+
 // Config représente la configuration complète du service Chat
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
@@ -85,7 +113,7 @@ type MonitoringConfig struct {
 }
 
 // GetDatabaseURL construit l'URL de connection PostgreSQL
-func (d DatabaseConfig) GetDatabaseURL() string {
+func (d *DatabaseConfig) GetDatabaseURL() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		d.Host, d.Port, d.User, d.Password, d.Name, d.SSLMode,
@@ -97,52 +125,52 @@ func LoadConfig() (*Config, error) {
 	// Configuration par défaut
 	config := &Config{
 		Server: ServerConfig{
-			Port:         8087,
+			Port:         DefaultServerPort,
 			Host:         "0.0.0.0",
 			Environment:  "development",
 			Debug:        true,
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 30 * time.Second,
+			ReadTimeout:  DefaultTimeout * time.Second,
+			WriteTimeout: DefaultTimeout * time.Second,
 		},
 		Database: DatabaseConfig{
 			Host:         "localhost",
-			Port:         5432,
+			Port:         DefaultDBPort,
 			Name:         "chat_db",
 			User:         "auth_user",
 			Password:     "auth_password",
 			SSLMode:      "disable",
-			MaxOpenConns: 25,
-			MaxIdleConns: 10,
-			MaxLifetime:  5 * time.Minute,
+			MaxOpenConns: DefaultMaxOpenConns,
+			MaxIdleConns: DefaultMaxIdleConns,
+			MaxLifetime:  DefaultDBMaxLifetime * time.Minute,
 		},
 		JWT: JWTConfig{
 			Secret: "your-super-secret-jwt-key-change-in-production-minimum-64-characters",
 		},
 		Chat: ChatConfig{
-			MaxMessageLength:       500,
-			MessageRetentionDays:   30,
-			MaxChannelsPerUser:     10,
+			MaxMessageLength:       DefaultMaxMessageLen,
+			MessageRetentionDays:   DefaultRetentionDays,
+			MaxChannelsPerUser:     DefaultMaxChannels,
 			AntiSpamWindow:         1 * time.Minute,
-			AntiSpamMaxMessages:    10,
+			AntiSpamMaxMessages:    DefaultAntiSpamMax,
 			ModerationEnabled:      true,
 			ProfanityFilterEnabled: true,
 		},
 		WebSocket: WebSocketConfig{
-			ReadBufferSize:   1024,
-			WriteBufferSize:  1024,
-			HandshakeTimeout: 10 * time.Second,
-			PongWait:         60 * time.Second,
-			PingPeriod:       54 * time.Second, // < PongWait
-			WriteWait:        10 * time.Second,
-			MaxMessageSize:   512,
+			ReadBufferSize:   DefaultBufferSize,
+			WriteBufferSize:  DefaultBufferSize,
+			HandshakeTimeout: DefaultHandshakeTO * time.Second,
+			PongWait:         DefaultPongWait * time.Second,
+			PingPeriod:       DefaultPingPeriod * time.Second, // < PongWait
+			WriteWait:        DefaultWriteWait * time.Second,
+			MaxMessageSize:   DefaultMaxMsgSize,
 		},
 		RateLimit: RateLimitConfig{
-			MessagesPerMinute: 60,
-			BurstSize:         10,
-			CleanupInterval:   5 * time.Minute,
+			MessagesPerMinute: DefaultMsgsPerMin,
+			BurstSize:         DefaultBurstSize,
+			CleanupInterval:   DefaultCleanupInt * time.Minute,
 		},
 		Monitoring: MonitoringConfig{
-			PrometheusPort: 9087,
+			PrometheusPort: DefaultPrometheusPort,
 			MetricsPath:    "/metrics",
 			HealthPath:     "/health",
 		},
@@ -229,7 +257,7 @@ func validateConfig(config *Config) error {
 	}
 
 	// Validation JWT
-	if len(config.JWT.Secret) < 32 {
+	if len(config.JWT.Secret) < DefaultJWTMinLength {
 		return fmt.Errorf("JWT secret must be at least 32 characters long")
 	}
 
