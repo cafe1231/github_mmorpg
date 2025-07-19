@@ -64,7 +64,7 @@ func (r *eventRepository) List(ctx context.Context, eventType *string, from, to 
 	var args []interface{}
 	argIndex := 1
 
-	if eventType != nil && *eventType != "" {
+	if eventType != nil {
 		conditions = append(conditions, fmt.Sprintf("type = $%d", argIndex))
 		args = append(args, *eventType)
 		argIndex++
@@ -94,29 +94,22 @@ func (r *eventRepository) List(ctx context.Context, eventType *string, from, to 
 		argIndex++
 	}
 
-	whereClause := ""
+	var whereClause string
 	if len(conditions) > 0 {
 		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	// Compter le total
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM analytics_events %s", whereClause)
+	countQuery := "SELECT COUNT(*) FROM analytics_events " + whereClause
 	var total int
 	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Récupérer les résultats
-	offset := (page - 1) * limit
-	query := fmt.Sprintf(`
-		SELECT id, type, player_id, guild_id, timestamp, payload
-		FROM analytics_events %s
-		ORDER BY timestamp DESC
-		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
-
-	args = append(args, limit, offset)
+	// Récupérer les données
+	query := "SELECT id, type, player_id, guild_id, timestamp, payload FROM analytics_events " + whereClause + " ORDER BY timestamp DESC LIMIT $" + fmt.Sprintf("%d", argIndex) + " OFFSET $" + fmt.Sprintf("%d", argIndex+1)
+	args = append(args, limit, (page-1)*limit)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -127,10 +120,7 @@ func (r *eventRepository) List(ctx context.Context, eventType *string, from, to 
 	var events []*models.Event
 	for rows.Next() {
 		event := &models.Event{}
-		err := rows.Scan(
-			&event.ID, &event.Type, &event.PlayerID, &event.GuildID,
-			&event.Timestamp, &event.Payload,
-		)
+		err := rows.Scan(&event.ID, &event.Type, &event.PlayerID, &event.GuildID, &event.Timestamp, &event.Payload)
 		if err != nil {
 			return nil, 0, err
 		}

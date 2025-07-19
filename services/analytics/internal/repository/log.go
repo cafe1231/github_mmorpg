@@ -65,29 +65,22 @@ func (r *logRepository) List(ctx context.Context, level *string, from, to *time.
 		argIndex++
 	}
 
-	whereClause := ""
+	var whereClause string
 	if len(conditions) > 0 {
 		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	// Compter le total
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM analytics_logs %s", whereClause)
+	countQuery := "SELECT COUNT(*) FROM analytics_logs " + whereClause
 	var total int
 	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Récupérer les résultats
-	offset := (page - 1) * limit
-	query := fmt.Sprintf(`
-		SELECT id, level, message, context, timestamp
-		FROM analytics_logs %s
-		ORDER BY timestamp DESC
-		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
-
-	args = append(args, limit, offset)
+	// Récupérer les données
+	query := "SELECT id, level, message, context, timestamp FROM analytics_logs " + whereClause + " ORDER BY timestamp DESC LIMIT $" + fmt.Sprintf("%d", argIndex) + " OFFSET $" + fmt.Sprintf("%d", argIndex+1)
+	args = append(args, limit, (page-1)*limit)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -98,9 +91,7 @@ func (r *logRepository) List(ctx context.Context, level *string, from, to *time.
 	var logs []*models.LogEntry
 	for rows.Next() {
 		log := &models.LogEntry{}
-		err := rows.Scan(
-			&log.ID, &log.Level, &log.Message, &log.Context, &log.Timestamp,
-		)
+		err := rows.Scan(&log.ID, &log.Level, &log.Message, &log.Context, &log.Timestamp)
 		if err != nil {
 			return nil, 0, err
 		}

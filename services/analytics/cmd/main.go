@@ -144,8 +144,9 @@ func setupRouter(
 // startServer démarre le serveur HTTP
 func startServer(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Config, logger *logrus.Logger) {
 	server := &http.Server{
-		Addr:    fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
-		Handler: router,
+		Addr:              fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
+		Handler:           router,
+		ReadHeaderTimeout: 30 * time.Second,
 	}
 
 	lifecycle.Append(fx.Hook{

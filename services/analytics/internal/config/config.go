@@ -32,34 +32,34 @@ type AuthConfig struct {
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("ANALYTICS_SERVER_PORT", "8088"),
-			Host: getEnv("ANALYTICS_SERVER_HOST", "0.0.0.0"),
+			Port: getEnvString("ANALYTICS_SERVER_PORT", "8088"),
+			Host: getEnvString("ANALYTICS_SERVER_HOST", "0.0.0.0"),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("ANALYTICS_DB_HOST", "localhost"),
-			Port:     getEnv("ANALYTICS_DB_PORT", "5432"),
-			User:     getEnv("ANALYTICS_DB_USER", "auth_user"),
-			Password: getEnv("ANALYTICS_DB_PASSWORD", "auth_password"),
-			DBName:   getEnv("ANALYTICS_DB_NAME", "analytics_db"),
-			SSLMode:  getEnv("ANALYTICS_DB_SSLMODE", "disable"),
+			Host:     getEnvString("ANALYTICS_DB_HOST", "localhost"),
+			Port:     getEnvString("ANALYTICS_DB_PORT", "5432"),
+			User:     getEnvString("ANALYTICS_DB_USER", "auth_user"),
+			Password: getEnvString("ANALYTICS_DB_PASSWORD", "auth_password"),
+			DBName:   getEnvString("ANALYTICS_DB_NAME", "analytics_db"),
+			SSLMode:  getEnvString("ANALYTICS_DB_SSLMODE", "disable"),
 		},
 		Auth: AuthConfig{
-			JWTSecret: getEnv("JWT_SECRET", "your-secret-key"),
+			JWTSecret: getEnvString("JWT_SECRET", "your-secret-key"),
 		},
 	}
 }
 
-func getEnv(key, defaultValue string) string {
+func getEnvString(key string, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue
 }
 
-func getEnvInt(key string, defaultValue int) int {
+func getEnvBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
 		}
 	}
 	return defaultValue
