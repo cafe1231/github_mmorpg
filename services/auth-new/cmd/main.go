@@ -108,7 +108,7 @@ func main() {
 	}()
 
 	// Gestion gracieuse de l'arrêt
-	gracefulShutdown(server, authService)
+	gracefulShutdown(server)
 }
 
 // setupRoutes configure toutes les routes du service Auth
@@ -248,7 +248,7 @@ func initLogger() {
 }
 
 // gracefulShutdown gère l'arrêt propre du serveur
-func gracefulShutdown(server *http.Server, authService *service.AuthService) {
+func gracefulShutdown(server *http.Server) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

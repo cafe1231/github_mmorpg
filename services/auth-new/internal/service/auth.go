@@ -563,10 +563,10 @@ func (s *AuthService) validateRegistration(req models.RegisterRequest) error {
 	}
 
 	// Validation des noms
-	if len(strings.TrimSpace(req.FirstName)) == 0 {
+	if strings.TrimSpace(req.FirstName) == "" {
 		return fmt.Errorf("first name is required")
 	}
-	if len(strings.TrimSpace(req.LastName)) == 0 {
+	if strings.TrimSpace(req.LastName) == "" {
 		return fmt.Errorf("last name is required")
 	}
 
