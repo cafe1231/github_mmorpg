@@ -11,6 +11,13 @@ import (
 	"combat/internal/database"
 )
 
+// Constantes pour les statuts de santé
+const (
+	HealthStatusHealthy   = "healthy"
+	HealthStatusUnhealthy = "unhealthy"
+	HealthStatusDegraded  = "degraded"
+)
+
 // HealthHandler gère les requêtes de santé du service
 type HealthHandler struct {
 	config *config.Config
@@ -79,13 +86,13 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	}
 
 	// Déterminer le statut global
-	overallStatus := "healthy"
+	overallStatus := HealthStatusHealthy
 	for _, check := range response.Checks {
-		if check.Status == "unhealthy" {
-			overallStatus = "unhealthy"
+		if check.Status == HealthStatusUnhealthy {
+			overallStatus = HealthStatusUnhealthy
 			break
-		} else if check.Status == "degraded" && overallStatus == "healthy" {
-			overallStatus = "degraded"
+		} else if check.Status == HealthStatusDegraded && overallStatus == HealthStatusHealthy {
+			overallStatus = HealthStatusDegraded
 		}
 	}
 

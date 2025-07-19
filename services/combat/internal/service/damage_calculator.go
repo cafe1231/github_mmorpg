@@ -1,10 +1,17 @@
 package service
 
 import (
-	"combat/internal/config"
-	"combat/internal/models"
 	"fmt"
 	"math/rand"
+
+	"combat/internal/config"
+	"combat/internal/models"
+)
+
+// Constantes pour les types de dégâts
+const (
+	DamageTypePhysical = "physical"
+	DamageTypeMagical  = "magical"
 )
 
 // DamageCalculatorInterface définit les méthodes du calculateur de dégâts
@@ -96,7 +103,7 @@ func (dc *DamageCalculator) CalculateDamage(attacker, defender *models.CombatPar
 	} else {
 		// Attaque de base - dégâts physiques
 		baseDamage = attacker.PhysicalDamage
-		damageType = "physical"
+		damageType = DamageTypePhysical
 		result.DamageType = "physical"
 	}
 
@@ -114,7 +121,7 @@ func (dc *DamageCalculator) CalculateDamage(attacker, defender *models.CombatPar
 	blockChance := dc.CalculateBlockChance(defender, modifiers)
 	if rand.Float64() < blockChance {
 		result.IsBlocked = true
-		result.FinalDamage = int(float64(baseDamage) * 0.3) // Dégâts réduits de 70%
+		result.FinalDamage = int(float64(baseDamage) * config.DefaultDamageReduction)
 		return result
 	}
 
@@ -123,7 +130,7 @@ func (dc *DamageCalculator) CalculateDamage(attacker, defender *models.CombatPar
 	switch damageType {
 	case "physical":
 		rawDamage = dc.CalculatePhysicalDamage(attacker, defender, baseDamage, modifiers)
-	case "magical":
+	case DamageTypeMagical:
 		rawDamage = dc.CalculateMagicalDamage(attacker, defender, baseDamage, modifiers)
 	case "true":
 		rawDamage = dc.CalculateTrueDamage(baseDamage, modifiers)
@@ -202,7 +209,7 @@ func (dc *DamageCalculator) CalculateHealing(caster, target *models.CombatPartic
 
 	if skill.Type == "magical" {
 		// Les soins magiques sont améliorés par la puissance magique
-		magicalBonus := float64(caster.MagicalDamage) * 0.6
+		magicalBonus := float64(caster.MagicalDamage) * config.DefaultHealingVarianceRange
 		healing += magicalBonus
 	}
 
@@ -238,7 +245,7 @@ func (dc *DamageCalculator) CalculateHealing(caster, target *models.CombatPartic
 // CalculatePhysicalDamage calcule les dégâts physiques
 func (dc *DamageCalculator) CalculatePhysicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int {
 	// Ajouter la puissance d'attaque physique
-	damage := float64(baseDamage) + (float64(attacker.PhysicalDamage) * 0.8)
+	damage := float64(baseDamage) + (float64(attacker.PhysicalDamage) * config.DefaultElementalPowerFire)
 
 	// Appliquer la réduction d'armure
 	armorReduction := dc.ApplyArmorReduction(int(damage), defender.PhysicalDefense, "physical")
@@ -255,7 +262,7 @@ func (dc *DamageCalculator) CalculatePhysicalDamage(attacker, defender *models.C
 // CalculateMagicalDamage calcule les dégâts magiques
 func (dc *DamageCalculator) CalculateMagicalDamage(attacker, defender *models.CombatParticipant, baseDamage int, modifiers map[string]float64) int {
 	// Ajouter la puissance magique
-	damage := float64(baseDamage) + (float64(attacker.MagicalDamage) * 0.8)
+	damage := float64(baseDamage) + (float64(attacker.MagicalDamage) * config.DefaultElementalPowerFire)
 
 	// Appliquer la résistance magique
 	magicReduction := dc.ApplyArmorReduction(int(damage), defender.MagicalDefense, "magical")
@@ -301,8 +308,8 @@ func (dc *DamageCalculator) CalculateCriticalChance(attacker *models.CombatParti
 	if baseCritChance < 0 {
 		baseCritChance = 0
 	}
-	if baseCritChance > 0.95 {
-		baseCritChance = 0.95
+	if baseCritChance > config.DefaultMaxCriticalChance {
+		baseCritChance = config.DefaultMaxCriticalChance
 	}
 
 	return baseCritChance
@@ -321,7 +328,7 @@ func (dc *DamageCalculator) CalculateHitChance(attacker, defender *models.Combat
 	}
 
 	// Facteur d'agilité/précision
-	agilityDiff := float64(attacker.PhysicalDamage-defender.PhysicalDefense) / 200.0
+	agilityDiff := float64(attacker.PhysicalDamage-defender.PhysicalDefense) / float64(config.DefaultRatingRange*config.DefaultMaxParticipantsPvP)
 	hitChance := baseHitChance + agilityDiff
 
 	// Modificateurs d'effets
@@ -330,11 +337,11 @@ func (dc *DamageCalculator) CalculateHitChance(attacker, defender *models.Combat
 	}
 
 	// Limiter entre 5% et 95%
-	if hitChance < 0.05 {
-		hitChance = 0.05
+	if hitChance < config.DefaultMinHitChance {
+		hitChance = config.DefaultMinHitChance
 	}
-	if hitChance > 0.95 {
-		hitChance = 0.95
+	if hitChance > config.DefaultMaxHitChance {
+		hitChance = config.DefaultMaxHitChance
 	}
 
 	return hitChance
@@ -346,7 +353,7 @@ func (dc *DamageCalculator) CalculateBlockChance(defender *models.CombatParticip
 	baseBlockChance := 0.05
 
 	// Bonus basé sur la défense physique
-	defenseBonus := float64(defender.PhysicalDefense) / 1000.0
+	defenseBonus := float64(defender.PhysicalDefense) / float64(config.DefaultVarianceDivisor*config.DefaultVarianceDivisor)
 	blockChance := baseBlockChance + defenseBonus
 
 	// Modificateurs d'effets
@@ -358,8 +365,8 @@ func (dc *DamageCalculator) CalculateBlockChance(defender *models.CombatParticip
 	if blockChance < 0 {
 		blockChance = 0
 	}
-	if blockChance > 0.75 {
-		blockChance = 0.75
+	if blockChance > config.DefaultMaxBlockChance {
+		blockChance = config.DefaultMaxBlockChance
 	}
 
 	return blockChance
@@ -372,7 +379,7 @@ func (dc *DamageCalculator) ApplyArmorReduction(damage int, armor int, damageTyp
 	}
 
 	// Formule de réduction: damage * (100 / (100 + armor))
-	reduction := float64(armor) / (float64(armor) + 100.0)
+	reduction := float64(armor) / (float64(armor) + float64(config.DefaultVarianceDivisor))
 	finalDamage := float64(damage) * (1.0 - reduction)
 
 	// Les dégâts purs ignorent l'armure
@@ -381,7 +388,7 @@ func (dc *DamageCalculator) ApplyArmorReduction(damage int, armor int, damageTyp
 	}
 
 	// S'assurer qu'il reste au moins 10% des dégâts originaux
-	minDamage := float64(damage) * 0.1
+	minDamage := float64(damage) * config.DefaultAverageDamageMultiplier2
 	if finalDamage < minDamage {
 		finalDamage = minDamage
 	}
@@ -429,7 +436,7 @@ func (dc *DamageCalculator) CalculateDamageOverTime(effect *models.CombatEffect,
 	baseDamage := effect.ModifierValue * effect.CurrentStacks
 
 	// Réduction basée sur la résistance magique (la plupart des DoTs sont magiques)
-	finalDamage := dc.ApplyArmorReduction(baseDamage, target.MagicalDefense/2, "magical")
+	finalDamage := dc.ApplyArmorReduction(baseDamage, target.MagicalDefense/config.DefaultArmorDivisor, "magical")
 
 	return finalDamage
 }
@@ -439,15 +446,15 @@ func (dc *DamageCalculator) CalculateStatusEffectChance(caster *models.CombatPar
 	baseChance := effect.Probability
 
 	// Modifier selon la différence de puissance magique
-	powerDiff := float64(caster.MagicalDamage-target.MagicalDefense) / 200.0
+	powerDiff := float64(caster.MagicalDamage-target.MagicalDefense) / float64(config.DefaultRatingRange*config.DefaultMaxParticipantsPvP)
 	finalChance := baseChance + powerDiff
 
 	// Limiter entre 5% et 95%
-	if finalChance < 0.05 {
-		finalChance = 0.05
+	if finalChance < config.DefaultMinFinalChance {
+		finalChance = config.DefaultMinFinalChance
 	}
-	if finalChance > 0.95 {
-		finalChance = 0.95
+	if finalChance > config.DefaultMaxFinalChance {
+		finalChance = config.DefaultMaxFinalChance
 	}
 
 	return finalChance
@@ -459,20 +466,20 @@ func (dc *DamageCalculator) getElementalPower(participant *models.CombatParticip
 	// Pour l'instant, retourner une valeur par défaut
 	// Dans un vrai jeu, cela serait basé sur l'équipement et les stats du personnage
 	elementalPowers := map[string]float64{
-		"fire":      0.8,
-		"ice":       0.7,
-		"lightning": 0.9,
-		"earth":     0.6,
-		"wind":      0.75,
-		"dark":      0.85,
-		"light":     0.8,
+		"fire":      config.DefaultElementalPowerFire,
+		"ice":       config.DefaultElementalPowerIce,
+		"lightning": config.DefaultElementalPowerLightning,
+		"earth":     config.DefaultElementalPowerEarth,
+		"wind":      config.DefaultElementalPowerWind,
+		"dark":      config.DefaultElementalPowerDark,
+		"light":     config.DefaultElementalPowerLight,
 	}
 
 	if power, exists := elementalPowers[element]; exists {
 		return power
 	}
 
-	return 0.5 // Valeur par défaut
+	return config.DefaultFleeChanceBase // Valeur par défaut
 }
 
 // CalculateLifesteal calcule le vol de vie
@@ -509,16 +516,16 @@ func (dc *DamageCalculator) CalculateManaBurn(target *models.CombatParticipant, 
 // CalculateKnockback calcule la force de projection
 func (dc *DamageCalculator) CalculateKnockback(attacker, target *models.CombatParticipant, baseKnockback float64) float64 {
 	// La force de projection dépend de la différence de "poids" ou de résistance
-	massRatio := float64(attacker.PhysicalDamage) / float64(target.PhysicalDefense+50)
+	massRatio := float64(attacker.PhysicalDamage) / float64(target.PhysicalDefense+config.DefaultMassRatioDivisor)
 
 	knockback := baseKnockback * massRatio
 
-	// Limiter la projection
-	if knockback > 10.0 {
-		knockback = 10.0
+	// Limiter le knockback
+	if knockback > config.DefaultMaxKnockback {
+		knockback = config.DefaultMaxKnockback
 	}
-	if knockback < 0.1 {
-		knockback = 0.1
+	if knockback < config.DefaultMinKnockback {
+		knockback = config.DefaultMinKnockback
 	}
 
 	return knockback
@@ -532,11 +539,11 @@ func (dc *DamageCalculator) CalculateComboMultiplier(comboCount int) float64 {
 	}
 
 	// Formule: 1 + (combo * 0.1) / (1 + combo * 0.05)
-	multiplier := 1.0 + (float64(comboCount)*0.1)/(1.0+float64(comboCount)*0.05)
+	multiplier := 1.0 + (float64(comboCount)*config.DefaultAverageDamageMultiplier2)/(1.0+float64(comboCount)*config.DefaultAverageDamageMultiplier2/config.DefaultMaxParticipantsPvP)
 
-	// Limiter le multiplicateur maximum
-	if multiplier > 3.0 {
-		multiplier = 3.0
+	// Limiter le multiplicateur
+	if multiplier > config.DefaultMaxMultiplier {
+		multiplier = config.DefaultMaxMultiplier
 	}
 
 	return multiplier
@@ -545,11 +552,11 @@ func (dc *DamageCalculator) CalculateComboMultiplier(comboCount int) float64 {
 // CalculateExperienceGain calcule l'expérience gagnée
 func (dc *DamageCalculator) CalculateExperienceGain(victorLevel, defeatedLevel int, damageContribution float64) int {
 	// Expérience de base selon le niveau de l'ennemi
-	baseExp := defeatedLevel * 10
+	baseExp := defeatedLevel * config.DefaultBaseExperience
 
 	// Modifier selon la différence de niveau
 	levelDiff := defeatedLevel - victorLevel
-	levelMultiplier := 1.0 + (float64(levelDiff) * 0.1)
+	levelMultiplier := 1.0 + (float64(levelDiff) * config.DefaultAverageDamageMultiplier2)
 
 	// Appliquer la contribution aux dégâts
 	finalExp := float64(baseExp) * levelMultiplier * damageContribution
@@ -575,13 +582,13 @@ func (dc *DamageCalculator) CalculateThreat(action *models.CombatAction, partici
 		// Les compétences offensives génèrent plus de menace
 		threat = action.DamageDealt
 		if action.DamageDealt > 0 {
-			threat = int(float64(action.DamageDealt) * 1.2)
+			threat = int(float64(action.DamageDealt) * config.DefaultThreatMultiplier)
 		}
 
 	case models.ActionTypeItem:
 		// Les objets de soin génèrent de la menace
 		if action.HealingDone > 0 {
-			threat = action.HealingDone / 2
+			threat = action.HealingDone / config.DefaultMaxParticipantsPvP
 		}
 
 	case models.ActionTypeDefend:
@@ -615,7 +622,6 @@ func (dc *DamageCalculator) CalculateAdvancedDamage(
 	modifiers map[string]float64,
 	comboCount int,
 ) *AdvancedDamageResult {
-
 	// Calcul de base
 	baseResult := dc.CalculateDamage(attacker, defender, skill, modifiers)
 

@@ -13,11 +13,18 @@ import (
 	"combat/internal/repository"
 )
 
+// Constantes pour les actions anti-cheat
+const (
+	AntiCheatActionWarn  = "warn"
+	AntiCheatActionBlock = "block"
+)
+
 // ActionServiceInterface définit les méthodes du service d'actions
 type ActionServiceInterface interface {
 	// Exécution d'actions
 	ExecuteAction(combat *models.CombatInstance, actor *models.CombatParticipant, req *models.ActionRequest) (*models.ActionResult, error)
-	ValidateAction(combat *models.CombatInstance, actor *models.CombatParticipant, req *models.ValidateActionRequest) (*models.ValidationResponse, error)
+	ValidateAction(combat *models.CombatInstance, actor *models.CombatParticipant,
+		req *models.ValidateActionRequest) (*models.ValidationResponse, error)
 
 	// Actions disponibles
 	GetAvailableActions(combat *models.CombatInstance, actor *models.CombatParticipant) ([]*models.ActionTemplate, error)
@@ -64,7 +71,9 @@ func NewActionService(
 }
 
 // ExecuteAction exécute une action de combat
-func (s *ActionService) ExecuteAction(combat *models.CombatInstance, actor *models.CombatParticipant, req *models.ActionRequest) (*models.ActionResult, error) {
+func (s *ActionService) ExecuteAction(combat *models.CombatInstance, actor *models.CombatParticipant,
+	req *models.ActionRequest,
+) (*models.ActionResult, error) {
 	startTime := time.Now()
 
 	// Créer l'action
@@ -145,7 +154,9 @@ func (s *ActionService) ExecuteAction(combat *models.CombatInstance, actor *mode
 }
 
 // executeAttack exécute une attaque de base
-func (s *ActionService) executeAttack(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
+func (s *ActionService) executeAttack(action *models.CombatAction, combat *models.CombatInstance,
+	actor *models.CombatParticipant, result *models.ActionResult,
+) error {
 	if action.TargetID == nil {
 		return fmt.Errorf("target required for attack")
 	}
@@ -253,7 +264,7 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 
 	if !hit {
 		action.IsMiss = true
-		action.ManaUsed = skill.ManaCost / 2 // Coût réduit en cas d'échec
+		action.ManaUsed = skill.ManaCost / config.DefaultArmorDivisor // Coût réduit en cas d'échec
 		return nil
 	}
 
@@ -286,7 +297,10 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 
 	// Définir le cooldown
 	if skill.Cooldown > 0 {
-		s.SetActionCooldown(actor.CharacterID, models.ActionTypeSkill, *action.SkillID, time.Duration(skill.Cooldown)*time.Second)
+		if err := s.SetActionCooldown(actor.CharacterID, models.ActionTypeSkill, *action.SkillID,
+			time.Duration(skill.Cooldown)*time.Second); err != nil {
+			logrus.WithError(err).Error("Failed to set action cooldown")
+		}
 	}
 
 	// Mettre à jour la mana de l'acteur
@@ -301,7 +315,9 @@ func (s *ActionService) executeSkill(action *models.CombatAction, combat *models
 }
 
 // executeItem utilize un objet
-func (s *ActionService) executeItem(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
+func (s *ActionService) executeItem(action *models.CombatAction, combat *models.CombatInstance,
+	actor *models.CombatParticipant, result *models.ActionResult,
+) error {
 	if action.ItemID == nil {
 		return fmt.Errorf("item ID required")
 	}
@@ -325,7 +341,9 @@ func (s *ActionService) executeItem(action *models.CombatAction, combat *models.
 }
 
 // executeDefend exécute une action de défense
-func (s *ActionService) executeDefend(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
+func (s *ActionService) executeDefend(action *models.CombatAction, combat *models.CombatInstance,
+	actor *models.CombatParticipant, result *models.ActionResult,
+) error {
 	// Appliquer un effet de défense temporaire
 	defenseEffect := &models.EffectApplication{
 		EffectTemplate: &models.EffectTemplate{
@@ -334,7 +352,7 @@ func (s *ActionService) executeDefend(action *models.CombatAction, combat *model
 			Description:   "Réduit les dégâts reçus de 50%",
 			EffectType:    models.EffectTypeBuff,
 			StatAffected:  "damage_reduction",
-			ModifierValue: 50,
+			ModifierValue: config.DefaultImprovementScore,
 			ModifierType:  models.ModifierTypePercentage,
 			BaseDuration:  1, // Un tour
 			MaxStacks:     1,
@@ -356,15 +374,18 @@ func (s *ActionService) executeDefend(action *models.CombatAction, combat *model
 }
 
 // executeFlee tente de fuir le combat
-func (s *ActionService) executeFlee(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
+func (s *ActionService) executeFlee(action *models.CombatAction, combat *models.CombatInstance,
+	actor *models.CombatParticipant, result *models.ActionResult,
+) error {
 	if !combat.Settings.AllowFlee {
 		return fmt.Errorf("fleeing not allowed in this combat")
 	}
 
 	// Chance de réussite de la fuite (basée sur l'agilité)
-	fleeChance := 0.5 + (float64(actor.PhysicalDamage) / 1000.0) // Formule simple
-	if fleeChance > 0.9 {
-		fleeChance = 0.9
+	fleeChance := config.DefaultFleeChanceBase + (float64(actor.PhysicalDamage) / config.DefaultFleeChanceDivisor) // Formule simple
+	// Limiter la chance de fuite à 90% maximum
+	if fleeChance > config.DefaultMaxFleeChance {
+		fleeChance = config.DefaultMaxFleeChance
 	}
 
 	success := rand.Float64() < fleeChance
@@ -390,9 +411,12 @@ func (s *ActionService) executeFlee(action *models.CombatAction, combat *models.
 }
 
 // executeWait attend et récupère de la mana
-func (s *ActionService) executeWait(action *models.CombatAction, combat *models.CombatInstance, actor *models.CombatParticipant, result *models.ActionResult) error {
+func (s *ActionService) executeWait(action *models.CombatAction, combat *models.CombatInstance,
+	actor *models.CombatParticipant, result *models.ActionResult,
+) error {
 	// Récupérer un pourcentage de mana
-	manaRecovery := int(float64(actor.MaxMana) * 0.1) // 10% de la mana max
+	// Récupération de mana (10% de la mana max)
+	manaRecovery := int(float64(actor.MaxMana) * config.DefaultManaRecoveryPercent)
 	if manaRecovery < 1 {
 		manaRecovery = 1
 	}
@@ -417,8 +441,9 @@ func (s *ActionService) executeWait(action *models.CombatAction, combat *models.
 func (s *ActionService) calculateActionOrder(actor *models.CombatParticipant) int {
 	// Ordre basé sur la vitesse d'attaque (plus élevé = agit en premier)
 	baseOrder := 100
-	speedBonus := int(actor.AttackSpeed * 10)
-	return baseOrder + speedBonus + rand.Intn(10) // Ajout d'un facteur aléatoire
+	// Bonus de vitesse d'attaque
+	speedBonus := int(actor.AttackSpeed * config.DefaultSpeedBonusMultiplier)
+	return baseOrder + speedBonus + rand.Intn(config.DefaultRandomFactor) // Ajout d'un facteur aléatoire
 }
 
 func (s *ActionService) applyDamage(target *models.CombatParticipant, damage int, result *models.ActionResult) {
@@ -605,7 +630,9 @@ func (s *ActionService) applyParticipantChanges(participantID uuid.UUID, change 
 }
 
 // ValidateAction valide une action sans l'exécuter
-func (s *ActionService) ValidateAction(combat *models.CombatInstance, actor *models.CombatParticipant, req *models.ValidateActionRequest) (*models.ValidationResponse, error) {
+func (s *ActionService) ValidateAction(combat *models.CombatInstance, actor *models.CombatParticipant,
+	req *models.ValidateActionRequest,
+) (*models.ValidationResponse, error) {
 	validation := req.Action.Validate()
 
 	response := &models.ValidationResponse{
@@ -664,11 +691,10 @@ func (s *ActionService) ValidateAction(combat *models.CombatInstance, actor *mod
 			}
 		}
 
-		if antiCheatResult.Score > 50 {
-			antiCheatResult.Action = "warn"
-		}
-		if antiCheatResult.Score > 80 {
-			antiCheatResult.Action = "block"
+		if antiCheatResult.Score > config.DefaultMinScore2 {
+			antiCheatResult.Action = AntiCheatActionWarn
+		} else if antiCheatResult.Score > config.DefaultMinScore3 {
+			antiCheatResult.Action = AntiCheatActionBlock
 			response.Valid = false
 		}
 
@@ -679,7 +705,9 @@ func (s *ActionService) ValidateAction(combat *models.CombatInstance, actor *mod
 }
 
 // GetAvailableActions récupère les actions disponibles pour un participant
-func (s *ActionService) GetAvailableActions(combat *models.CombatInstance, actor *models.CombatParticipant) ([]*models.ActionTemplate, error) {
+func (s *ActionService) GetAvailableActions(combat *models.CombatInstance,
+	actor *models.CombatParticipant,
+) ([]*models.ActionTemplate, error) {
 	templates := models.GetActionTemplates()
 	available := []*models.ActionTemplate{}
 
@@ -707,6 +735,7 @@ func (s *ActionService) GetAvailableActions(combat *models.CombatInstance, actor
 		if template.Type == models.ActionTypeSkill {
 			// Pour les compétences, on vérifierait le cooldown ici
 			// Pour l'instant, on assume qu'elles sont disponibles
+			logrus.Debug("Skill cooldown check not fully implemented")
 		}
 
 		template.Available = isAvailable
@@ -759,7 +788,9 @@ func (s *ActionService) ProcessAction(action *models.CombatAction, combat *model
 }
 
 // CalculateActionResult calcule le résultat d'une action
-func (s *ActionService) CalculateActionResult(action *models.CombatAction, actor, target *models.CombatParticipant, skill *models.SkillInfo) error {
+func (s *ActionService) CalculateActionResult(action *models.CombatAction, actor, target *models.CombatParticipant,
+	skill *models.SkillInfo,
+) error {
 	if action.ActionType == models.ActionTypeAttack || (action.ActionType == models.ActionTypeSkill && skill != nil && skill.BaseDamage > 0) {
 		// Calculer les dégâts
 		damage := action.CalculateDamage(actor, target, skill)

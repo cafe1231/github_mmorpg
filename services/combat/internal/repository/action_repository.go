@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"combat/internal/config"
 	"combat/internal/database"
 	"combat/internal/models"
 )
@@ -419,10 +420,10 @@ func (r *ActionRepository) GetActionStatistics(actorID uuid.UUID, timeWindow tim
 
 	// Calculer les taux
 	if stats.TotalActions > 0 {
-		stats.CriticalRate = float64(stats.CriticalHits) / float64(stats.TotalActions) * 100
-		stats.MissRate = float64(stats.Misses) / float64(stats.TotalActions) * 100
-		stats.BlockRate = float64(stats.Blocks) / float64(stats.TotalActions) * 100
-		stats.AccuracyRate = 100 - stats.MissRate
+		stats.CriticalRate = float64(stats.CriticalHits) / float64(stats.TotalActions) * config.DefaultPercentageMultiplier
+		stats.MissRate = float64(stats.Misses) / float64(stats.TotalActions) * config.DefaultPercentageMultiplier
+		stats.BlockRate = float64(stats.Blocks) / float64(stats.TotalActions) * config.DefaultPercentageMultiplier
+		stats.AccuracyRate = config.DefaultPercentageMultiplier - stats.MissRate
 	}
 
 	return &stats, nil

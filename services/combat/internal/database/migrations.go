@@ -1,7 +1,5 @@
 package database
 
-import ()
-
 // Migration 1: Table des instances de combat
 const createCombatInstancesTable = `
 CREATE TABLE IF NOT EXISTS combat_instances (

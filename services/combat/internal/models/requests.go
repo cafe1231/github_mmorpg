@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"combat/internal/config"
+
 	"github.com/google/uuid"
 )
 
@@ -190,15 +192,15 @@ func (r *CreateCombatRequest) Validate() error {
 	if r.TurnTimeLimit > 0 && r.TurnTimeLimit < 5 {
 		return fmt.Errorf("limite de temps de tour trop courte (minimum 5 secondes)")
 	}
-	if r.TurnTimeLimit > 300 {
-		return fmt.Errorf("limite de temps de tour trop longue (maximum 300 secondes)")
+	if r.TurnTimeLimit > config.DefaultTurnTimeLimit {
+		return fmt.Errorf("limite de temps de tour trop longue (maximum %d secondes)", config.DefaultTurnTimeLimit)
 	}
 
 	if r.MaxDuration > 0 && r.MaxDuration < 60 {
 		return fmt.Errorf("durée maximale trop courte (minimum 60 secondes)")
 	}
-	if r.MaxDuration > 3600 {
-		return fmt.Errorf("durée maximale trop longue (maximum 3600 secondes)")
+	if r.MaxDuration > config.DefaultMaxDuration {
+		return fmt.Errorf("durée maximale trop longue (maximum %d secondes)", config.DefaultMaxDuration)
 	}
 
 	return nil
@@ -210,11 +212,11 @@ func (r *SearchCombatsRequest) Validate() error {
 	if r.Limit < 0 {
 		return fmt.Errorf("la limite ne peut pas être négative")
 	}
-	if r.Limit > 100 {
-		return fmt.Errorf("la limite ne peut pas dépasser 100")
+	if r.Limit > config.DefaultMaxLimit {
+		return fmt.Errorf("la limite ne peut pas dépasser %d", config.DefaultMaxLimit)
 	}
 	if r.Limit == 0 {
-		r.Limit = 20 // Valeur par défaut
+		r.Limit = config.DefaultMaxLimit3 // Valeur par défaut
 	}
 
 	// Validation de l'offset
@@ -243,8 +245,8 @@ func (r *GetCombatHistoryRequest) Validate() error {
 	if r.Limit < 0 {
 		return fmt.Errorf("la limite ne peut pas être négative")
 	}
-	if r.Limit > 200 {
-		return fmt.Errorf("la limite ne peut pas dépasser 200")
+	if r.Limit > config.DefaultMaxLimit2 {
+		return fmt.Errorf("la limite ne peut pas dépasser %d", config.DefaultMaxLimit2)
 	}
 	if r.Limit == 0 {
 		r.Limit = 50 // Valeur par défaut
@@ -309,8 +311,8 @@ func (r *ApplyEffectRequest) Validate() error {
 		if *r.Duration < 0 {
 			return fmt.Errorf("la durée ne peut pas être négative")
 		}
-		if *r.Duration > 100 {
-			return fmt.Errorf("la durée ne peut pas dépasser 100 tours")
+		if *r.Duration > config.DefaultMaxDuration2 {
+			return fmt.Errorf("la durée ne peut pas dépasser %d tours", config.DefaultMaxDuration2)
 		}
 	}
 
@@ -319,8 +321,8 @@ func (r *ApplyEffectRequest) Validate() error {
 		if *r.Stacks < 1 {
 			return fmt.Errorf("le nombre de stacks doit être au moins 1")
 		}
-		if *r.Stacks > 10 {
-			return fmt.Errorf("le nombre de stacks ne peut pas dépasser 10")
+		if *r.Stacks > config.DefaultMaxStacks6 {
+			return fmt.Errorf("le nombre de stacks ne peut pas dépasser %d", config.DefaultMaxStacks6)
 		}
 	}
 
@@ -333,8 +335,8 @@ func (r *BulkActionRequest) Validate() error {
 	if len(r.Actions) == 0 {
 		return fmt.Errorf("au moins une action requise")
 	}
-	if len(r.Actions) > 10 {
-		return fmt.Errorf("impossible d'exécuter plus de 10 actions à la fois")
+	if len(r.Actions) > config.DefaultMaxStacks6 {
+		return fmt.Errorf("impossible d'exécuter plus de %d actions à la fois", config.DefaultMaxStacks6)
 	}
 
 	// Validation de chaque action
@@ -353,8 +355,8 @@ func (r *ReplayRequest) Validate() error {
 	if r.Speed <= 0 {
 		r.Speed = 1.0 // Valeur par défaut
 	}
-	if r.Speed > 10.0 {
-		return fmt.Errorf("la vitesse ne peut pas dépasser 10x")
+	if r.Speed > config.DefaultMaxSpeed {
+		return fmt.Errorf("la vitesse ne peut pas dépasser %dx", int(config.DefaultMaxSpeed))
 	}
 
 	// Validation des tours
@@ -423,9 +425,9 @@ func GetDefaultCreateCombatRequest() *CreateCombatRequest {
 
 	return &CreateCombatRequest{
 		CombatType:      CombatTypePvE,
-		MaxParticipants: 4,
-		TurnTimeLimit:   30,
-		MaxDuration:     300,
+		MaxParticipants: config.DefaultMaxParticipants,
+		TurnTimeLimit:   config.DefaultTurnTimeLimit2,
+		MaxDuration:     config.DefaultMaxDuration3,
 		Settings:        &defaultSettings, // Maintenant on peut prendre l'adresse
 		Participants:    []ParticipantRequest{},
 	}
@@ -434,7 +436,7 @@ func GetDefaultCreateCombatRequest() *CreateCombatRequest {
 // GetDefaultSearchRequest retourne une demande de recherche par défaut
 func GetDefaultSearchRequest() *SearchCombatsRequest {
 	return &SearchCombatsRequest{
-		Limit:           20,
+		Limit:           config.DefaultMaxLimit3,
 		Offset:          0,
 		IncludeFinished: false,
 	}

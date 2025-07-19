@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	"combat/internal/config"
+
 	"github.com/google/uuid"
 )
 
@@ -252,7 +254,7 @@ func (p *CombatParticipant) GetHealthPercentage() float64 {
 	if p.MaxHealth == 0 {
 		return 0
 	}
-	return float64(p.Health) / float64(p.MaxHealth) * 100
+	return float64(p.Health) / float64(p.MaxHealth) * config.DefaultHealthPercentage
 }
 
 // GetManaPercentage retourne le pourcentage de mana d'un participant
@@ -260,7 +262,7 @@ func (p *CombatParticipant) GetManaPercentage() float64 {
 	if p.MaxMana == 0 {
 		return 0
 	}
-	return float64(p.Mana) / float64(p.MaxMana) * 100
+	return float64(p.Mana) / float64(p.MaxMana) * config.DefaultManaPercentage
 }
 
 // GetDefaultCombatSettings retourne les paramètres par défaut d'un combat

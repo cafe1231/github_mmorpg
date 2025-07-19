@@ -4,7 +4,15 @@ import (
 	"fmt"
 	"time"
 
+	"combat/internal/config"
+
 	"github.com/google/uuid"
+)
+
+// Constantes pour les types de dégâts
+const (
+	DamageTypePhysical = "physical"
+	DamageTypeMagical  = "magical"
 )
 
 // ActionType définit les types d'actions possibles
@@ -258,12 +266,12 @@ func GetActionTemplates() []*ActionTemplate {
 			ManaCost:        0,
 			Available:       true,
 			Damage: &DamageInfo{
-				BaseDamage:         10,
+				BaseDamage:         config.DefaultBaseDamage,
 				DamageType:         "physical",
 				ScaleWithStat:      "physical_damage",
 				ScaleMultiplier:    1.0,
-				CriticalChance:     0.05,
-				CriticalMultiplier: 1.5,
+				CriticalChance:     config.DefaultCriticalChance,
+				CriticalMultiplier: config.DefaultCriticalMultiplier,
 			},
 		},
 		{
@@ -312,20 +320,20 @@ func GetSkillTemplates() map[string]*SkillInfo {
 			ID:           "fireball",
 			Name:         "Boule de feu",
 			Description:  "Lance une boule de feu qui inflige des dégâts magiques",
-			Type:         "magical",
-			ManaCost:     25,
-			Cooldown:     2,
-			Range:        3,
+			Type:         DamageTypeMagical,
+			ManaCost:     config.DefaultManaCostBasic,
+			Cooldown:     config.DefaultCooldownBasic,
+			Range:        config.DefaultRangeBasic,
 			AreaOfEffect: false,
 			TargetType:   "enemy",
-			BaseDamage:   35,
+			BaseDamage:   config.DefaultBaseDamageSkill,
 			BaseHealing:  0,
 			Effects: []SkillEffect{
 				{
 					Type:        "damage_over_time",
-					Value:       5,
-					Duration:    3,
-					Probability: 0.3,
+					Value:       config.DefaultEffectValue,
+					Duration:    config.DefaultEffectDuration,
+					Probability: config.DefaultEffectProbability,
 					Target:      "target",
 				},
 			},
@@ -337,14 +345,14 @@ func GetSkillTemplates() map[string]*SkillInfo {
 			ID:           "heal",
 			Name:         "Soin",
 			Description:  "Restaure les points de vie d'un allié",
-			Type:         "magical",
-			ManaCost:     20,
+			Type:         DamageTypeMagical,
+			ManaCost:     config.DefaultManaCostHeal,
 			Cooldown:     1,
-			Range:        2,
+			Range:        config.DefaultRangeHeal,
 			AreaOfEffect: false,
 			TargetType:   "ally",
 			BaseDamage:   0,
-			BaseHealing:  30,
+			BaseHealing:  config.DefaultBaseHealing,
 			Icon:         "heart",
 			Animation:    "heal_cast",
 			SoundEffect:  "heal_chime",
@@ -353,20 +361,20 @@ func GetSkillTemplates() map[string]*SkillInfo {
 			ID:           "lightning_bolt",
 			Name:         "Éclair",
 			Description:  "Frappe l'ennemi avec un éclair rapide",
-			Type:         "magical",
-			ManaCost:     30,
-			Cooldown:     3,
-			Range:        4,
+			Type:         DamageTypeMagical,
+			ManaCost:     config.DefaultManaCostAdvanced,
+			Cooldown:     config.DefaultCooldownAdvanced,
+			Range:        config.DefaultRangeAdvanced,
 			AreaOfEffect: false,
 			TargetType:   "enemy",
-			BaseDamage:   40,
+			BaseDamage:   config.DefaultBaseDamageAdvanced,
 			BaseHealing:  0,
 			Effects: []SkillEffect{
 				{
 					Type:        "stun",
 					Value:       1,
 					Duration:    1,
-					Probability: 0.2,
+					Probability: config.DefaultEffectProbability2,
 					Target:      "target",
 				},
 			},
@@ -379,48 +387,43 @@ func GetSkillTemplates() map[string]*SkillInfo {
 			Name:         "Coup de bouclier",
 			Description:  "Frappe avec le bouclier et étourdit l'ennemi",
 			Type:         "physical",
-			ManaCost:     15,
-			Cooldown:     2,
+			ManaCost:     config.DefaultManaCostSpecial,
+			Cooldown:     config.DefaultCooldownSpecial,
 			Range:        1,
 			AreaOfEffect: false,
 			TargetType:   "enemy",
-			BaseDamage:   20,
+			BaseDamage:   config.DefaultBaseDamageSpecial,
 			BaseHealing:  0,
 			Effects: []SkillEffect{
 				{
 					Type:        "stun",
 					Value:       1,
 					Duration:    1,
-					Probability: 0.5,
+					Probability: config.DefaultEffectProbability3,
 					Target:      "target",
 				},
 			},
-			Requirements: map[string]int{
-				"shield_equipped": 1,
+			Modifiers: map[string]float64{
+				"critical_chance_bonus": config.DefaultCriticalChanceBonus,
+				"critical_multiplier":   config.DefaultCriticalMultiplier2,
 			},
-			Icon:        "shield",
-			Animation:   "shield_bash",
-			SoundEffect: "metal_clang",
 		},
 		"backstab": {
 			ID:           "backstab",
-			Name:         "Attaque sournoise",
-			Description:  "Attaque critique garantie si l'ennemi ne vous a pas ciblé",
+			Name:         "Coup dans le dos",
+			Description:  "Attaque sournoise avec bonus de dégâts",
 			Type:         "physical",
-			ManaCost:     20,
-			Cooldown:     4,
+			ManaCost:     config.DefaultManaCostUltimate,
+			Cooldown:     config.DefaultCooldownUltimate,
 			Range:        1,
 			AreaOfEffect: false,
 			TargetType:   "enemy",
-			BaseDamage:   25,
+			BaseDamage:   config.DefaultBaseDamageUltimate,
 			BaseHealing:  0,
 			Modifiers: map[string]float64{
-				"critical_chance_bonus": 0.5,
-				"critical_multiplier":   2.0,
+				"critical_chance_bonus": config.DefaultCriticalChanceBonus,
+				"critical_multiplier":   config.DefaultCriticalMultiplier2,
 			},
-			Icon:        "dagger",
-			Animation:   "backstab",
-			SoundEffect: "blade_slice",
 		},
 	}
 }
@@ -496,25 +499,25 @@ func (ca *CombatAction) CalculateDamage(actor, target *CombatParticipant, skill 
 	// Application des modificateurs d'acteur
 	damage := float64(baseDamage)
 
-	if damageType == "magical" {
-		damage += float64(actor.MagicalDamage) * 0.8
+	if damageType == DamageTypeMagical {
+		damage += float64(actor.MagicalDamage) * config.DefaultMagicalDamageMultiplier
 	} else {
-		damage += float64(actor.PhysicalDamage) * 0.8
+		damage += float64(actor.PhysicalDamage) * config.DefaultPhysicalDamageMultiplier
 	}
 
 	// Facteur de défense
 	defense := float64(target.PhysicalDefense)
-	if damageType == "magical" {
+	if damageType == DamageTypeMagical {
 		defense = float64(target.MagicalDefense)
 	}
 
 	// Formule de réduction des dégâts
-	damageReduction := defense / (defense + 100)
-	damage = damage * (1 - damageReduction)
+	damageReduction := defense / (defense + config.DefaultDefenseDivisor)
+	damage *= (1 - damageReduction)
 
 	// Critique
 	if ca.IsCritical {
-		damage *= 1.5
+		damage *= config.DefaultCriticalMultiplier
 		if skill != nil {
 			// Vérifier si la compétence a un multiplicateur de critique spécial
 			if critMultiplier, exists := skill.Modifiers["critical_multiplier"]; exists {
@@ -524,7 +527,9 @@ func (ca *CombatAction) CalculateDamage(actor, target *CombatParticipant, skill 
 	}
 
 	// Variabilité (±15%)
-	variance := 0.85 + (0.3 * (float64(time.Now().UnixNano()%100) / 100))
+	variance := config.DefaultVarianceBase +
+		(config.DefaultVarianceRange *
+			(float64(time.Now().UnixNano()%config.DefaultVarianceDivisor) / config.DefaultVarianceDivisor))
 	damage *= variance
 
 	// S'assurer que les dégâts ne sont jamais négatifs
@@ -551,8 +556,8 @@ func (ca *CombatAction) CalculateHealing(actor *CombatParticipant, skill *SkillI
 	healing := float64(baseHealing)
 
 	// Modificateur d'intelligence pour les soins magiques
-	if skill != nil && skill.Type == "magical" {
-		healing += float64(actor.MagicalDamage) * 0.6
+	if skill != nil && skill.Type == DamageTypeMagical {
+		healing += float64(actor.MagicalDamage) * config.DefaultHealingMultiplier
 	}
 
 	// Critique
@@ -561,7 +566,9 @@ func (ca *CombatAction) CalculateHealing(actor *CombatParticipant, skill *SkillI
 	}
 
 	// Variabilité (±10%)
-	variance := 0.9 + (0.2 * (float64(time.Now().UnixNano()%100) / 100))
+	variance := config.DefaultHealingVarianceBase +
+		(config.DefaultHealingVarianceRange *
+			(float64(time.Now().UnixNano()%config.DefaultVarianceDivisor) / config.DefaultVarianceDivisor))
 	healing *= variance
 
 	return int(healing)
@@ -579,8 +586,8 @@ func CalculateCriticalChance(actor *CombatParticipant, skill *SkillInfo) float64
 	}
 
 	// Limiter à 95% maximum
-	if baseCritChance > 0.95 {
-		baseCritChance = 0.95
+	if baseCritChance > config.DefaultMaxCriticalChance {
+		baseCritChance = config.DefaultMaxCriticalChance
 	}
 
 	return baseCritChance
@@ -592,15 +599,15 @@ func CalculateHitChance(actor, target *CombatParticipant, skill *SkillInfo) floa
 	baseHitChance := 0.85
 
 	// Facteur d'agilité
-	agilityDiff := float64(actor.PhysicalDamage-target.PhysicalDefense) / 100.0
-	hitChance := baseHitChance + (agilityDiff * 0.1)
+	agilityDiff := float64(actor.PhysicalDamage-target.PhysicalDefense) / config.DefaultAgilityDivisor
+	hitChance := baseHitChance + (agilityDiff * config.DefaultAgilityMultiplier)
 
 	// Limiter entre 5% et 95%
-	if hitChance < 0.05 {
-		hitChance = 0.05
+	if hitChance < config.DefaultMinHitChance {
+		hitChance = config.DefaultMinHitChance
 	}
-	if hitChance > 0.95 {
-		hitChance = 0.95
+	if hitChance > config.DefaultMaxHitChance {
+		hitChance = config.DefaultMaxHitChance
 	}
 
 	return hitChance
@@ -664,11 +671,11 @@ func (ca *CombatAction) GetEffectiveness() float64 {
 	effectiveness := 50.0 // Base
 
 	if ca.DamageDealt > 0 {
-		effectiveness += float64(ca.DamageDealt) / 10.0
+		effectiveness += float64(ca.DamageDealt) / config.DefaultEffectivenessDivisor
 	}
 
 	if ca.HealingDone > 0 {
-		effectiveness += float64(ca.HealingDone) / 8.0
+		effectiveness += float64(ca.HealingDone) / config.DefaultHealingDivisor
 	}
 
 	if ca.IsCritical {
@@ -683,8 +690,9 @@ func (ca *CombatAction) GetEffectiveness() float64 {
 	if effectiveness < 0 {
 		effectiveness = 0
 	}
-	if effectiveness > 100 {
-		effectiveness = 100
+	// S'assurer que l'efficacité ne dépasse pas 100%
+	if effectiveness > config.DefaultMaxEffectiveness {
+		effectiveness = config.DefaultMaxEffectiveness
 	}
 
 	return effectiveness

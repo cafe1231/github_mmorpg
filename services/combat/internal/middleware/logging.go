@@ -10,6 +10,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Constantes pour les méthodes HTTP
+const (
+	HTTPMethodPOST   = "POST"
+	HTTPMethodPUT    = "PUT"
+	HTTPMethodDELETE = "DELETE"
+	HTTPMethodPATCH  = "PATCH"
+)
+
 // LoggingConfig configuration pour le middleware de logging
 type LoggingConfig struct {
 	SkipPaths      []string `json:"skip_paths"`
@@ -279,7 +287,7 @@ func AuditLogging(auditPaths []string) gin.HandlerFunc {
 		}
 
 		// Ou auditer toutes les opérations de modification
-		if method == "POST" || method == "PUT" || method == "DELETE" || method == "PATCH" {
+		if method == HTTPMethodPOST || method == HTTPMethodPUT || method == HTTPMethodDELETE || method == HTTPMethodPATCH {
 			needsAudit = true
 		}
 
@@ -313,7 +321,7 @@ func AuditLogging(auditPaths []string) gin.HandlerFunc {
 // Fonctions utilitaires pour la détection de sécurité
 
 func shouldLogBody(method string) bool {
-	return method == "POST" || method == "PUT" || method == "PATCH"
+	return method == HTTPMethodPOST || method == HTTPMethodPUT || method == HTTPMethodPATCH
 }
 
 func containsSQLInjection(input string) bool {

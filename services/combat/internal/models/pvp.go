@@ -1,10 +1,13 @@
 package models
 
 import (
-	"fmt" // <- AJOUTER CETTE LIGNE
-	"github.com/google/uuid"
-	"math" // <- AJOUTER CETTE LIGNE
+	"fmt"
+	"math"
 	"time"
+
+	"combat/internal/config"
+
+	"github.com/google/uuid"
 )
 
 // ChallengeType définit les types de défis PvP
@@ -339,10 +342,10 @@ func (c *PvPChallenge) GetDuration() time.Duration {
 // CalculateRatingChange calcule le changement de classement après un match
 func CalculateRatingChange(winnerRating, loserRating int, isWinner bool) int {
 	// Constante K pour l'algorithme Elo
-	k := 32.0
+	k := config.DefaultEloK
 
 	// Calcul de la probabilité de victoire attendue
-	expectedScore := 1.0 / (1.0 + math.Pow(10, float64(loserRating-winnerRating)/400.0))
+	expectedScore := 1.0 / (1.0 + math.Pow(config.DefaultEloBase, float64(loserRating-winnerRating)/config.DefaultEloDivisor))
 
 	if !isWinner {
 		expectedScore = 1.0 - expectedScore
@@ -363,17 +366,17 @@ func CalculateRatingChange(winnerRating, loserRating int, isWinner bool) int {
 // GetRankFromRating retourne le nom du rang basé sur le rating
 func GetRankFromRating(rating int) string {
 	switch {
-	case rating >= 2400:
+	case rating >= config.DefaultGrandMasterRating:
 		return "Grand Master"
-	case rating >= 2100:
+	case rating >= config.DefaultMasterRating:
 		return "Master"
-	case rating >= 1800:
+	case rating >= config.DefaultDiamondRating:
 		return "Diamond"
-	case rating >= 1500:
+	case rating >= config.DefaultPlatinumRating:
 		return "Platinum"
-	case rating >= 1200:
+	case rating >= config.DefaultGoldRating:
 		return "Gold"
-	case rating >= 900:
+	case rating >= config.DefaultPvPRating:
 		return "Silver"
 	default:
 		return "Bronze"
@@ -387,16 +390,16 @@ func (s *PvPStakes) Validate() error {
 		return fmt.Errorf("l'or misé ne peut pas être négatif")
 	}
 
-	if s.Gold > 10000 {
-		return fmt.Errorf("l'or misé ne peut pas dépasser 10000")
+	if s.Gold > config.DefaultMaxGold {
+		return fmt.Errorf("l'or misé ne peut pas dépasser %d", config.DefaultMaxGold)
 	}
 
 	if s.Experience < 0 {
 		return fmt.Errorf("l'expérience misée ne peut pas être négative")
 	}
 
-	if len(s.Items) > 10 {
-		return fmt.Errorf("impossible de miser plus de 10 objets")
+	if len(s.Items) > config.DefaultMaxItems {
+		return fmt.Errorf("impossible de miser plus de %d objets", config.DefaultMaxItems)
 	}
 
 	// Validation des objets
@@ -440,11 +443,11 @@ func (s *PvPStakes) GetTotalValue() int {
 
 // CreateDefaultStakes crée des enjeux par défaut basés sur le niveau des joueurs
 func CreateDefaultStakes(challengerLevel, challengedLevel int) *PvPStakes {
-	avgLevel := (challengerLevel + challengedLevel) / 2
+	avgLevel := (challengerLevel + challengedLevel) / config.DefaultLevelDivisor
 
 	return &PvPStakes{
-		Gold:       avgLevel * 10,
-		Experience: avgLevel * 5,
+		Gold:       avgLevel * config.DefaultGoldMultiplier,
+		Experience: avgLevel * config.DefaultExperienceMultiplier,
 		Reputation: 1,
 	}
 }
@@ -452,15 +455,15 @@ func CreateDefaultStakes(challengerLevel, challengedLevel int) *PvPStakes {
 // GetMatchmakingRange retourne la plage de classement pour le matchmaking
 func GetMatchmakingRange(rating int, waitTime time.Duration) *RatingRange {
 	// Base range de ±100 points
-	baseRange := 100
+	baseRange := config.DefaultRatingRange
 
 	// Élargir la plage en fonction du temps d'attente
 	waitMinutes := int(waitTime.Minutes())
-	expandedRange := baseRange + (waitMinutes * 10)
+	expandedRange := baseRange + (waitMinutes * config.DefaultRangeMultiplier)
 
 	// Limiter l'expansion maximale
-	if expandedRange > 500 {
-		expandedRange = 500
+	if expandedRange > config.DefaultExpandedRange {
+		expandedRange = config.DefaultExpandedRange
 	}
 
 	return &RatingRange{
@@ -502,8 +505,8 @@ type PvPSeasonInfo struct {
 func GetSeasonRewards() map[string]*PvPReward {
 	return map[string]*PvPReward{
 		"Grandmaster": {
-			Gold:       10000,
-			Experience: 5000,
+			Gold:       config.DefaultMaxGoldReward,
+			Experience: config.DefaultMaxExperienceReward,
 			Items: []RewardItem{
 				{ItemID: "legendary_pvp_mount", Quantity: 1, Quality: "legendary"},
 				{ItemID: "grandmaster_title", Quantity: 1, Quality: "epic"},
@@ -511,8 +514,8 @@ func GetSeasonRewards() map[string]*PvPReward {
 			Titles: []string{"Grandmaster"},
 		},
 		"Master": {
-			Gold:       7500,
-			Experience: 3500,
+			Gold:       config.DefaultGoldReward2,
+			Experience: config.DefaultExperienceReward2,
 			Items: []RewardItem{
 				{ItemID: "epic_pvp_weapon", Quantity: 1, Quality: "epic"},
 				{ItemID: "master_title", Quantity: 1, Quality: "rare"},
@@ -520,8 +523,8 @@ func GetSeasonRewards() map[string]*PvPReward {
 			Titles: []string{"Master"},
 		},
 		"Diamond": {
-			Gold:       5000,
-			Experience: 2500,
+			Gold:       config.DefaultGoldReward3,
+			Experience: config.DefaultExperienceReward3,
 			Items: []RewardItem{
 				{ItemID: "rare_pvp_armor", Quantity: 1, Quality: "rare"},
 			},

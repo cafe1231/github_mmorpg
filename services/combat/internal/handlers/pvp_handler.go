@@ -13,6 +13,11 @@ import (
 	"combat/internal/service"
 )
 
+// Constantes pour les erreurs
+const (
+	ErrorChallengeNotFound = "challenge not found"
+)
+
 // PvPHandler gère les requêtes HTTP pour le PvP
 type PvPHandler struct {
 	pvpService service.PvPServiceInterface
@@ -134,7 +139,7 @@ func (h *PvPHandler) GetChallenge(c *gin.Context) {
 
 	challenge, err := h.pvpService.GetChallenge(challengeID)
 	if err != nil {
-		if err.Error() == "challenge not found" {
+		if err.Error() == ErrorChallengeNotFound {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error":      "Challenge not found",
 				"request_id": c.GetHeader("X-Request-ID"),
@@ -199,7 +204,7 @@ func (h *PvPHandler) RespondToChallenge(c *gin.Context) {
 
 	response, err := h.pvpService.RespondToChallenge(challengeID, &req)
 	if err != nil {
-		if err.Error() == "challenge not found" {
+		if err.Error() == ErrorChallengeNotFound {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error":      "Challenge not found",
 				"request_id": c.GetHeader("X-Request-ID"),
@@ -249,7 +254,7 @@ func (h *PvPHandler) CancelChallenge(c *gin.Context) {
 	}
 
 	if err := h.pvpService.CancelChallenge(challengeID, playerID); err != nil {
-		if err.Error() == "challenge not found" {
+		if err.Error() == ErrorChallengeNotFound {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error":      "Challenge not found",
 				"request_id": c.GetHeader("X-Request-ID"),
@@ -285,7 +290,7 @@ func (h *PvPHandler) CancelChallenge(c *gin.Context) {
 func (h *PvPHandler) GetRankings(c *gin.Context) {
 	req := models.GetRankingsRequest{
 		Season: c.DefaultQuery("season", "current"),
-		Limit:  50,
+		Limit:  config.DefaultImprovementScore,
 		Offset: 0,
 	}
 

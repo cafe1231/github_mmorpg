@@ -13,6 +13,11 @@ import (
 	"combat/internal/service"
 )
 
+// Constantes pour les valeurs de requête
+const (
+	QueryValueTrue = "true"
+)
+
 // CombatHandler gère les requêtes HTTP liées au combat
 type CombatHandler struct {
 	combatService service.CombatServiceInterface
@@ -97,10 +102,10 @@ func (h *CombatHandler) GetCombatStatus(c *gin.Context) {
 
 	// Parser les paramètres de requête
 	req := &models.GetCombatStatusRequest{
-		IncludeParticipants: c.Query("include_participants") == "true",
-		IncludeActions:      c.Query("include_actions") == "true",
-		IncludeEffects:      c.Query("include_effects") == "true",
-		IncludeLogs:         c.Query("include_logs") == "true",
+		IncludeParticipants: c.Query("include_participants") == QueryValueTrue,
+		IncludeActions:      c.Query("include_actions") == QueryValueTrue,
+		IncludeEffects:      c.Query("include_effects") == QueryValueTrue,
+		IncludeLogs:         c.Query("include_logs") == QueryValueTrue,
 	}
 
 	status, err := h.combatService.GetCombatStatus(combatID, req)
@@ -229,7 +234,9 @@ func (h *CombatHandler) LeaveCombat(c *gin.Context) {
 	}
 
 	var req models.LeaveCombatRequest
-	c.ShouldBindJSON(&req) // Optional body
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logrus.WithError(err).Debug("Failed to bind optional request body")
+	}
 
 	if err := h.combatService.LeaveCombat(combatID, characterID, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -497,7 +504,7 @@ func (h *CombatHandler) SearchCombats(c *gin.Context) {
 		}
 	}
 
-	req.IncludeFinished = c.Query("include_finished") == "true"
+	req.IncludeFinished = c.Query("include_finished") == QueryValueTrue
 
 	result, err := h.combatService.SearchCombats(req)
 	if err != nil {

@@ -4,6 +4,12 @@ import (
 	"time"
 )
 
+// Constantes pour les statuts de santé
+const (
+	HealthStatusHealthy   = "healthy"
+	HealthStatusUnhealthy = "unhealthy"
+)
+
 // HealthResponse représente la réponse de santé du service
 type HealthResponse struct {
 	Status    string                 `json:"status"`
@@ -217,11 +223,11 @@ type DependencyInfo struct {
 // GetHealthStatus retourne le statut de santé global
 func GetHealthStatus(checks map[string]*HealthCheck) string {
 	for _, check := range checks {
-		if check.Status != "healthy" {
-			return "unhealthy"
+		if check.Status != HealthStatusHealthy {
+			return HealthStatusUnhealthy
 		}
 	}
-	return "healthy"
+	return HealthStatusHealthy
 }
 
 // CreateHealthCheck crée un contrôle de santé

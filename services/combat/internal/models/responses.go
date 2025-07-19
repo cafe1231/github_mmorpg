@@ -350,9 +350,9 @@ func CreateSuccessResponse(message string, data interface{}) *SuccessResponse {
 }
 
 // CreateErrorResponse crée une réponse d'erreur
-func CreateErrorResponse(error, code, details, requestID string) *ErrorResponse {
+func CreateErrorResponse(errorMsg, code, details, requestID string) *ErrorResponse {
 	return &ErrorResponse{
-		Error:     error,
+		Error:     errorMsg,
 		Code:      code,
 		Details:   details,
 		RequestID: requestID,

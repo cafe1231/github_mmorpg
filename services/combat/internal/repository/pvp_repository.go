@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"combat/internal/config"
 	"combat/internal/database"
 	"combat/internal/models"
 )
@@ -81,7 +82,6 @@ func (r *PvPRepository) CreateChallenge(challenge *models.PvPChallenge) error {
 		challenge.WinnerID, challenge.LoserID, challenge.ResultType,
 		challenge.CreatedAt, challenge.RespondedAt, challenge.ExpiresAt, challenge.CompletedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create challenge: %w", err)
 	}
@@ -107,7 +107,6 @@ func (r *PvPRepository) GetChallengeByID(id uuid.UUID) (*models.PvPChallenge, er
 		&challenge.WinnerID, &challenge.LoserID, &challenge.ResultType,
 		&challenge.CreatedAt, &challenge.RespondedAt, &challenge.ExpiresAt, &challenge.CompletedAt,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("challenge not found")
@@ -143,7 +142,6 @@ func (r *PvPRepository) UpdateChallenge(challenge *models.PvPChallenge) error {
 		challenge.Message, stakesJSON, challenge.Status, challenge.WinnerID, challenge.LoserID,
 		challenge.ResultType, challenge.RespondedAt, challenge.ExpiresAt, challenge.CompletedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to update challenge: %w", err)
 	}
@@ -367,14 +365,13 @@ func (r *PvPRepository) GetPvPStatistics(playerID uuid.UUID) (*models.PvPStatist
 		&stats.TotalDamageDealt, &stats.TotalDamageTaken, &stats.TotalHealingDone,
 		&stats.UpdatedAt,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Créer des statistiques par défaut
 			return &models.PvPStatistics{
 				PlayerID:      playerID,
-				CurrentRating: 1000, // Rating par défaut
-				HighestRating: 1000,
+				CurrentRating: config.DefaultPvPRating, // Rating par défaut
+				HighestRating: config.DefaultPvPRating,
 				UpdatedAt:     time.Now(),
 			}, nil
 		}
@@ -384,7 +381,7 @@ func (r *PvPRepository) GetPvPStatistics(playerID uuid.UUID) (*models.PvPStatist
 	// Calculer les statistiques dérivées
 	totalMatches := stats.BattlesWon + stats.BattlesLost + stats.Draws
 	if totalMatches > 0 {
-		stats.WinRate = float64(stats.BattlesWon) / float64(totalMatches) * 100
+		stats.WinRate = float64(stats.BattlesWon) / float64(totalMatches) * config.DefaultPercentageMultiplier
 	}
 
 	stats.TotalMatches = totalMatches
@@ -483,7 +480,7 @@ func (r *PvPRepository) GetTopPlayers(limit int) ([]*models.PvPRanking, error) {
 		// Calculer le taux de victoire
 		totalMatches := ranking.Wins + ranking.Losses + ranking.Draws
 		if totalMatches > 0 {
-			ranking.WinRate = float64(ranking.Wins) / float64(totalMatches) * 100
+			ranking.WinRate = float64(ranking.Wins) / float64(totalMatches) * config.DefaultPercentageMultiplier
 		}
 
 		// TODO: Récupérer le nom du joueur depuis le service player
@@ -547,7 +544,7 @@ func (r *PvPRepository) GetPlayersInRatingRange(minRating, maxRating int) ([]*mo
 		// Calculer le taux de victoire
 		totalMatches := ranking.Wins + ranking.Losses + ranking.Draws
 		if totalMatches > 0 {
-			ranking.WinRate = float64(ranking.Wins) / float64(totalMatches) * 100
+			ranking.WinRate = float64(ranking.Wins) / float64(totalMatches) * config.DefaultPercentageMultiplier
 		}
 
 		rankings = append(rankings, &ranking)
@@ -580,7 +577,6 @@ func (r *PvPRepository) AddToQueue(entry *models.PvPQueueEntry) error {
 		entry.PlayerID, entry.ChallengeType, entry.MinRating, entry.MaxRating,
 		preferencesJSON, entry.JoinedAt, entry.UpdatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to add to queue: %w", err)
 	}
@@ -624,7 +620,6 @@ func (r *PvPRepository) GetQueueEntry(playerID uuid.UUID) (*models.PvPQueueEntry
 		&entry.PlayerID, &entry.ChallengeType, &entry.MinRating, &entry.MaxRating,
 		&preferencesJSON, &entry.JoinedAt, &entry.UpdatedAt,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("player not in queue")
@@ -699,9 +694,9 @@ func (r *PvPRepository) FindMatchmakingCandidates(entry *models.PvPQueueEntry) (
 		LIMIT 10`
 
 	// Calculer les limites de rating
-	playerRating := entry.MinRating      // Utiliser le rating min comme référence
-	minRatingRange := playerRating - 100 // ±100 points de rating
-	maxRatingRange := playerRating + 100
+	playerRating := entry.MinRating                            // Utiliser le rating min comme référence
+	minRatingRange := playerRating - config.DefaultRatingRange // ±100 points de rating
+	maxRatingRange := playerRating + config.DefaultRatingRange
 
 	rows, err := r.db.Query(query,
 		entry.ChallengeType, entry.PlayerID,

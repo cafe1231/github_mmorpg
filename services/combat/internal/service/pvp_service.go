@@ -105,7 +105,7 @@ func (s *PvPService) CreateChallenge(challengerID uuid.UUID, req *models.CreateC
 		}(),
 		Status:    models.ChallengeStatusPending,
 		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(24 * time.Hour), // 24h d'expiration
+		ExpiresAt: time.Now().Add(time.Duration(config.DefaultJWTExpiration) * time.Hour), // 24h d'expiration
 	}
 
 	if err := s.pvpRepo.CreateChallenge(challenge); err != nil {
@@ -287,7 +287,7 @@ func (s *PvPService) UpdatePlayerStatistics(playerID uuid.UUID, result *models.M
 		// Créer de nouvelles statistiques si elles n'existent pas
 		stats = &models.PvPStatistics{
 			PlayerID:      playerID,
-			CurrentRating: 1000, // Rating de départ
+			CurrentRating: config.DefaultPvPRating, // Rating de départ
 		}
 	}
 
@@ -312,7 +312,7 @@ func (s *PvPService) UpdatePlayerStatistics(playerID uuid.UUID, result *models.M
 	}
 	stats.TotalMatches = stats.BattlesWon + stats.BattlesLost + stats.Draws
 	if stats.TotalMatches > 0 {
-		stats.WinRate = float64(stats.BattlesWon) / float64(stats.TotalMatches) * 100
+		stats.WinRate = float64(stats.BattlesWon) / float64(stats.TotalMatches) * config.DefaultPercentageMultiplier
 	}
 	// Streaks (simplifié)
 	if result.ResultType == models.ResultTypeVictory {
@@ -453,9 +453,9 @@ func (s *PvPService) StartMatch(player1ID, player2ID uuid.UUID, matchType models
 	// Créer le combat
 	combatReq := &models.CreateCombatRequest{
 		CombatType:      models.CombatTypePvP,
-		MaxParticipants: 2,
-		TurnTimeLimit:   30,
-		MaxDuration:     300,
+		MaxParticipants: config.DefaultMaxParticipantsPvP,
+		TurnTimeLimit:   config.DefaultTurnTimeLimitPvP,
+		MaxDuration:     config.DefaultMaxDurationPvP,
 	}
 
 	combat := &models.CombatInstance{
@@ -538,7 +538,7 @@ func (s *PvPService) CleanupOldQueue() error {
 // StartCleanupRoutine démarre les routines de nettoyage
 func (s *PvPService) StartCleanupRoutine() {
 	// Nettoyage toutes les 30 minutes
-	ticker := time.NewTicker(30 * time.Minute)
+	ticker := time.NewTicker(time.Duration(config.DefaultCombatTurnTimeout) * time.Minute)
 	go func() {
 		defer ticker.Stop()
 		for range ticker.C {
@@ -555,7 +555,7 @@ func (s *PvPService) StartCleanupRoutine() {
 // StartMatchmakingRoutine démarre le matchmaking automatique
 func (s *PvPService) StartMatchmakingRoutine() {
 	// Matchmaking toutes les 10 secondes
-	s.queueTicker = time.NewTicker(10 * time.Second)
+	s.queueTicker = time.NewTicker(time.Duration(config.DefaultQueueTicker2) * time.Second)
 	go func() {
 		defer s.queueTicker.Stop()
 		for range s.queueTicker.C {
@@ -573,10 +573,10 @@ func (s *PvPService) createPvPCombat(challenge *models.PvPChallenge) (*models.Co
 		ID:              uuid.New(),
 		CombatType:      models.CombatTypePvP,
 		Status:          "pending",
-		MaxParticipants: 2,
+		MaxParticipants: config.DefaultMaxParticipantsPvP,
 		CurrentTurn:     0,
-		TurnTimeLimit:   30,
-		MaxDuration:     300,
+		TurnTimeLimit:   config.DefaultTurnTimeLimitPvP,
+		MaxDuration:     config.DefaultMaxDurationPvP,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
@@ -606,7 +606,7 @@ func (s *PvPService) calculateRatingChange(playerRating, opponentRating int, won
 	// Système ELO simplifié
 	k := 32.0 // Facteur K
 
-	expectedScore := 1.0 / (1.0 + math.Pow(10, float64(opponentRating-playerRating)/400))
+	expectedScore := 1.0 / (1.0 + math.Pow(config.DefaultEloBase, float64(opponentRating-playerRating)/config.DefaultEloDivisor))
 
 	var actualScore float64
 	if won {
@@ -629,7 +629,7 @@ func (s *PvPService) getQueueCount(queueType models.ChallengeType) (int, error) 
 
 func (s *PvPService) estimateWaitTime(queueSize int) time.Duration {
 	// Estimation simple basée sur la taille de la file d'attente
-	baseWait := 30 * time.Second
+	baseWait := time.Duration(config.DefaultCombatTurnTimeout) * time.Second
 	return baseWait + time.Duration(queueSize)*10*time.Second
 }
 
@@ -649,8 +649,12 @@ func (s *PvPService) createMatches(entries []*models.PvPQueueEntry) {
 			}
 
 			// Retirer les joueurs de la file d'attente
-			s.pvpRepo.RemoveFromQueue(player1.PlayerID)
-			s.pvpRepo.RemoveFromQueue(player2.PlayerID)
+			if err := s.pvpRepo.RemoveFromQueue(player1.PlayerID); err != nil {
+				logrus.WithError(err).Error("Failed to remove player1 from queue")
+			}
+			if err := s.pvpRepo.RemoveFromQueue(player2.PlayerID); err != nil {
+				logrus.WithError(err).Error("Failed to remove player2 from queue")
+			}
 
 			logrus.WithFields(logrus.Fields{
 				"match_id": match.ID,
@@ -669,10 +673,10 @@ func (s *PvPService) arePlayersCompatible(p1, p2 *models.PvPQueueEntry) bool {
 	// Augmenter la tolérance avec le temps d'attente
 	waitTime1 := time.Since(p1.JoinedAt)
 	waitTime2 := time.Since(p2.JoinedAt)
-	avgWaitTime := (waitTime1 + waitTime2) / 2
+	avgWaitTime := (waitTime1 + waitTime2) / config.DefaultMaxParticipantsPvP
 
 	// Augmenter la tolérance de 50 points par minute d'attente
-	maxRatingDiff += int(avgWaitTime.Minutes()) * 50
+	maxRatingDiff += int(avgWaitTime.Minutes()) * config.DefaultRatingMultiplier
 
 	return ratingDiff <= maxRatingDiff
 }

@@ -9,6 +9,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// Constantes pour les types d'actions
+const (
+	ActionTypeUnknown = "unknown"
+)
+
 var (
 	// Métriques HTTP
 	httpRequestsTotal = promauto.NewCounterVec(
@@ -200,7 +205,7 @@ func CombatMetrics() gin.HandlerFunc {
 
 		// Métriques pour les actions de combat
 		if path == "/api/v1/combat/:id/action" && c.Request.Method == "POST" {
-			actionType := "unknown"
+			actionType := ActionTypeUnknown
 			result := "success"
 
 			if c.Writer.Status() >= 400 {
@@ -220,7 +225,7 @@ func CombatMetrics() gin.HandlerFunc {
 		if path == "/api/v1/combat" && c.Request.Method == "POST" && c.Writer.Status() == 201 {
 			combatType := c.GetString("combat_type")
 			if combatType == "" {
-				combatType = "unknown"
+				combatType = ActionTypeUnknown
 			}
 			combatInstancesTotal.WithLabelValues(combatType).Inc()
 		}

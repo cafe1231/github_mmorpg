@@ -522,7 +522,7 @@ func (s *EffectService) GetEffectImpact(participant *models.CombatParticipant) (
 			case models.ModifierTypeFlat:
 				impact.StatModifiers[stat] += value
 			case models.ModifierTypePercentage:
-				impact.PercentModifiers[stat] += float64(value) / 100.0
+				impact.PercentModifiers[stat] += float64(value) / float64(config.DefaultVarianceDivisor)
 			}
 		}
 
@@ -581,9 +581,13 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 				effect.ModifierValue -= int(finalDamage) / effect.CurrentStacks
 				if effect.ModifierValue <= 0 {
 					// Bouclier détruit
-					s.effectRepo.Delete(effect.ID)
+					if err := s.effectRepo.Delete(effect.ID); err != nil {
+						logrus.WithError(err).Error("Failed to delete destroyed shield effect")
+					}
 				} else {
-					s.effectRepo.Update(effect)
+					if err := s.effectRepo.Update(effect); err != nil {
+						logrus.WithError(err).Error("Failed to update shield effect")
+					}
 				}
 				break
 			} else {
@@ -592,13 +596,15 @@ func (s *EffectService) ApplyDamageReduction(participant *models.CombatParticipa
 				shieldAbsorption = absorption
 
 				// Bouclier détruit
-				s.effectRepo.Delete(effect.ID)
+				if err := s.effectRepo.Delete(effect.ID); err != nil {
+					logrus.WithError(err).Error("Failed to delete shield effect")
+				}
 			}
 
 		case models.EffectTypeBuff:
 			// Vérifier si c'est un effet de réduction de dégâts
 			if effect.StatAffected != nil && *effect.StatAffected == "damage_reduction" {
-				reduction := float64(effect.ModifierValue*effect.CurrentStacks) / 100.0
+				reduction := float64(effect.ModifierValue*effect.CurrentStacks) / float64(config.DefaultVarianceDivisor)
 				finalDamage *= (1.0 - reduction)
 			}
 		}
@@ -653,7 +659,7 @@ func (s *EffectService) GetEffectDuration(effectID uuid.UUID) (time.Duration, er
 
 	// Si pas d'expiration absolute, estimer basé sur les tours restants
 	// Assume 30 secondes par tour (devrait être configuré)
-	estimatedDuration := time.Duration(effect.RemainingTurns) * 30 * time.Second
+	estimatedDuration := time.Duration(effect.RemainingTurns) * time.Duration(config.DefaultCombatTurnTimeout) * time.Second
 	return estimatedDuration, nil
 }
 

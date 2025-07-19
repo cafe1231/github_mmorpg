@@ -214,7 +214,7 @@ func (s *CombatService) GetCombatStatus(id uuid.UUID, req *models.GetCombatStatu
 
 	// Charger les actions récentes si demandé
 	if req.IncludeActions {
-		actions, err := s.actionRepo.GetRecentActions(id, 10)
+		actions, err := s.actionRepo.GetRecentActions(id, config.DefaultMinIntervals)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load recent actions: %w", err)
 		}
@@ -264,8 +264,8 @@ func (s *CombatService) StartCombat(id uuid.UUID) error {
 		return fmt.Errorf("failed to get participants: %w", err)
 	}
 
-	if len(participants) < 2 {
-		return fmt.Errorf("at least 2 participants required to start combat")
+	if len(participants) < config.DefaultMinParticipants {
+		return fmt.Errorf("au moins %d participants requis", config.DefaultMinParticipants)
 	}
 
 	// Vérifier que tous les participants sont prêts
@@ -619,7 +619,6 @@ func (s *CombatService) SearchCombats(req *models.SearchCombatsRequest) (*models
 		PageSize: req.Limit,
 		HasMore:  req.Offset+req.Limit < total,
 	}, nil
-
 }
 
 // GetCombatHistory récupère l'historique de combat
@@ -720,8 +719,8 @@ func (s *CombatService) calculateRewards(combat *models.CombatInstance, particip
 
 	for _, p := range participants {
 		reward := &models.CombatReward{
-			Experience: 10, // Base XP
-			Gold:       5,  // Base gold
+			Experience: config.DefaultBaseExperience, // Base XP
+			Gold:       config.DefaultBaseGold,       // Base gold
 		}
 
 		// Bonus pour les gagnants
@@ -731,11 +730,11 @@ func (s *CombatService) calculateRewards(combat *models.CombatInstance, particip
 		}
 
 		// Bonus basé sur les performances
-		if p.DamageDealt > 100 {
-			reward.Experience += 5
+		if p.DamageDealt > config.DefaultMaxDamage {
+			p.DamageDealt = config.DefaultMaxDamage
 		}
-		if p.HealingDone > 50 {
-			reward.Experience += 3
+		if p.HealingDone > config.DefaultMaxHealing {
+			p.HealingDone = config.DefaultMaxHealing
 		}
 
 		rewards[p.CharacterID] = reward
@@ -844,7 +843,7 @@ func (s *CombatService) calculatePvPRatingChange(participant *models.CombatParti
 	for _, p := range allParticipants {
 		if p.Team != participant.Team {
 			// On devrait récupérer le rating réel ici
-			opponentRatings = append(opponentRatings, 1000) // Rating par défaut
+			opponentRatings = append(opponentRatings, config.DefaultPvPRating) // Rating par défaut
 		}
 	}
 
@@ -859,7 +858,7 @@ func (s *CombatService) calculatePvPRatingChange(participant *models.CombatParti
 	avgOpponentRating /= len(opponentRatings)
 
 	// Calcul Elo
-	expectedScore := 1.0 / (1.0 + math.Pow(10, float64(avgOpponentRating-1000)/400.0))
+	expectedScore := 1.0 / (1.0 + math.Pow(config.DefaultEloBase, float64(avgOpponentRating-config.DefaultPvPRating)/config.DefaultEloDivisor))
 
 	actualScore := 0.0
 	if isWinner {
@@ -948,7 +947,7 @@ func (s *CombatService) calculateHistorySummary(history []*models.CombatHistoryE
 
 	// Calculer les moyennes
 	if summary.TotalCombats > 0 {
-		summary.WinRate = float64(summary.Wins) / float64(summary.TotalCombats) * 100
+		summary.WinRate = float64(summary.Wins) / float64(summary.TotalCombats) * config.DefaultPercentageMultiplier
 		summary.AverageDuration = float64(totalDuration) / float64(summary.TotalCombats)
 	}
 
@@ -996,7 +995,7 @@ func (s *CombatService) formatStatisticsResponse(stats *models.CombatStatistics,
 	}
 
 	if pveBattles > 0 {
-		response.PvE.WinRate = float64(stats.PvEBattlesWon) / float64(pveBattles) * 100
+		response.PvE.WinRate = float64(stats.PvEBattlesWon) / float64(pveBattles) * config.DefaultPercentageMultiplier
 	}
 
 	// Statistiques PvP
@@ -1011,7 +1010,7 @@ func (s *CombatService) formatStatisticsResponse(stats *models.CombatStatistics,
 	}
 
 	if pvpBattles > 0 {
-		response.PvP.WinRate = float64(stats.PvPBattlesWon) / float64(pvpBattles) * 100
+		response.PvP.WinRate = float64(stats.PvPBattlesWon) / float64(pvpBattles) * config.DefaultPercentageMultiplier
 	}
 
 	// Statistiques détaillées si demandées
@@ -1025,7 +1024,7 @@ func (s *CombatService) formatStatisticsResponse(stats *models.CombatStatistics,
 			DamageTrend:      "stable",
 			PerformanceTrend: "stable",
 			ActivityTrend:    "stable",
-			ImprovementScore: 50.0,
+			ImprovementScore: config.DefaultImprovementScore,
 		}
 
 		// TODO: Charger les achievements

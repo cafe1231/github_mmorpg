@@ -3,11 +3,14 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
+	"combat/internal/config"
 	"combat/internal/database"
 	"combat/internal/models"
+
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
@@ -379,7 +382,7 @@ func (r *EffectRepository) GetEffectDuration(effectID uuid.UUID) (time.Duration,
 	}
 
 	// Sinon, estimer basé sur les tours restants (30 secondes par tour)
-	estimatedDuration := time.Duration(effect.RemainingTurns) * 30 * time.Second
+	estimatedDuration := time.Duration(effect.RemainingTurns) * time.Duration(config.DefaultCombatTurnTimeout) * time.Second
 	return estimatedDuration, nil
 }
 

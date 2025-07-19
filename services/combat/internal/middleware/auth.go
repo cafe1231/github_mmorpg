@@ -340,7 +340,6 @@ func validateJWT(tokenString, secret string) (*JWTClaims, error) {
 		}
 		return []byte(secret), nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}

@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
 
+	"combat/internal/config"
 	"combat/internal/database"
 	"combat/internal/models"
 )
@@ -115,7 +117,6 @@ func (r *CombatRepository) GetByID(id uuid.UUID) (*models.CombatInstance, error)
 		&combat.MaxDuration, &settingsJSON, &combat.CreatedAt,
 		&combat.StartedAt, &combat.EndedAt, &combat.UpdatedAt,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("combat not found")
@@ -306,7 +307,7 @@ func (r *CombatRepository) List(filters *models.SearchCombatsRequest) ([]*models
 func (r *CombatRepository) GetByStatus(status models.CombatStatus) ([]*models.CombatInstance, error) {
 	filters := &models.SearchCombatsRequest{
 		Status:          &status,
-		Limit:           100,
+		Limit:           config.DefaultVarianceDivisor,
 		IncludeFinished: true,
 	}
 
@@ -361,7 +362,7 @@ func (r *CombatRepository) GetByParticipant(participantID uuid.UUID) ([]*models.
 func (r *CombatRepository) GetByZone(zoneID string) ([]*models.CombatInstance, error) {
 	filters := &models.SearchCombatsRequest{
 		ZoneID:          &zoneID,
-		Limit:           50,
+		Limit:           config.DefaultImprovementScore,
 		IncludeFinished: false,
 	}
 
@@ -529,7 +530,7 @@ func (r *CombatRepository) createDefaultStatistics(characterID uuid.UUID) (*mode
 	stats := &models.CombatStatistics{
 		ID:          uuid.New(),
 		CharacterID: characterID,
-		PvPRating:   1000, // Rating par défaut
+		PvPRating:   config.DefaultPvPRating, // Rating par défaut
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -646,6 +647,7 @@ func (r *CombatRepository) GetCombatHistory(req *models.GetCombatHistoryRequest)
 	if req.WinsOnly || req.LossesOnly {
 		// Cette logique nécessiterait une table de résultats ou une logique plus complexe
 		// Pour l'instant, on l'ignore
+		logrus.Debug("WinsOnly/LossesOnly filtering not yet implemented")
 	}
 
 	// Compter le total
@@ -725,7 +727,6 @@ func (r *CombatRepository) CleanupExpiredCombats() error {
 		models.CombatStatusCancelled, now,
 		models.CombatStatusWaiting, models.CombatStatusActive,
 		expiredTime)
-
 	if err != nil {
 		return fmt.Errorf("failed to cleanup expired combats: %w", err)
 	}
@@ -739,7 +740,7 @@ func (r *CombatRepository) GetExpiredCombats() ([]*models.CombatInstance, error)
 
 	filters := &models.SearchCombatsRequest{
 		CreatedBefore:   &expiredTime,
-		Limit:           100,
+		Limit:           config.DefaultVarianceDivisor,
 		IncludeFinished: false,
 	}
 
