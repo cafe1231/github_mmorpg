@@ -10,7 +10,13 @@ import (
 
 type AnalyticsService interface {
 	TrackEvent(ctx context.Context, req *models.CreateEventRequest) error
-	GetEvents(ctx context.Context, eventType *string, from, to *time.Time, playerID, guildID *uuid.UUID, page, limit int) ([]*models.Event, int, error)
+	GetEvents(
+		ctx context.Context,
+		eventType *string,
+		from, to *time.Time,
+		playerID, guildID *uuid.UUID,
+		page, limit int,
+	) ([]*models.Event, int, error)
 	GetEvent(ctx context.Context, eventID uuid.UUID) (*models.Event, error)
 }
 

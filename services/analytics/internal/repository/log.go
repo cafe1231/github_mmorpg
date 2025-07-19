@@ -36,7 +36,13 @@ func (r *logRepository) Create(ctx context.Context, log *models.LogEntry) error 
 	return err
 }
 
-func (r *logRepository) List(ctx context.Context, level *string, from, to *time.Time, contextFilter *string, page, limit int) ([]*models.LogEntry, int, error) {
+func (r *logRepository) List(
+	ctx context.Context,
+	level *string,
+	from, to *time.Time,
+	contextFilter *string,
+	page, limit int,
+) ([]*models.LogEntry, int, error) {
 	var conditions []string
 	var args []interface{}
 	argIndex := 1

@@ -43,7 +43,13 @@ func (s *analyticsService) TrackEvent(ctx context.Context, req *models.CreateEve
 	return s.eventRepo.Create(ctx, event)
 }
 
-func (s *analyticsService) GetEvents(ctx context.Context, eventType *string, from, to *time.Time, playerID, guildID *uuid.UUID, page, limit int) ([]*models.Event, int, error) {
+func (s *analyticsService) GetEvents(
+	ctx context.Context,
+	eventType *string,
+	from, to *time.Time,
+	playerID, guildID *uuid.UUID,
+	page, limit int,
+) ([]*models.Event, int, error) {
 	return s.eventRepo.List(ctx, eventType, from, to, playerID, guildID, page, limit)
 }
 

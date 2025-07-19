@@ -58,7 +58,13 @@ func (r *eventRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Ev
 	return event, nil
 }
 
-func (r *eventRepository) List(ctx context.Context, eventType *string, from, to *time.Time, playerID, guildID *uuid.UUID, page, limit int) ([]*models.Event, int, error) {
+func (r *eventRepository) List(
+	ctx context.Context,
+	eventType *string,
+	from, to *time.Time,
+	playerID, guildID *uuid.UUID,
+	page, limit int,
+) ([]*models.Event, int, error) {
 	var conditions []string
 	var args []interface{}
 	argIndex := 1

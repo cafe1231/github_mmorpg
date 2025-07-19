@@ -11,7 +11,13 @@ import (
 type EventRepository interface {
 	Create(ctx context.Context, event *models.Event) error
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error)
-	List(ctx context.Context, eventType *string, from, to *time.Time, playerID, guildID *uuid.UUID, page, limit int) ([]*models.Event, int, error)
+	List(
+		ctx context.Context,
+		eventType *string,
+		from, to *time.Time,
+		playerID, guildID *uuid.UUID,
+		page, limit int,
+	) ([]*models.Event, int, error)
 }
 
 type MetricRepository interface {
